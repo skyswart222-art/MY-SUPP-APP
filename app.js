@@ -82,7 +82,28 @@ try { const tv = localStorage.getItem("planner.todayView"); if (tv === "full" ||
 /* Theme: dark by default, remembered per device */
 S.theme = "dark";
 try { const th = localStorage.getItem("planner.theme"); if (th === "light" || th === "dark") S.theme = th; } catch {}
-function applyTheme() { document.documentElement.setAttribute("data-theme", S.theme); }
+const ACCENTS = [
+  { id: "ember", name: "Ember", d: "#ff6a2b", l: "#f2540f" },
+  { id: "magenta", name: "Hot magenta", d: "#ff2e88", l: "#e3106c" },
+  { id: "electric", name: "Electric blue", d: "#3d95ff", l: "#1668e3" },
+  { id: "volt", name: "Volt", d: "#c6f432", l: "#4f9a00" },
+];
+S.accent = "ember";
+try { const ac = localStorage.getItem("planner.accent"); if (ACCENTS.some((x) => x.id === ac)) S.accent = ac; } catch {}
+function applyTheme() { const r = document.documentElement; r.setAttribute("data-theme", S.theme); r.setAttribute("data-accent", S.accent); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = S.theme === "dark" ? "#1c1c1e" : "#efeeeb"; }
+function renderSettings() {
+  const el = $("#setsheet"); if (!el) return;
+  if (!S.settingsOpen) { el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="sheet-bg" data-act="close-settings"><div class="sheet" role="dialog" aria-modal="true" aria-label="Settings" data-stop>
+    <div class="grab"></div>
+    <div class="row between"><h2>Settings</h2><button class="btn sm" data-act="close-settings">Done</button></div>
+    <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Appearance</span>
+      <div class="seg2">${[["dark", "Dark"], ["light", "Light"]].map(([v, n]) => `<button type="button" data-act="settheme" data-v="${v}" aria-pressed="${S.theme === v}">${n}</button>`).join("")}</div></div>
+    <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Colour</span>
+      <div class="setgrid">${ACCENTS.map((x) => `<button type="button" class="swatch" data-act="setaccent" data-v="${x.id}" aria-pressed="${S.accent === x.id}"><i style="background:${S.theme === "dark" ? x.d : x.l}"></i>${x.name}</button>`).join("")}</div>
+      <p class="small muted" style="margin:0">Used for buttons, progress rings and the selected tab.</p></div>
+  </div></div>`;
+}
 applyTheme();
 try { const t = localStorage.getItem("planner.tab"); if (["today", "totals", "stock", "spend", "add"].includes(t)) S.tab = t; } catch {}
 
@@ -450,6 +471,7 @@ async function removeExamples() { for (const s of S.supps.filter((x) => x.exampl
 const SUN = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
 function renderChrome() {
+  document.documentElement.setAttribute("data-mod", S.module);
   const tb = $("#themebtn");
   if (tb) { tb.innerHTML = S.theme === "dark" ? SUN : MOON; tb.setAttribute("aria-label", S.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"); }
   $("#modules").innerHTML = MODULES.map((m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`).join("");
@@ -2904,6 +2926,10 @@ document.addEventListener("click", async (e) => {
     case "wkdose": toggleDose(b.dataset.key, b.dataset.date); break;
     case "goday": S.date = b.dataset.date; S.todayView = "full"; try { localStorage.setItem("planner.todayView", "full"); } catch {} render(); if (S.date === today()) scrollToNow(); break;
     case "theme": S.theme = S.theme === "dark" ? "light" : "dark"; try { localStorage.setItem("planner.theme", S.theme); } catch {} applyTheme(); renderChrome(); break;
+    case "settings": S.settingsOpen = true; renderSettings(); break;
+    case "close-settings": S.settingsOpen = false; renderSettings(); break;
+    case "settheme": S.theme = b.dataset.v === "light" ? "light" : "dark"; try { localStorage.setItem("planner.theme", S.theme); } catch {} applyTheme(); renderChrome(); renderSettings(); break;
+    case "setaccent": if (ACCENTS.some((x) => x.id === b.dataset.v)) { S.accent = b.dataset.v; try { localStorage.setItem("planner.accent", S.accent); } catch {} applyTheme(); renderSettings(); } break;
     case "tview": S.todayView = b.dataset.v; try { localStorage.setItem("planner.todayView", S.todayView); } catch {} render(); break;
     case "tmode": S.totalsMode = b.dataset.m; render(); break;
     case "new": S.form = blankForm(); S.photos = { front: null, back: null }; S.ai = { busy: false, msg: "", kind: "" }; setTab("add"); break;

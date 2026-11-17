@@ -12,49 +12,58 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Daily Stack Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: one-column phone app, sticky header, hourly rail timeline, fixed bottom tab bar. */
 :root {
-  --bg: #f3f6f4;
-  --surface: #ffffff;
-  --sunk: #e7ede9;
-  --ink: #15231d;
-  --muted: #5d6e66;
-  --line: #d3ddd7;
-  --accent: #1d6b55;
-  --accent-ink: #ffffff;
-  --accent-soft: #d8ebe3;
-  --warn: #a35d00;
-  --warn-soft: #fbecd3;
-  --crit: #b3261e;
-  --crit-soft: #f9dedb;
-  --ok: #2c7a3f;
-  --track: #e3ebe6;
-  --font-display: "Outfit", "Avenir Next", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg: #efeeeb; --surface: rgba(255,255,255,.86); --sunk: rgba(30,25,15,.05); --ink: #1b1a17; --muted: #6e6a62;
+  --line: rgba(30,25,15,.08); --warn: #a35d00; --warn-soft: rgba(163,93,0,.12); --crit: #c4271d; --crit-soft: rgba(196,39,29,.1); --ok: #2c7a3f; --track: rgba(30,25,15,.08);
+  --accent: #f2540f; --accent-ink: #ffffff; --accent-soft: rgba(242,84,15,.13);
+  --font-display: "Poppins", "Avenir Next", system-ui, sans-serif;
+  --font-body: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --radius: 14px;
+  --radius: 22px;
   --tabbar-h: 64px;
+  --fade: linear-gradient(transparent, transparent);
+  --noise: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%22.9%22 numOctaves=%222%22 stitchTiles=%22stitch%22/%3E%3CfeColorMatrix values=%220 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .07 0%22/%3E%3C/filter%3E%3Crect width=%22200%22 height=%22200%22 filter=%22url(%23n)%22/%3E%3C/svg%3E");
+  --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAgEAAwX/xAAVAQEBAAAAAAAAAAAAAAAAAAAAAf/aAAwDAQACEAMQAAAB9rSxUEdXz6Fihy59uZzihNsVGnTry6HTbKOXXmnKIm0xbKPry6HSmqefTmnMok2xaUPpz6D2ykMJzKJNsWyj6c+g9tLOfQWciwTamsQugYrKQMHMok2xkUNhis0uCNgDBNsVFCRsqpxTZYQyHbFURbtG2xtZRLAdsJFCsRNcTWBKINsJFDsptsaWBKINsJFCspdMaWEKILKVFCsptsaWElh//8QAGhABAAIDAQAAAAAAAAAAAAAAAQAgEDBAcP/aAAgBAQABBQLgKOghljchljoKNyr7n//EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQMBAT8BHf/EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQIBAT8BHf/EABQQAQAAAAAAAAAAAAAAAAAAAID/2gAIAQEABj8CHH//xAAYEAEBAQEBAAAAAAAAAAAAAAABACAQMP/aAAgBAQABPyHpEcZnRwcYTOToT0cnQwOSODjw5OCOPDkiI4zOSIjjM5IiOMzkiI4zOSIjjM5IjrM5IjrM5IjDM4IyzkjTk24I24I24I24IjTgiNOCNuCPMjzI8f/aAAwDAQACAAMAAAAQJddtRx9FlEZhNBlIhB9JBUpJ9FJWB17Zl9lpDtRmZFHJeixRXx3vl1XV55ltXVB5B9X99N1VD9phVp//xAAUEQEAAAAAAAAAAAAAAAAAAABg/9oACAEDAQE/EB3/xAAUEQEAAAAAAAAAAAAAAAAAAABg/9oACAECAQE/EB3/xAAZEAEBAQEBAQAAAAAAAAAAAAABABAgETD/2gAIAQEAAT8Qw43kYxmdJyyEMDwIlLQQhh6Fh4D2lLxH4E8R+DPGdOWeO6cs8d0+LN0+LN04Ry3ThHLdOAXsvSNBhvZdHTQvb29nDERg5cMRoZ5eXkmGI0Ly8vMcMRoZ5rhiOAYzOGI4Bw4YjQjhwxGhyzOGhyzOGh0zf//Z");
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0f1613; --surface: #17211d; --sunk: #1f2c26; --ink: #e4eee9; --muted: #95a8a0;
-    --line: #2c3b35; --accent: #5cc3a0; --accent-ink: #062018; --accent-soft: #1d3a30;
-    --warn: #f0b45a; --warn-soft: #3a2b12; --crit: #ff8a80; --crit-soft: #3d1a17; --ok: #7ccf8e; --track: #1f2c26;
-    color-scheme: dark;
-  }
-}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1c1c1e; --surface: rgba(44,44,46,.82); --sunk: rgba(255,255,255,.06); --ink: #f5f4f1; --muted: #a3a19b;
+  --line: rgba(255,255,255,.08); --warn: #f0b45a; --warn-soft: rgba(240,180,90,.14); --crit: #ff8a7a; --crit-soft: rgba(255,138,122,.14); --ok: #9fd18b; --track: rgba(255,255,255,.09);
+  --fade: radial-gradient(90% 60% at 50% 115%, rgba(0,0,0,.5), transparent 70%);
+  color-scheme: dark; --accent: #ff6a2b; --accent-ink: #1a0800; --accent-soft: rgba(255,106,43,.18); } }
 :root[data-theme="dark"] {
-  --bg: #0f1613; --surface: #17211d; --sunk: #1f2c26; --ink: #e4eee9; --muted: #95a8a0;
-  --line: #2c3b35; --accent: #5cc3a0; --accent-ink: #062018; --accent-soft: #1d3a30;
-  --warn: #f0b45a; --warn-soft: #3a2b12; --crit: #ff8a80; --crit-soft: #3d1a17; --ok: #7ccf8e; --track: #1f2c26;
+  --bg: #1c1c1e; --surface: rgba(44,44,46,.82); --sunk: rgba(255,255,255,.06); --ink: #f5f4f1; --muted: #a3a19b;
+  --line: rgba(255,255,255,.08); --warn: #f0b45a; --warn-soft: rgba(240,180,90,.14); --crit: #ff8a7a; --crit-soft: rgba(255,138,122,.14); --ok: #9fd18b; --track: rgba(255,255,255,.09);
+  --fade: radial-gradient(90% 60% at 50% 115%, rgba(0,0,0,.5), transparent 70%);
   color-scheme: dark;
+  --accent: #ff6a2b; --accent-ink: #1a0800; --accent-soft: rgba(255,106,43,.18);
 }
+/* Bright colour picked in Settings (Ember is the default) */
+:root[data-accent="magenta"] { --accent: #e3106c; --accent-ink: #ffffff; --accent-soft: rgba(227,16,108,.12); }
+:root[data-theme="dark"][data-accent="magenta"] { --accent: #ff2e88; --accent-ink: #ffffff; --accent-soft: rgba(255,46,136,.18); }
+:root[data-accent="electric"] { --accent: #1668e3; --accent-ink: #ffffff; --accent-soft: rgba(22,104,227,.12); }
+:root[data-theme="dark"][data-accent="electric"] { --accent: #3d95ff; --accent-ink: #ffffff; --accent-soft: rgba(61,149,255,.18); }
+:root[data-accent="volt"] { --accent: #4f9a00; --accent-ink: #ffffff; --accent-soft: rgba(79,154,0,.13); }
+:root[data-theme="dark"][data-accent="volt"] { --accent: #c6f432; --accent-ink: #142000; --accent-soft: rgba(198,244,50,.16); }
+/* Faded photo background: each section's photo blurred to soft colour and light */
+:root[data-mod="workouts"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAECAwb/xAAWAQEBAQAAAAAAAAAAAAAAAAAAAQL/2gAMAwEAAhADEAAAAfR51nGsy5shLAIolDvEmpmxJLLACiA6RJUSwACpSAsAQoAKaMtDAABSVRqaCxeYQUiiULqCxDIFlAFlLZSZ1kzQAWCpTVzRm5CwFEAC3IsQ1BQQQAqACkAAAAALLAAAQAAoJYKlEAAD/8QAFBABAAAAAAAAAAAAAAAAAAAAgP/aAAgBAQABBQIcf//EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQMBAT8BHf/EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQIBAT8BHf/EABQQAQAAAAAAAAAAAAAAAAAAAID/2gAIAQEABj8CHH//xAAZEAEBAQEBAQAAAAAAAAAAAAABADARUHD/2gAIAQEAAT8hmc2c2c32eXMSMz0nR+Df/9oADAMBAAIAAwAAABD6a0POOhpUXGnIWf0mlEcFdm008uP2wEnPeXlGnGsEGNW1sk/Xl3G09jEX83+X33vONUPMf7qm8t/77//EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQMBAT8QHf/EABYRAAMAAAAAAAAAAAAAAAAAAAABYP/aAAgBAgEBPxAUb//EABoQAQEAAwEBAAAAAAAAAAAAAAEAEBEgMFD/2gAIAQEAAT8QcjM9uRmc64WWDM51ayspZZnlwsssvbjcstvB3u30RatWvAgg8gIQtWvAwMPGrVrBEW5fAjCy4IjgjDPW8EZPgRk2uyG3LPiNuWcnW7cs+j6Pjvh9H4r5/wD/2Q=="); }
+:root[data-mod="meals"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAECAwQF/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAEC/9oADAMBAAIQAxAAAAH7mprK1uVqazdBc46c7OedzecbxuXe8bzbSCZNZSpN2zzaxquu+W83bKGU1Gs2taxqPLY1N6xZekyio1NINMjkUWaCoiqIKgzVFalLYzNKw1EyolVWpYoAJNSpNDFUWUUhQiwWU5aza0CiKBLAkMXNs3c1dJYqCyQRms3Ns1cWN3A2yXUyRErNgtzSoKgqCoIAAACgA//EABQQAQAAAAAAAAAAAAAAAAAAAID/2gAIAQEAAQUCHH//xAAUEQEAAAAAAAAAAAAAAAAAAABg/9oACAEDAQE/AR3/xAAWEQADAAAAAAAAAAAAAAAAAAABIGD/2gAIAQIBAT8BQRX/xAAUEAEAAAAAAAAAAAAAAAAAAACA/9oACAEBAAY/Ahx//8QAGhAAAwEBAQEAAAAAAAAAAAAAAAERECBQcP/aAAgBAQABPyHEIQtYx6hCQlwxjxCELp5BCELil2YhC16hahCZS9XEJiZS9Xm/G7lKXL3SlKX1P//aAAwDAQACAAMAAAAQjZeUm5osxnGzeOqTg5VwC1ddZJDRJWtYSIhr4qTuUcwsij3rkUWXWOTQSCOkBfFAL1tpR99PV999D/8A/8QAGREAAwEBAQAAAAAAAAAAAAAAARARACBQ/9oACAEDAQE/EOChhxMMFVVdXfX/AP/EABkRAQEBAQEBAAAAAAAAAAAAAAEAERAwQP/aAAgBAgEBPxBll6JngRbMkEFknEsg5nhvdt+jO5ZZ7f/EABoQAQEBAQEBAQAAAAAAAAAAAAEAERAgMED/2gAIAQEAAT8QIIQhCJ8ZIIQ6AR0YSdTCCLZZeEnyYtlnhuwcDOcrZZS2y4IlPoYsxEMQl4AzbebDEIhh422G2223pHgttttssgggsss8bZBBBBZZJJZZzIIIIOZJJJJZZBBEdZJLLOERHhLLLIiPhnCI4RHoiPBx7sMRwiOMy2wwwxHd4sssMMMMNttsssssMMMQfA2YstsMMMeQLL42222222233tttvk/P/9k="); }
+:root[data-mod="skincare"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAECAwb/xAAWAQEBAQAAAAAAAAAAAAAAAAAAAQL/2gAMAwEAAhADEAAAAfWDNQAABADRAAABAAoAABAACgAAhkrNNJSgASwmdYDNN3OjQAECY3gyQ3rOjaCwAJjWTJF1vGkt56NMjTA1lkiF1c1JcaNSZNMDbIIXVzpM1RnUMNQUIpWpUt1TE6Q5ukMOg5tjN0NKIoiwAAAAAAAIKg//xAAUEAEAAAAAAAAAAAAAAAAAAACA/9oACAEBAAEFAhx//8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAwEBPwEd/8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAgEBPwEd/8QAFBABAAAAAAAAAAAAAAAAAAAAgP/aAAgBAQAGPwIcf//EABwQAAMBAQEAAwAAAAAAAAAAAAABERAwIEBQYP/aAAgBAQABPyH9Mx6uDHq4Mergx6uDHq4MY8WX0xj8UpSlKXhSlKXi+j+LCEIQhCEITIQhCEIQhCE+x//aAAwDAQACAAMAAAAQAe8gG8E8oAc++8gE4y+4Am6C8iU2KS4AaDH3EcqdEhK6OFpRaGCltJXN3lwl633z/myyEOOOwwgAMM//xAAYEQEAAwEAAAAAAAAAAAAAAAABECBAUP/aAAgBAwEBPxDntCHT/8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAgEBPxAd/8QAGxABAQEBAQEBAQAAAAAAAAAAAQARECAwQFD/2gAIAQEAAT8Q/S/0nwtttvtllthh8PXhSwyj08KWGUcfD0Y4PT0Y5LfgMcFtvh8AlDEG2222XQYYYhwepiy2wwww8PhFlthiGGWUsMNssRERPDEdIiCCSSSyCyyyCCIcGPrIgeA/EAZZZZZZZZZZZZ9d97b9N8f/2Q=="); }
+:root[data-mod="progress"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAECAwb/xAAWAQEBAQAAAAAAAAAAAAAAAAAAAQL/2gAMAwEAAhADEAAAAfR51nGsy5shLAIolDvEmpmxJLLACiA6RJUSwACpSAsAQoAKaMtDAABSVRqaCxeYQUiiULqCxDIFlAFlLZSZ1kzQAWCpTVzRm5CwFEAC3IsQ1BQQQAqACkAAAAALLAAAQAAoJYKlEAAD/8QAFBABAAAAAAAAAAAAAAAAAAAAgP/aAAgBAQABBQIcf//EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQMBAT8BHf/EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQIBAT8BHf/EABQQAQAAAAAAAAAAAAAAAAAAAID/2gAIAQEABj8CHH//xAAZEAEBAQEBAQAAAAAAAAAAAAABADARUHD/2gAIAQEAAT8hmc2c2c32eXMSMz0nR+Df/9oADAMBAAIAAwAAABD6a0POOhpUXGnIWf0mlEcFdm008uP2wEnPeXlGnGsEGNW1sk/Xl3G09jEX83+X33vONUPMf7qm8t/77//EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQMBAT8QHf/EABYRAAMAAAAAAAAAAAAAAAAAAAABYP/aAAgBAgEBPxAUb//EABoQAQEAAwEBAAAAAAAAAAAAAAEAEBEgMFD/2gAIAQEAAT8QcjM9uRmc64WWDM51ayspZZnlwsssvbjcstvB3u30RatWvAgg8gIQtWvAwMPGrVrBEW5fAjCy4IjgjDPW8EZPgRk2uyG3LPiNuWcnW7cs+j6Pjvh9H4r5/wD/2Q=="); }
+:root[data-mod="cycle"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAECAwb/xAAWAQEBAQAAAAAAAAAAAAAAAAAAAQL/2gAMAwEAAhADEAAAAfWDNQAABADRAAABAAoAABAACgAAhkrNNJSgASwmdYDNN3OjQAECY3gyQ3rOjaCwAJjWTJF1vGkt56NMjTA1lkiF1c1JcaNSZNMDbIIXVzpM1RnUMNQUIpWpUt1TE6Q5ukMOg5tjN0NKIoiwAAAAAAAIKg//xAAUEAEAAAAAAAAAAAAAAAAAAACA/9oACAEBAAEFAhx//8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAwEBPwEd/8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAgEBPwEd/8QAFBABAAAAAAAAAAAAAAAAAAAAgP/aAAgBAQAGPwIcf//EABwQAAMBAQEAAwAAAAAAAAAAAAABERAwIEBQYP/aAAgBAQABPyH9Mx6uDHq4Mergx6uDHq4MY8WX0xj8UpSlKXhSlKXi+j+LCEIQhCEITIQhCEIQhCE+x//aAAwDAQACAAMAAAAQAe8gG8E8oAc++8gE4y+4Am6C8iU2KS4AaDH3EcqdEhK6OFpRaGCltJXN3lwl633z/myyEOOOwwgAMM//xAAYEQEAAwEAAAAAAAAAAAAAAAABECBAUP/aAAgBAwEBPxDntCHT/8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAgEBPxAd/8QAGxABAQEBAQEBAQAAAAAAAAAAAQARECAwQFD/2gAIAQEAAT8Q/S/0nwtttvtllthh8PXhSwyj08KWGUcfD0Y4PT0Y5LfgMcFtvh8AlDEG2222XQYYYhwepiy2wwww8PhFlthiGGWUsMNssRERPDEdIiCCSSSyCyyyCCIcGPrIgeA/EAZZZZZZZZZZZZ9d97b9N8f/2Q=="); }
+:root[data-theme="dark"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGQAAAwEBAQAAAAAAAAAAAAAAAQIDAAQG/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAEC/9oADAMBAAIQAxAAAAHxJBGpKhe8LwyVU5Y9XORV1BtqLo8X6OboL4Ejz9POc6UmDbUWVot0c9y5UqnPeCQnSYNtRZWK9HP0RUgrOF4pCdJg21FlcraNosVZUheKQnSYuxszqxW8bS0ZSLKsiEqzF21hdHWto1ipUyiVJ2RlWQu2sZ0or0Rs2mTDJhZOdJiEGxnSkrkMDHQMdU51mSINPSdB2DQM2ACBJ0mRINPSdCjo0HbABUWboRINPSdCjKYOwMCBEdCLK1O6OOytG2BtsIrqf//EABoQAQEBAQEBAQAAAAAAAAAAAAEAIBAwQFD/2gAIAQEAAQUC6RHGZ0RHGZ0RHWZyREcZnREcZnRHWZ0R1mdEdZnRHWZ0R1mdEdZnJEYZyRGGdEYZ0ZZ9H7Tbk25PQ9D83//EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQMBAT8BHf/EABQRAQAAAAAAAAAAAAAAAAAAAGD/2gAIAQIBAT8BHf/EABQQAQAAAAAAAAAAAAAAAAAAAID/2gAIAQEABj8CHH//xAAZEAEBAQEBAQAAAAAAAAAAAAABABAgETD/2gAIAQEAAT8hw5Qjh4OUIxng4ZMfnM/DH02Nz4o3OU8G5yng3OU8Ghyng0OU6cAx2dOAY6OkaGOjpGC9vZdHSIz29vZw6RHLM4REdM6YOXDpg5cOmDlmcIwcszhGDlmcIiOmcIiOmcIiOmb/2gAMAwEAAgADAAAAEKAIhR0vMkzSRvFh1AVgAK8OXhEFiHSmdYpbegTLQkXlyNgGbg3mc6UgAP8AE8cQS/ud9TwaeP6hSqaLL//EABURAQEAAAAAAAAAAAAAAAAAAFAB/9oACAEDAQE/EDIF/8QAGREBAQEAAwAAAAAAAAAAAAAAAQAgEUBQ/9oACAECAQE/EPGcsxGEuO3/AP/EAB0QAQACAwEBAQEAAAAAAAAAAAEAEBEgMSFBMED/2gAIAQEAAT8Qhb8Ux5cGCNEUcdQ8njeGNFFHyOcw+VHsEbIo44vJxo3tk7o4ovkV72yd2OL5He2ayvm9Ffi13o1lqNY0/M+UEOg/PyP4jWTOn72aimYr+6NE4WC0ShqNjC0SpoTOgwasTExMTESGGi4QJiYmINE0oTExHUGlKY29bKTMWNvWyEzMxt62YrMY2GrGjYaPiGjZ/9k="); }
+:root[data-theme="dark"][data-mod="workouts"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAECAwQG/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAEC/9oADAMBAAIQAxAAAAH5vGsY3jGsWZllzJVRSSi+3Fxjcxc6zIlgpKCWHozM5qM2WFVKBCWVqQAACi3RmdEcVlCkUiqa3nctmpL5lagpLRKJreatkzGEtVKUCypqzS5xvBgFBUospu5o57wRZKUglLBq4pcoahKRZYAiUKlhqWBKAIICgaiAAAiACG4LLCUEAAgf/8QAFhAAAwAAAAAAAAAAAAAAAAAAAAGA/9oACAEBAAEFAhxv/8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAwEBPwEd/8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAgEBPwEd/8QAFBABAAAAAAAAAAAAAAAAAAAAgP/aAAgBAQAGPwIcf//EABkQAQEBAQEBAAAAAAAAAAAAAAEAMBEQYP/aAAgBAQABPyF8M4szOLMzisszj2Wcu3c+5cuYkFy5gRBcuYERmR53E8ZcCPGcCPGcCPGcTxnLszl36P8A/9oADAMBAAIAAwAAABA07tDGD4k0i1CedwjcQiBDDUuQhcMcPAyAeSshwBHgDxRjBRAbMSCghL1ifDREgBvDA3DwfOci8OsN/wD/xAAZEQEAAwEBAAAAAAAAAAAAAAABABEgMED/2gAIAQMBAT8QYxwscrF4krJu/S6en//EABkRAQADAQEAAAAAAAAAAAAAAAEAESAwUP/aAAgBAgEBPxAhkIZDneXdeX//xAAaEAEBAQEBAQEAAAAAAAAAAAABABEQIDBB/9oACAEBAAE/EPBszPM9szPjLJTnKZ5lllngnKZ4HWZ5FLL6eNYsvDylnCy+SCDh+AIdL65BCPQzLLLLLIIR6XuWWWWQcKWegg8BwS8Bw+QEPo/Ph7EpW+sjoytlKyz0MPCl523m28LL622222We773jx8Ptn4b1n4bbxn5s+ny+3z//2Q=="); }
+:root[data-theme="dark"][data-mod="meals"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGgAAAwEBAQEAAAAAAAAAAAAAAAECAwQFBv/EABcBAQEBAQAAAAAAAAAAAAAAAAABAgP/2gAMAwEAAhADEAAAAfj6V5PQ0xo1nTGqaebnjvj0zhntn1xnrlrm7aRrz26RismLKhG5K0ep5+uOmp0bc23LWqlSkEbzTitTW8rxrzah9cbaYVm7rNRZFblOQt5hzAwpUDbiW1QIG5dmbblKdZo6cZrRVktEmZSoZUrpOG01aYTNohaFmTVDY4GCsGJMAGc1xdlNOVtMYMSaEKUxvKtTasql0cOKcg0polSZVD1NKyqNXk41Mg0mVTgVQ5dNyRTkKJCiQYnZACsAAAABpoAz/8QAGhABAQADAQEAAAAAAAAAAAAAAQAQESAwcP/aAAgBAQABBQLgjLM5I6ZnJHjrBHO+NYIjyIjzLdu39r//xAAWEQADAAAAAAAAAAAAAAAAAAABIGD/2gAIAQMBAT8BQxX/xAAZEQADAQEBAAAAAAAAAAAAAAAAAREQAlD/2gAIAQIBAT8BGxvORDHiWUYyCRCZCbPX/8QAFBABAAAAAAAAAAAAAAAAAAAAgP/aAAgBAQAGPwIcf//EABoQAQEBAQEBAQAAAAAAAAAAAAEAERAgMFD/2gAIAQEAAT8hiCCHB5TEIQQQR4BZHAgg7ssycHQ6szeZwcOVssstsRwlKVssvSGHhKOjfG29GG2222222347b6CyyyzzlkEEFllllnjIII5lklllnCPTZZZwj4ZZw+h8yPmR8GbYYYj0y28GGG22222WWXgww22222yy+Ntttttttt87bbbbbb+P/9oADAMBAAIAAwAAABAeMgiVW5Cye6yivAZ3I8Ufm5R72sDrP1YOzv5ofxBbFLPZh9nKYxirW802G0qLsM9Fgi6LS7nwBDClv//EABoRAQEBAQEBAQAAAAAAAAAAAAEAERAgMED/2gAIAQMBAT8QIIOmI4stkQyyww8GWXm/DLLLLPOWezzvN8bzfw//xAAaEQEBAQEBAQEAAAAAAAAAAAABABEQICEw/9oACAECAQE/EF8gXD6Bl8QjHAxUkwoWdNttsMsttsMMz430zPjJJPAcSyyyDuWWfh//xAAbEAEBAQEBAQEBAAAAAAAAAAABABARIDAxIf/aAAgBAQABPxAI+KBl/MiEIeR/lhcHBv7j4oLs5P7usz9z3Jeaje9jqIp/ABhziXs2yxLZJ+GMZ2LsQpD6HENBgiIwh07DcggwMXBwYcHkBa1jOYEaAXJjgYxgQhBEXJITGNCEIiNS5oYIiI3kFyMEREXJMLuhERGM3bspxERGOFOiUoYbt2WWDB8AEND4ED4BKb3bLDDEIU3taxbsMPoDh3x27du3bt274PkfX//Z"); }
+:root[data-theme="dark"][data-mod="skincare"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAECAwX/xAAWAQEBAQAAAAAAAAAAAAAAAAAAAQL/2gAMAwEAAhADEAAAAfLlmKAgACAGgCAAEABoCAAlgIUGgQAgjJWFdGdRuAAlhnnvnWbgdt8ukdAASWGeXTmvMldenLpHZjSWAiGefTmvOWL06ctprXHVnViRucxvmy1mMr03y0znfLVdM5wm3IvaYS2QutZ0zjU3Wc9MnJpEtLlaNzVmr0qc89pLwnccXYcXUc9bqdFEUZURRFEUEFQVAAIVB//EABoQAAMBAQEBAAAAAAAAAAAAAAABERAwUGD/2gAIAQEAAQUC+zergx6uL1cXq4vo+FKXjSlL5c2EIQhCbNhCEIQhPS//xAAUEQEAAAAAAAAAAAAAAAAAAABg/9oACAEDAQE/AR3/xAAUEQEAAAAAAAAAAAAAAAAAAABg/9oACAECAQE/AR3/xAAUEAEAAAAAAAAAAAAAAAAAAACA/9oACAEBAAY/Ahx//8QAGxABAQEBAQEBAQAAAAAAAAAAAQARECAwUGD/2gAIAQEAAT8h/kNt+LLbbHwZbYY+Dww8HxGOD0zwxwemeGOC3yzw8IYYbbbbZeHg2ww2+Bss8G2GHh6NlnhERMttsNvSIjjPDwRBBZJJZZZZZB1lk+wAWcZZ8QDLPGWWWWWfj//aAAwDAQACAAMAAAAQXjf7H/7G/j/DCe7TnDC/nLFbe/TZlr/j/KFeLbPzRHVz/ekj0NEWIzYpL27hdKSyOvTjv7DTvPDz3/8A/8QAGhEAAgMBAQAAAAAAAAAAAAAAAREAECAwUP/aAAgBAwEBPxDwVFkUcCjgUcCOGnHHH2//xAAWEQADAAAAAAAAAAAAAAAAAAABQFD/2gAIAQIBAT8Qplv/xAAcEAEBAAMBAQEBAAAAAAAAAAABABARICEwMUD/2gAIAQEAAT8Q+W/u9P1en+Hdu32zLLgQe2WBhFDw4Z4n3gcPTOUvcSllwzk/UvZS5eF+uDu3l5T9YKINu3blPKM+RDGOApQ+4jgtjicZW/cBkLgNMorfspSlLEwxGLD7yDGEZMcgPCRgYYARCuI8oMEpCtY9AEMWrVrsDVr67t27dvG7ed27dvjdvnd//9k="); }
+:root[data-theme="dark"][data-mod="progress"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAECAwQG/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAEC/9oADAMBAAIQAxAAAAH5vGsY3jGsWZllzJVRSSi+3Fxjcxc6zIlgpKCWHozM5qM2WFVKBCWVqQAACi3RmdEcVlCkUiqa3nctmpL5lagpLRKJreatkzGEtVKUCypqzS5xvBgFBUospu5o57wRZKUglLBq4pcoahKRZYAiUKlhqWBKAIICgaiAAAiACG4LLCUEAAgf/8QAFhAAAwAAAAAAAAAAAAAAAAAAAAGA/9oACAEBAAEFAhxv/8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAwEBPwEd/8QAFBEBAAAAAAAAAAAAAAAAAAAAYP/aAAgBAgEBPwEd/8QAFBABAAAAAAAAAAAAAAAAAAAAgP/aAAgBAQAGPwIcf//EABkQAQEBAQEBAAAAAAAAAAAAAAEAMBEQYP/aAAgBAQABPyF8M4szOLMzisszj2Wcu3c+5cuYkFy5gRBcuYERmR53E8ZcCPGcCPGcCPGcTxnLszl36P8A/9oADAMBAAIAAwAAABA07tDGD4k0i1CedwjcQiBDDUuQhcMcPAyAeSshwBHgDxRjBRAbMSCghL1ifDREgBvDA3DwfOci8OsN/wD/xAAZEQEAAwEBAAAAAAAAAAAAAAABABEgMED/2gAIAQMBAT8QYxwscrF4krJu/S6en//EABkRAQADAQEAAAAAAAAAAAAAAAEAESAwUP/aAAgBAgEBPxAhkIZDneXdeX//xAAaEAEBAQEBAQEAAAAAAAAAAAABABEQIDBB/9oACAEBAAE/EPBszPM9szPjLJTnKZ5lllngnKZ4HWZ5FLL6eNYsvDylnCy+SCDh+AIdL65BCPQzLLLLLIIR6XuWWWWQcKWegg8BwS8Bw+QEPo/Ph7EpW+sjoytlKyz0MPCl523m28LL622222We773jx8Ptn4b1n4bbxn5s+ny+3z//2Q=="); }
+:root[data-theme="dark"][data-mod="cycle"] { --photo: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wgARCADQAGADASIAAhEBAxEB/8QAGAABAQEBAQAAAAAAAAAAAAAAAAECAwX/xAAWAQEBAQAAAAAAAAAAAAAAAAAAAQL/2gAMAwEAAhADEAAAAfLlmKAgACAGgCAAEABoCAAlgIUGgQAgjJWFdGdRuAAlhnnvnWbgdt8ukdAASWGeXTmvMldenLpHZjSWAiGefTmvOWL06ctprXHVnViRucxvmy1mMr03y0znfLVdM5wm3IvaYS2QutZ0zjU3Wc9MnJpEtLlaNzVmr0qc89pLwnccXYcXUc9bqdFEUZURRFEUEFQVAAIVB//EABoQAAMBAQEBAAAAAAAAAAAAAAABERAwUGD/2gAIAQEAAQUC+zergx6uL1cXq4vo+FKXjSlL5c2EIQhCbNhCEIQhPS//xAAUEQEAAAAAAAAAAAAAAAAAAABg/9oACAEDAQE/AR3/xAAUEQEAAAAAAAAAAAAAAAAAAABg/9oACAECAQE/AR3/xAAUEAEAAAAAAAAAAAAAAAAAAACA/9oACAEBAAY/Ahx//8QAGxABAQEBAQEBAQAAAAAAAAAAAQARECAwUGD/2gAIAQEAAT8h/kNt+LLbbHwZbYY+Dww8HxGOD0zwxwemeGOC3yzw8IYYbbbbZeHg2ww2+Bss8G2GHh6NlnhERMttsNvSIjjPDwRBBZJJZZZZZB1lk+wAWcZZ8QDLPGWWWWWfj//aAAwDAQACAAMAAAAQXjf7H/7G/j/DCe7TnDC/nLFbe/TZlr/j/KFeLbPzRHVz/ekj0NEWIzYpL27hdKSyOvTjv7DTvPDz3/8A/8QAGhEAAgMBAQAAAAAAAAAAAAAAAREAECAwUP/aAAgBAwEBPxDwVFkUcCjgUcCOGnHHH2//xAAWEQADAAAAAAAAAAAAAAAAAAABQFD/2gAIAQIBAT8Qplv/xAAcEAEBAAMBAQEBAAAAAAAAAAABABARICEwMUD/2gAIAQEAAT8Q+W/u9P1en+Hdu32zLLgQe2WBhFDw4Z4n3gcPTOUvcSllwzk/UvZS5eF+uDu3l5T9YKINu3blPKM+RDGOApQ+4jgtjicZW/cBkLgNMorfspSlLEwxGLD7yDGEZMcgPCRgYYARCuI8oMEpCtY9AEMWrVrsDVr67t27dvG7ed27dvjdvnd//9k="); }
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
-body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+html { background: var(--bg); }
+html::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background-color: var(--bg); background-image: var(--fade), var(--noise), var(--photo); background-size: auto, 200px 200px, cover; background-position: center; transition: background-image .4s; }
+body { background: transparent; color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--bg) 72%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -62,20 +71,20 @@ button { cursor: pointer; }
 h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
 
 .wrap { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 72%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-bottom: 1px solid var(--line); }
 header.top .wrap { padding-block: 12px 10px; display: flex; flex-direction: column; gap: 8px; }
 .brandrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.brand { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; }
+.brand { font-family: var(--font-display); font-weight: 600; font-size: 21px; letter-spacing: -0.01em; }
 .modules { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .modules::-webkit-scrollbar { display: none; }
-.mod { flex: none; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
-.mod[aria-current="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.mod { flex: none; border: 1px solid transparent; background: var(--sunk); border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
+.mod[aria-current="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
 .mod[disabled] { opacity: .55; cursor: default; }
 .syncnote { font-size: 12px; color: var(--muted); }
 
 main .wrap { padding-block: 16px calc(var(--tabbar-h) + 28px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 18px; }
 
-nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); }
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: color-mix(in srgb, var(--surface) 92%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); }
 nav.tabs .row { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); height: var(--tabbar-h); }
 .tab { background: none; border: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; color: var(--muted); position: relative; }
 .tab svg { width: 22px; height: 22px; }
@@ -83,6 +92,15 @@ nav.tabs .row { max-width: 640px; margin: 0 auto; display: grid; grid-template-c
 .tab .dot { position: absolute; top: 9px; left: calc(50% + 8px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--crit); color: #fff; font-size: 10px; line-height: 16px; font-family: var(--font-data); }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+:root[data-theme="light"] .card { box-shadow: 0 6px 20px rgba(60,50,30,.06); }
+/* Settings sheet */
+.setgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.swatch { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); font-weight: 600; text-align: left; }
+.swatch i { flex: none; width: 28px; height: 28px; border-radius: 50%; }
+.swatch[aria-pressed="true"] { border-color: var(--ink); }
+.seg2 { display: grid; grid-template-columns: 1fr 1fr; background: var(--sunk); border-radius: 12px; padding: 4px; gap: 4px; }
+.seg2 button { border: 0; background: transparent; border-radius: 9px; padding: 9px 0; font-weight: 600; color: var(--muted); }
+.seg2 button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
 .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
@@ -510,13 +528,14 @@ code { font-family: var(--font-data); font-size: 12px; background: var(--sunk); 
   <div class="wrap">
     <div class="brandrow">
       <div class="brand">Planner</div>
-      <div class="row" style="gap:10px"><div class="syncnote" id="syncnote">Loading…</div><button class="avatarbtn" id="avatarbtn" type="button" aria-label="Your profile" hidden></button><button class="iconbtn" id="themebtn" data-act="theme" aria-label="Switch theme"></button></div>
+      <div class="row" style="gap:10px"><div class="syncnote" id="syncnote">Loading…</div><button class="avatarbtn" id="avatarbtn" type="button" aria-label="Your profile" hidden></button><button class="iconbtn" id="themebtn" data-act="theme" aria-label="Switch theme"></button><button class="iconbtn" id="setbtn" data-act="settings" aria-label="Settings: colours"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.5" fill="currentColor"/><circle cx="17.5" cy="10.5" r="1.5" fill="currentColor"/><circle cx="8.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="6.5" cy="12.5" r="1.5" fill="currentColor"/><path d="M12 2a10 10 0 0 0 0 20c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a6 6 0 0 0 6-6c0-4.9-4.5-8.6-10-8.6z"/></svg></button></div>
     </div>
     <div class="modules" id="modules" role="tablist" aria-label="Plans"></div>
   </div>
 </header>
 <main><div class="wrap" id="view"><div class="card empty"><span class="spin"></span><p>Opening your planner…</p></div></div></main>
 <nav class="tabs" aria-label="Sections"><div class="row" id="tabs"></div></nav>
+<div id="setsheet"></div>
 <div id="toast" class="toast" hidden></div>
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>

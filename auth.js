@@ -15,7 +15,7 @@ const sb = !configured || !window.supabase ? null : window.supabase.createClient
 });
 const APP_KEY = "mysupp";
 // Match the planner's theme (dark unless they picked light) before anything shows.
-try { const th = localStorage.getItem("planner.theme"); document.documentElement.setAttribute("data-theme", th === "light" ? "light" : "dark"); } catch {}
+try { const th = localStorage.getItem("planner.theme"); document.documentElement.setAttribute("data-theme", th === "light" ? "light" : "dark"); const ac = localStorage.getItem("planner.accent"); if (/^(ember|magenta|electric|volt)$/.test(ac || "")) document.documentElement.setAttribute("data-accent", ac); } catch {}
 
 /* ---------- Auth functions ---------- */
 let user = null;
@@ -560,6 +560,7 @@ async function startSignedIn() {
       profile = p;
       const { data: st } = await sb.from("user_settings").select("data").eq("user_id", u.id).maybeSingle();
       const th = st?.data?.theme; if (th === "light" || th === "dark") { try { localStorage.setItem("planner.theme", th); } catch {} }
+      const ac = st?.data?.accent; if (/^(ember|magenta|electric|volt)$/.test(ac || "")) { try { localStorage.setItem("planner.accent", ac); } catch {} }
       await fetchAll();
     } catch (e) {
       // Offline with a copy on this phone: open from that copy and save later.
@@ -588,20 +589,22 @@ function loadApp() {
   });
 }
 function watchTheme() {
-  let last = document.documentElement.getAttribute("data-theme");
+  // Saves the dark/light choice and the colour to the account, so they follow you to other devices.
+  const cur = () => ({ theme: document.documentElement.getAttribute("data-theme"), accent: document.documentElement.getAttribute("data-accent") || "ember" });
+  let last = JSON.stringify(cur());
   new MutationObserver(async () => {
-    const th = document.documentElement.getAttribute("data-theme"); if (th === last || !D.uid) return; last = th;
+    const now = cur(), key = JSON.stringify(now); if (key === last || !D.uid) return; last = key;
     try {
       const { data: st } = await sb.from("user_settings").select("data").eq("user_id", D.uid).maybeSingle();
-      await sb.from("user_settings").upsert({ user_id: D.uid, data: { ...(st?.data || {}), theme: th } });
+      await sb.from("user_settings").upsert({ user_id: D.uid, data: { ...(st?.data || {}), ...now } });
     } catch {}
-  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-accent"] });
 }
 async function logOut() {
   try { await Promise.race([flush(), new Promise((r) => setTimeout(r, 4000))]); } catch {}
   const uid = D.uid;
   if (uid) { lsDel(`${APP_KEY}.cloud.${uid}`); lsDel(`${APP_KEY}.signed.${uid}`); }
-  try { Object.keys(localStorage).filter((k) => k.startsWith("planner.") && k !== "planner.theme").forEach(lsDel); } catch {}
+  try { Object.keys(localStorage).filter((k) => k.startsWith("planner.") && k !== "planner.theme" && k !== "planner.accent").forEach(lsDel); } catch {}
   try { sessionStorage.setItem(`${APP_KEY}.loggedout`, "1"); } catch {}
   try { await sb.auth.signOut(); } catch {}
   user = null; D.uid = null;
