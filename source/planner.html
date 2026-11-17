@@ -85,10 +85,19 @@ nav.tabs .row { max-width: 640px; margin: 0 auto; display: grid; grid-template-c
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
 :root[data-theme="light"] .card { box-shadow: 0 6px 20px rgba(60,50,30,.06); }
-.btn.primary, .mod[aria-current="true"] { box-shadow: 0 0 0 1px var(--glow), 0 0 14px var(--glow), 0 0 38px var(--glow2), inset 0 1px 0 rgb(255 255 255 / .25); }
-.tab[aria-current="page"] svg { filter: drop-shadow(0 0 7px var(--glow)); }
+/* Neon "lit" look: a white-hot rim, then the colour blooming outward (like a glowing sign) */
+:root { --rim: color-mix(in srgb, var(--accent) 35%, #fff); }
+.btn.primary, .mod[aria-current="true"] {
+  border-color: var(--rim) !important;
+  box-shadow: inset 0 0 8px color-mix(in srgb, #fff 45%, transparent), 0 0 0 1px var(--rim), 0 0 6px 1px var(--rim), 0 0 16px 2px var(--glow), 0 0 34px 6px var(--glow2), 0 0 60px 12px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+:root[data-theme="dark"] .btn.primary, :root[data-theme="dark"] .mod[aria-current="true"] {
+  box-shadow: inset 0 0 10px color-mix(in srgb, #fff 50%, transparent), 0 0 0 1px var(--rim), 0 0 8px 2px var(--rim), 0 0 20px 4px var(--glow), 0 0 44px 10px var(--glow2), 0 0 80px 18px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.modules { padding: 14px 10px; margin: -14px -10px; }
+.tab[aria-current="page"] svg { filter: drop-shadow(0 0 2px var(--rim)) drop-shadow(0 0 8px var(--glow)) drop-shadow(0 0 16px var(--glow2)); }
 .tab[aria-current="page"] span { text-shadow: 0 0 12px var(--glow); }
-circle[stroke="var(--accent)"][stroke-width="14"] { filter: drop-shadow(0 0 10px var(--glow)); }
+circle[stroke="var(--accent)"][stroke-width="14"] { filter: drop-shadow(0 0 2px var(--rim)) drop-shadow(0 0 10px var(--glow)) drop-shadow(0 0 22px var(--glow2)); }
 .swatch i { box-shadow: 0 0 12px currentColor; }
 /* Settings sheet */
 .setgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
