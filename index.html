@@ -565,6 +565,52 @@ code { font-family: var(--font-data); font-size: 12px; background: var(--sunk); 
 .cdrow:last-child { border-bottom: 0; }
 .cdimp { gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
 .wpct > div .small { font-size: 11px; }
+/* ---------- Budget ---------- */
+:root { --g1: #0f8f7f; --g2: #6a55e0; --g3: #b87a00; --g4: #d24f86; }
+:root[data-theme="dark"] { --g1: #26a896; --g2: #7f72f5; --g3: #c08608; --g4: #e0608c; }
+.bcard { display: flex; flex-direction: column; gap: 12px; }
+.bbig { font-family: var(--font-data); font-size: 24px; font-weight: 500; line-height: 1.1; }
+.ov-ring svg:has(.bglow) { overflow: visible; }
+.bglow { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.bgrp, .bcat { display: flex; flex-direction: column; gap: 5px; }
+.bcats { display: flex; flex-direction: column; gap: 11px; }
+.bname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.mbar.thin { height: 5px; }
+.mbar > i { transition: width .3s; }
+.iconbtn.sm { width: 32px; height: 32px; border-radius: 9px; flex: none; }
+.okt { color: var(--ok); }
+.seg3 { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--sunk); border-radius: 12px; padding: 4px; gap: 4px; }
+.seg3 button { border: 0; background: transparent; border-radius: 9px; padding: 9px 0; font-weight: 600; color: var(--muted); font-size: 14px; }
+.seg3 button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent); }
+.bstack { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; background: var(--sunk); }
+.bstack > i { display: block; min-width: 3px; }
+.bstack.empty-bar { background: var(--sunk); }
+.bsplit { display: flex; flex-direction: column; gap: 8px; }
+.bsrow { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.bleft { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); font-weight: 600; }
+.bleft b { color: var(--accent); font-family: var(--font-data); font-weight: 500; }
+.bleft.zero { background: color-mix(in srgb, var(--ok) 14%, transparent); } .bleft.zero b { color: var(--ok); }
+.bleft.neg { background: var(--warn-soft); } .bleft.neg b { color: var(--warn); }
+.bedit { display: flex; flex-direction: column; gap: 8px; }
+.berow { display: grid; grid-template-columns: minmax(0, 1fr) 84px 32px; gap: 8px; align-items: center; }
+.berow .full { grid-column: 1 / -1; margin-top: -4px; }
+.btx { align-items: center !important; }
+.btx .sw { flex: none; }
+.bgoal { display: flex; flex-direction: column; gap: 12px; }
+.bgtop { display: flex; gap: 16px; align-items: center; }
+.bgtop .ov-ring { width: 104px; height: 104px; }
+.bgtop .bbig { font-size: 20px; }
+.bgname { font-size: 22px; }
+.bars.btall { height: 170px; position: relative; }
+.bars i.over { background: color-mix(in srgb, var(--warn) 55%, var(--sunk)) !important; }
+.bars button[aria-pressed="true"] i.over { background: var(--warn) !important; }
+.bars button[aria-pressed="true"] i { box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent); }
+.bline { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--muted); pointer-events: none; }
+.bline em { position: absolute; right: 0; top: -17px; font-style: normal; font-size: 10.5px; color: var(--muted); background: var(--surface); padding: 0 4px; border-radius: 4px; }
+.bstackbars { height: 150px; }
+.bcol { height: 100%; display: flex; align-items: flex-end; justify-content: center; padding: 0 3px; }
+.bcolin { width: 100%; max-width: 30px; display: flex; flex-direction: column; gap: 2px; border-radius: 4px 4px 0 0; overflow: hidden; }
+.bcolin > i { display: block; min-height: 2px; }
 </style>
 <link rel="stylesheet" href="auth.css">
 </head>
