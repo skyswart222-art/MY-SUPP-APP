@@ -294,8 +294,13 @@ textarea.in { min-height: 64px; resize: vertical; }
 .mm { display: flex; flex-direction: column; gap: 3px; }
 .mbar { height: 7px; border-radius: 4px; background: var(--track); overflow: hidden; }
 .mbar > i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
-.mbar.c > i { background: color-mix(in srgb, var(--accent) 60%, #d9a43a); }
-.mbar.f > i { background: color-mix(in srgb, var(--accent) 35%, #c77dff); }
+/* Macro colours stay the same in every theme: protein mint teal, carbs honey gold, fat soft pink */
+:root { --mp: #0f9e8c; --mc: #d99a12; --mf: #e0679e; }
+:root[data-theme="dark"] { --mp: #5ad6c4; --mc: #ffc95c; --mf: #ff9fc8; }
+.mbar.p > i { background: var(--mp); box-shadow: 0 0 8px color-mix(in srgb, var(--mp) 60%, transparent); }
+.mbar.c > i { background: var(--mc); box-shadow: 0 0 8px color-mix(in srgb, var(--mc) 60%, transparent); }
+.mbar.f > i { background: var(--mf); box-shadow: 0 0 8px color-mix(in srgb, var(--mf) 60%, transparent); }
+.mbar.over.p > i, .mbar.over.c > i, .mbar.over.f > i { background: var(--warn); box-shadow: none; }
 .mbar.over > i { background: var(--warn); }
 .mplanned { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 8px; }
 .mplanned .num { font-size: 11.5px; margin-top: 2px; }
