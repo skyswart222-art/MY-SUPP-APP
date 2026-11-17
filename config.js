@@ -4,4 +4,6 @@
 window.APP_CONFIG = {
   supabaseUrl: "https://cpqhnpotcnhwcqyhgofd.supabase.co",
   supabaseAnonKey: "sb_publishable_34RJjpZIQwUcwmgC7qduog_racdgn_e",
+  // Free photo and PDF reading on your Claude plan (used when no Anthropic key is set on Vercel).
+  readerUrl: "https://claude.ai/artifact/JnHNzJXLig7pEkVMw1vsmZ",
 };

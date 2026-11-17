@@ -466,6 +466,57 @@ const AI_URL = cfg.aiUrl || "/api/claude";
 let aiInfo = null;
 const blobToB64 = (b) => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(b); });
 async function token() { const { data } = await sb.auth.getSession(); return data?.session?.access_token || ""; }
+
+/* Free reading through the Claude reader page: the app hands over a request code (prompt + shrunk photos),
+   the person pastes it into the reader on claude.ai, which reads it on their Claude plan and gives back a result code. */
+const READER_URL = cfg.readerUrl || "";
+const REQ = "PLANNER-READ:", RES = "PLANNER-RESULT:";
+const bytesToB64 = (u) => { let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const b64ToBytes = (b) => { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+async function deflate(text) { return bytesToB64(new Uint8Array(await new Response(new Blob([text]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer())); }
+async function inflate(b64) { return new TextDecoder().decode(await new Response(new Blob([b64ToBytes(b64)]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer()); }
+async function shrinkForCode(blob) {
+  try {
+    const bmp = await createImageBitmap(blob), sc = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
+    const cv = document.createElement("canvas"); cv.width = Math.round(bmp.width * sc); cv.height = Math.round(bmp.height * sc);
+    cv.getContext("2d").drawImage(bmp, 0, 0, cv.width, cv.height);
+    return await new Promise((r) => cv.toBlob(r, "image/jpeg", 0.78));
+  } catch { return blob; }
+}
+function bridge(prompt, images) {
+  return new Promise(async (resolve, reject) => {
+    let code = "";
+    const imgs = [];
+    for (const b of images.slice(0, 5)) { const s = await shrinkForCode(b); imgs.push({ t: s.type || "image/jpeg", d: await blobToB64(s) }); }
+    code = REQ + (await deflate(JSON.stringify({ v: 1, prompt, images: imgs, label: imgs.length ? "a photo reading" : "a reading" })));
+    const finish = (fn, v) => { pop.innerHTML = ""; pop.removeEventListener("click", onClick); pop.removeEventListener("input", onInput); fn(v); };
+    pop.innerHTML = `<div class="au-scrim"><div class="au-sheet" role="dialog" aria-modal="true" aria-labelledby="br-h">
+      <div class="au-sheethead"><h2 class="au-h" id="br-h">Read it free with Claude</h2><button class="iconbtn" type="button" id="br-x" aria-label="Cancel">${ICON.x}</button></div>
+      <ol class="br-steps">
+        <li><b>Copy the request.</b><button class="au-primary br-btn" type="button" id="br-copy">Copy request</button><textarea id="br-code" class="br-code" readonly hidden></textarea><span class="au-dim" id="br-copied"></span></li>
+        <li><span><b>Open the reader</b>, paste it in, tap <b>Read with Claude</b>, then <b>Copy result</b>.</span><a class="au-out br-btn br-link" href="${esc(READER_URL)}" target="_blank" rel="noopener">Open the reader on Claude</a></li>
+        <li><b>Paste the result here.</b><textarea id="br-res" class="br-code" placeholder="PLANNER-RESULT:…" spellcheck="false" autocapitalize="off"></textarea><div class="au-msg" id="br-msg" role="status"></div></li>
+      </ol>
+      <p class="au-dim" style="margin:0">Uses your Claude plan, so it costs nothing extra.</p>
+    </div></div>`;
+    const onClick = (e) => {
+      if (e.target.closest("#br-x")) finish(reject, Object.assign(new Error("cancelled"), { code: "cancelled" }));
+      if (e.target.closest("#br-copy")) {
+        navigator.clipboard.writeText(code).then(() => { $("#br-copied").textContent = "Copied. Now open the reader."; },
+          () => { const t = $("#br-code"); t.value = code; t.hidden = false; t.focus(); t.select(); $("#br-copied").textContent = "Copy the selected text above."; });
+      }
+    };
+    const onInput = async (e) => {
+      if (e.target.id !== "br-res") return;
+      const raw = e.target.value.replace(/\s+/g, ""), msg = $("#br-msg");
+      if (!raw) { msg.textContent = ""; msg.className = "au-msg"; return; }
+      if (!raw.startsWith(RES)) { msg.textContent = "That's not a result from the reader. Tap Copy result there and paste again."; msg.className = "au-msg err"; return; }
+      try { const j = JSON.parse(await inflate(raw.slice(RES.length))); finish(resolve, j.data); }
+      catch { msg.textContent = "Part of the result is missing. Copy it again from the reader."; msg.className = "au-msg err"; }
+    };
+    pop.addEventListener("click", onClick); pop.addEventListener("input", onInput);
+  });
+}
 function makeSample() {
   return {
     limits: async () => {
@@ -473,9 +524,11 @@ function makeSample() {
         try { const r = await fetch(AI_URL, { headers: { Authorization: "Bearer " + (await token()) } }); aiInfo = r.ok ? await r.json() : { ready: false }; }
         catch { aiInfo = { ready: false }; }
       }
-      return aiInfo.ready ? { images: { maxCount: aiInfo.maxImages || 5 } } : null;
+      return aiInfo.ready ? { images: { maxCount: aiInfo.maxImages || 5 } } : READER_URL ? { images: { maxCount: 5 } } : null;
     },
     json: async (prompt, opts = {}) => {
+      if (!aiInfo) await makeSample().limits();
+      if (!aiInfo.ready && READER_URL) return bridge(prompt, opts.images || []);
       const images = [];
       for (const b of (opts.images || []).slice(0, aiInfo?.maxImages || 5)) images.push({ media_type: /png|webp|gif/.test(b.type) ? b.type : "image/jpeg", data: await blobToB64(b) });
       let r;
