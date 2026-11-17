@@ -304,6 +304,20 @@ textarea.in { min-height: 64px; resize: vertical; }
 .mbar.over > i { background: var(--warn); }
 .mplanned { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 8px; }
 .mplanned .num { font-size: 11.5px; margin-top: 2px; }
+.mprep { display: flex; flex-direction: column; gap: 12px; }
+.mprep-card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.mprep-card.is-next { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); box-shadow: 0 0 22px var(--glow2); }
+.mprep-head { display: flex; align-items: center; gap: 12px; }
+.mprep-n { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 600; font-size: 15px; }
+.mprep-name { font-size: 24px; line-height: 1.1; }
+.mprep-edit { border: 0; background: none; color: var(--muted); padding: 4px; border-radius: 8px; display: inline-grid; }
+.mprep-kcal { text-align: right; display: flex; flex-direction: column; line-height: 1.15; }
+.mprep-kcal b { font-size: 18px; }
+.mprep-mac { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.mprep-mac span { display: inline-flex; align-items: center; gap: 6px; }
+.mprep-mac i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.mprep-card .mfood { font-size: 14px; padding: 7px 0; }
+.mprep-card .madd { margin-top: 0; }
 .madd.solid { border-style: solid; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .mfood { display: flex; gap: 8px; align-items: baseline; width: 100%; border: 0; background: none; padding: 5px 0; text-align: left; font-size: 13px; color: var(--ink); border-bottom: 1px dashed var(--line); }
 .mfood:last-child { border-bottom: 0; }
@@ -1582,10 +1596,11 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (S.me
 const MDEFAULT = {
   targets: { kcal: 2400, protein: 180, carbs: 250, fat: 75 },
   slots: [
-    { id: "breakfast", name: "Breakfast", time: "07:30" },
-    { id: "lunch", name: "Lunch", time: "12:30" },
-    { id: "snack", name: "Snack", time: "15:30" },
-    { id: "dinner", name: "Dinner", time: "18:30" },
+    { id: "meal1", name: "Meal 1", time: "07:00" },
+    { id: "meal2", name: "Meal 2", time: "10:00" },
+    { id: "meal3", name: "Meal 3", time: "13:00" },
+    { id: "meal4", name: "Meal 4", time: "16:00" },
+    { id: "meal5", name: "Meal 5", time: "19:00" },
   ],
 };
 S.module = "supplements"; S.mtab = "mtoday";
@@ -1606,7 +1621,7 @@ function minitDb(db, id) {
   mstore.foods.onSnapshot((snap) => { S.meals.foods = snap.docs.map((d) => ({ ...d.data(), id: d.id })); msoft(); }, () => {});
   mstore.settings.onSnapshot((snap) => { if (snap.exists) { S.meals.settings = { ...S.meals.settings, ...snap.data() }; msoft(); } }, () => {});
 }
-function msoft() { if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm) { renderChrome(); return; } render(); }
+function msoft() { if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm || S.mrename) { renderChrome(); return; } render(); }
 async function msaveDay(date) {
   const d = S.meals.days[date] || { date, entries: [] };
   if (store.kind === "db" && mstore.days) return queued("md/" + date, () => mstore.days.doc(date).set({ date, entries: JSON.parse(JSON.stringify(d.entries)) }));
@@ -1650,6 +1665,16 @@ function macroBar(label, val, target, cls) {
   const over = target && val > target * 1.05;
   return `<div class="mm"><div class="row between"><span class="small muted">${label}</span><span class="small num"><b>${gr(val)}</b><span class="muted"> / ${gr(target)}</span></span></div><div class="mbar ${cls} ${over ? "over" : ""}"><i style="width:${pct}%"></i></div></div>`;
 }
+const PENCIL = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
+function mprepHead(sl, i, st, sub) {
+  const editing = S.mrename === sl.id && sl.id !== "other";
+  const name = editing ? `<div class="row" style="gap:6px"><input class="in" id="mren-in" value="${esc(sl.name)}" maxlength="40" aria-label="Meal name" style="padding:6px 10px;font-size:16px"><button type="button" class="btn sm primary" data-act="mrensave">Save</button><button type="button" class="btn sm" data-act="mrencancel">Cancel</button></div>`
+    : `<div class="row" style="gap:6px"><h3 class="mprep-name">${esc(sl.name)}</h3>${sl.id !== "other" ? `<button type="button" class="mprep-edit" data-act="mrename" data-meal="${esc(sl.id)}" aria-label="Rename ${esc(sl.name)}">${PENCIL}</button>` : ""}</div>`;
+  return `<div class="mprep-head"><span class="mprep-n num">${sl.id === "other" ? "+" : i + 1}</span><div class="grow" style="min-width:0">${name}<span class="ov-ttime">${sl.time ? fmtTime(sl.time) : ""}${sub ? " · " + sub : ""}</span></div>
+    ${editing ? "" : `<div class="mprep-kcal"><b class="num">${kc(st.kcal)}</b><span class="small muted">kcal</span></div>`}</div>
+    <div class="mprep-mac num"><span><i style="background:var(--mp)"></i>P ${Math.round(st.protein)}g</span><span><i style="background:var(--mc)"></i>C ${Math.round(st.carbs)}g</span><span><i style="background:var(--mf)"></i>F ${Math.round(st.fat)}g</span></div>`;
+}
+const mfoodRow = (e, act, extra = "") => `<button class="mfood" data-act="${act}" ${extra} data-id="${e.id}"><span class="grow">${esc(e.name)}${num(e.qty, 1) !== 1 ? ` <span class="muted">×${fmtN(num(e.qty, 1), 2)}</span>` : ""}${e.serving ? `<br><span class="small muted">${esc(e.serving)}</span>` : ""}</span><span class="num muted">${kc(num(e.kcal) * (num(e.qty, 1) || 1))} kcal</span></button>`;
 function mealToday() {
   const date = S.date, isToday = date === today(), d = parseD(date);
   const T = mtargets(), all = mentries(date), tot = msum(all);
@@ -1672,18 +1697,18 @@ function mealToday() {
   const logged = new Set(all.map((e) => e.meal));
   const todoPlan = slots.filter((sl) => !logged.has(sl.id) && mplanItems(sl.id).length);
   if (todoPlan.length > 1) html += `<div class="row between card" style="gap:10px;padding:10px 14px"><span class="small muted grow">Eating to plan ${isToday ? "today" : "this day"}?</span><button class="btn sm primary" data-act="matedayplan">Log ${todoPlan.length === slots.length ? "whole day" : "rest of day"} as planned</button></div>`;
-  html += `<div class="ov-grid">`;
-  const tile = (sl, list) => {
-    const st = msum(list);
-    return `<div class="ov-tile ${sl.id === nx && !list.length ? "is-next" : ""}"><div class="row between"><span class="ov-tlabel">${esc(sl.name)}</span><span class="ov-state ${list.length ? "done" : ""}">${list.length ? kc(st.kcal) + " kcal" : sl.id === nx ? "NOW" : "–"}</span></div>
-      <span class="ov-ttime">${sl.time ? fmtTime(sl.time) : ""}${list.length ? `<br>P ${Math.round(st.protein)} · C ${Math.round(st.carbs)} · F ${Math.round(st.fat)}` : ""}</span>
-      <div class="ov-items">${list.map((e) => `<button class="mfood" data-act="medit" data-id="${e.id}"><span class="grow">${esc(e.name)}${num(e.qty, 1) !== 1 ? ` <span class="muted">×${fmtN(num(e.qty, 1), 2)}</span>` : ""}</span><span class="num muted">${kc(num(e.kcal) * (num(e.qty, 1) || 1))}</span></button>`).join("")}</div>
-      ${!list.length && mplanItems(sl.id).length ? `<div class="mplanned">${mplanItems(sl.id).map((e) => `<span>${esc(e.name)}</span>`).join("")}<span class="num">Plan · ${kc(msum(mplanItems(sl.id)).kcal)} kcal</span></div><button class="madd solid" data-act="mateplan" data-meal="${esc(sl.id)}">Ate as planned</button>` : ""}
-      <button class="madd" data-act="madd" data-meal="${esc(sl.id)}">+ Add food</button></div>`;
+  html += `<div class="mprep">`;
+  const tile = (sl, list, i) => {
+    const st = msum(list), planned = mplanItems(sl.id), isNext = sl.id === nx && !list.length;
+    const body = list.length ? `<div class="ov-items">${list.map((e) => mfoodRow(e, "medit")).join("")}</div>`
+      : planned.length ? `<div class="mplanned">${planned.map((e) => `<span>${esc(e.name)}${e.serving ? " · " + esc(e.serving) : ""}</span>`).join("")}<span class="num">Plan · ${kc(msum(planned).kcal)} kcal</span></div>` : `<div class="small muted">Nothing logged yet.</div>`;
+    return `<section class="mprep-card ${isNext ? "is-next" : ""}">${mprepHead(sl, i, st, isNext ? "Up next" : list.length ? "Done" : "")}${body}
+      <div class="row" style="gap:8px;flex-wrap:wrap">${!list.length && planned.length ? `<button class="madd solid" data-act="mateplan" data-meal="${esc(sl.id)}">Ate as planned</button>` : ""}<button class="madd" data-act="madd" data-meal="${esc(sl.id)}">+ Add food</button></div></section>`;
   };
-  for (const sl of slots) html += tile(sl, all.filter((e) => e.meal === sl.id));
+  slots.forEach((sl, i) => { html += tile(sl, all.filter((e) => e.meal === sl.id), i); });
   const other = all.filter((e) => !known.has(e.meal));
-  if (other.length) html += tile({ id: "other", name: "Other", time: "" }, other);
+  if (other.length) html += tile({ id: "other", name: "Other", time: "" }, other, slots.length);
+  html += `<button class="btn ghost" data-act="maddmeal" style="align-self:flex-start">+ Add another meal</button>`;
   html += `</div>`;
   if (!S.meals.foods.length && !Object.keys(S.meals.days).length) html += `<div class="card row between wrapflex" style="gap:10px"><div class="grow small muted" style="min-width:180px">New here? Load a sample day to see how it works. You can clear it from Foods.</div><button class="btn sm" data-act="mexample">Try a sample day</button></div>`;
   html += `<p class="hint">Targets are a starting point. Change them on the Targets tab.</p>`;
@@ -1756,14 +1781,15 @@ function mealPlan() {
   html += `<div class="card"><div class="row between"><span class="eyebrow">Plan totals vs targets</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
     <div class="mm"><div class="row between"><span class="small muted">Calories</span><span class="small num"><b>${kc(tot.kcal)}</b><span class="muted"> / ${kc(T.kcal)} kcal</span></span></div><div class="mbar ${tot.kcal > T.kcal * 1.05 ? "over" : ""}"><i style="width:${Math.min(100, T.kcal ? (tot.kcal / T.kcal) * 100 : 0)}%"></i></div></div>
     ${macroBar("Protein", tot.protein, T.protein, "p")}${macroBar("Carbs", tot.carbs, T.carbs, "c")}${macroBar("Fat", tot.fat, T.fat, "f")}</div></div>`;
-  for (const sl of slots) {
+  html += `<div class="mprep">`;
+  slots.forEach((sl, i) => {
     const items = plan[sl.id] || [], st = msum(items);
-    html += `<section class="card"><div class="row between"><div><span class="ov-tlabel">${esc(sl.name)}</span> <span class="ov-ttime">${fmtTime(sl.time)}</span></div><span class="num small"><b>${kc(st.kcal)}</b> kcal</span></div>
-      <div class="small muted num" style="margin:2px 0 8px">P ${Math.round(st.protein)} g · C ${Math.round(st.carbs)} g · F ${Math.round(st.fat)} g</div>
-      <div class="ov-items">${items.map((e) => `<button class="mfood" data-act="mpedit" data-meal="${esc(sl.id)}" data-id="${e.id}"><span class="grow">${esc(e.name)}${num(e.qty, 1) !== 1 ? ` <span class="muted">×${fmtN(num(e.qty, 1), 2)}</span>` : ""}${e.serving ? `<br><span class="small muted">${esc(e.serving)}</span>` : ""}</span><span class="num muted">${kc(num(e.kcal) * (num(e.qty, 1) || 1))}</span></button>`).join("") || '<div class="small muted">Nothing planned yet.</div>'}</div>
-      <button class="madd" style="margin-top:8px" data-act="madd" data-meal="${esc(sl.id)}" data-plan="1">+ Add to ${esc(sl.name.toLowerCase())}</button></section>`;
-  }
-  html += `<p class="hint">Change meal names and times on the Targets tab.</p>`;
+    html += `<section class="mprep-card">${mprepHead(sl, i, st)}
+      <div class="ov-items">${items.map((e) => mfoodRow(e, "mpedit", `data-meal="${esc(sl.id)}"`)).join("") || '<div class="small muted">Nothing planned yet.</div>'}</div>
+      <button class="madd" data-act="madd" data-meal="${esc(sl.id)}" data-plan="1">+ Add to ${esc(sl.name)}</button></section>`;
+  });
+  html += `<button class="btn ghost" data-act="maddmeal" style="align-self:flex-start">+ Add another meal</button></div>`;
+  html += `<p class="hint">Tap the pencil to rename a meal. Change meal times on the Targets tab.</p>`;
   return html;
 }
 function mopenEdit(id) {
@@ -1862,7 +1888,7 @@ async function mexample() {
   ].map((f) => ({ ...f, id: "ex_" + uid(), example: true, usedAt: new Date().toISOString() }));
   for (const f of foods) await msaveFood(f);
   const date = today(), day = S.meals.days[date] || (S.meals.days[date] = { date, entries: [] });
-  [["breakfast", 0], ["lunch", 1], ["snack", 2]].forEach(([meal, i]) => { const f = foods[i]; day.entries.push({ id: uid(), meal, name: f.name, serving: f.serving, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, qty: 1, example: true }); });
+  [["meal1", 0], ["meal3", 1], ["meal4", 2]].forEach(([meal, i]) => { const f = foods[i]; day.entries.push({ id: uid(), meal, name: f.name, serving: f.serving, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, qty: 1, example: true }); });
   await msaveDay(date); render(); toast("Sample day loaded");
 }
 async function mclearExamples() {
@@ -1890,7 +1916,11 @@ async function mealClick(a, b) {
     case "mexample": mexample(); return true;
     case "mclearex": mclearExamples(); return true;
     case "mgoday": S.date = b.dataset.date; S.mtab = "mtoday"; render(); window.scrollTo(0, 0); return true;
-    case "maddslot": S.mtargetsForm.slots.push({ id: "m" + uid().slice(0, 6), name: "Meal", time: "20:00" }); render(); return true;
+    case "maddslot": S.mtargetsForm.slots.push({ id: "m" + uid().slice(0, 6), name: `Meal ${S.mtargetsForm.slots.length + 1}`, time: "20:00" }); render(); return true;
+    case "mrename": S.mrename = b.dataset.meal; render(); setTimeout(() => { const i = $("#mren-in"); i?.focus(); i?.select(); }, 0); return true;
+    case "mrencancel": S.mrename = null; render(); return true;
+    case "mrensave": { const v = ($("#mren-in")?.value || "").trim().slice(0, 40); const id = S.mrename; S.mrename = null; if (v) { const slots = mslots().map((x) => (x.id === id ? { ...x, name: v } : x)); S.meals.settings = { ...S.meals.settings, slots }; render(); toast(`Renamed to ${v}`); await msaveSettings(); } else render(); return true; }
+    case "maddmeal": { const sl = mslots(), last = sl[sl.length - 1]; const [h, m] = (last?.time || "17:00").split(":").map(Number); const t = `${pad(Math.min(23, h + 3))}:${pad(m)}`; S.meals.settings = { ...S.meals.settings, slots: [...sl, { id: "m" + uid().slice(0, 6), name: `Meal ${sl.length + 1}`, time: t }] }; render(); toast(`Added Meal ${sl.length + 1}`); await msaveSettings(); return true; }
     case "mrmslot": S.mtargetsForm.slots.splice(Number(b.dataset.i), 1); render(); return true;
   }
   return false;
