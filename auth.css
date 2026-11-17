@@ -10,6 +10,7 @@ html.au-locked, html.au-locked body { overflow: hidden; }
 .au-brand p { margin: 0; color: var(--muted); font-size: 14px; max-width: 30ch; }
 .au-logo { width: 52px; height: 52px; border-radius: 16px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
 .au-logo svg { width: 26px; height: 26px; }
+.au-logoimg { width: 72px; height: 72px; border-radius: 20px; box-shadow: 0 8px 28px rgb(0 0 0 / .35); }
 .au-h { font-size: 19px; }
 .au-p { margin: 0; }
 .au-dim { color: var(--muted); font-size: 13px; }

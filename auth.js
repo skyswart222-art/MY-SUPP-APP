@@ -85,7 +85,7 @@ const ICON = {
 /* ---------- Screens ---------- */
 const root = document.createElement("div"); root.id = "auth"; root.className = "au-root"; document.body.appendChild(root);
 const pop = document.createElement("div"); pop.id = "authpop"; document.body.appendChild(pop);
-const brandHtml = (sub) => `<div class="au-brand"><div class="au-logo" aria-hidden="true">${ICON.user}</div><h1>Planner</h1>${sub ? `<p>${sub}</p>` : ""}</div>`;
+const brandHtml = (sub) => `<div class="au-brand"><img class="au-logoimg" src="icon-192.png" alt="" aria-hidden="true"><h1>Elevate</h1>${sub ? `<p>${sub}</p>` : ""}</div>`;
 function showRoot(html) { root.hidden = false; root.innerHTML = `<div class="au-wrap"><div class="au-card">${html}</div></div>`; document.documentElement.classList.add("au-locked"); }
 function hideRoot() { root.hidden = true; root.innerHTML = ""; document.documentElement.classList.remove("au-locked"); }
 
