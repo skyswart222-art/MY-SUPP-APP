@@ -15,7 +15,7 @@ const sb = !configured || !window.supabase ? null : window.supabase.createClient
 });
 const APP_KEY = "mysupp";
 // Match the planner's theme (dark unless they picked light) before anything shows.
-try { const th = localStorage.getItem("planner.theme"); document.documentElement.setAttribute("data-theme", th === "light" ? "light" : "dark"); const ac = localStorage.getItem("planner.accent"); if (/^(ember|magenta|electric|volt)$/.test(ac || "")) document.documentElement.setAttribute("data-accent", ac); } catch {}
+try { const th = localStorage.getItem("planner.theme"); document.documentElement.setAttribute("data-theme", th === "light" ? "light" : "dark"); let ac = localStorage.getItem("planner.accent"); if (ac === "magenta") ac = "violet"; if (/^(ember|violet|electric|volt)$/.test(ac || "")) document.documentElement.setAttribute("data-accent", ac); } catch {}
 
 /* ---------- Auth functions ---------- */
 let user = null;
@@ -560,7 +560,7 @@ async function startSignedIn() {
       profile = p;
       const { data: st } = await sb.from("user_settings").select("data").eq("user_id", u.id).maybeSingle();
       const th = st?.data?.theme; if (th === "light" || th === "dark") { try { localStorage.setItem("planner.theme", th); } catch {} }
-      const ac = st?.data?.accent; if (/^(ember|magenta|electric|volt)$/.test(ac || "")) { try { localStorage.setItem("planner.accent", ac); } catch {} }
+      let ac = st?.data?.accent; if (ac === "magenta") ac = "violet"; if (/^(ember|violet|electric|volt)$/.test(ac || "")) { try { localStorage.setItem("planner.accent", ac); } catch {} }
       await fetchAll();
     } catch (e) {
       // Offline with a copy on this phone: open from that copy and save later.

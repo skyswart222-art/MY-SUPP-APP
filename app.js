@@ -84,12 +84,12 @@ S.theme = "dark";
 try { const th = localStorage.getItem("planner.theme"); if (th === "light" || th === "dark") S.theme = th; } catch {}
 const ACCENTS = [
   { id: "ember", name: "Ember", d: "#ff6a2b", l: "#f2540f" },
-  { id: "magenta", name: "Hot magenta", d: "#ff2e88", l: "#e3106c" },
+  { id: "violet", name: "Neon violet", d: "#a66bff", l: "#7b3fe4" },
   { id: "electric", name: "Electric blue", d: "#3d95ff", l: "#1668e3" },
   { id: "volt", name: "Volt", d: "#c6f432", l: "#4f9a00" },
 ];
 S.accent = "ember";
-try { const ac = localStorage.getItem("planner.accent"); if (ACCENTS.some((x) => x.id === ac)) S.accent = ac; } catch {}
+try { let ac = localStorage.getItem("planner.accent"); if (ac === "magenta") ac = "violet"; if (ACCENTS.some((x) => x.id === ac)) S.accent = ac; } catch {}
 function applyTheme() { const r = document.documentElement; r.setAttribute("data-theme", S.theme); r.setAttribute("data-accent", S.accent); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = S.theme === "dark" ? "#1c1c1e" : "#efeeeb"; }
 function renderSettings() {
   const el = $("#setsheet"); if (!el) return;
@@ -100,7 +100,7 @@ function renderSettings() {
     <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Appearance</span>
       <div class="seg2">${[["dark", "Dark"], ["light", "Light"]].map(([v, n]) => `<button type="button" data-act="settheme" data-v="${v}" aria-pressed="${S.theme === v}">${n}</button>`).join("")}</div></div>
     <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Colour</span>
-      <div class="setgrid">${ACCENTS.map((x) => `<button type="button" class="swatch" data-act="setaccent" data-v="${x.id}" aria-pressed="${S.accent === x.id}"><i style="background:${S.theme === "dark" ? x.d : x.l}"></i>${x.name}</button>`).join("")}</div>
+      <div class="setgrid">${ACCENTS.map((x) => `<button type="button" class="swatch" data-act="setaccent" data-v="${x.id}" aria-pressed="${S.accent === x.id}"><i style="background:${S.theme === "dark" ? x.d : x.l};color:${S.theme === "dark" ? x.d : x.l}"></i>${x.name}</button>`).join("")}</div>
       <p class="small muted" style="margin:0">Used for buttons, progress rings and the selected tab.</p></div>
   </div></div>`;
 }

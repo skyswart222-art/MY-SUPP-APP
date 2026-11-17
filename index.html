@@ -40,8 +40,11 @@
   --accent: #ff6a2b; --accent-ink: #1a0800; --accent-soft: rgba(255,106,43,.18);
 }
 /* Bright colour picked in Settings (Ember is the default) */
-:root[data-accent="magenta"] { --accent: #e3106c; --accent-ink: #ffffff; --accent-soft: rgba(227,16,108,.12); }
-:root[data-theme="dark"][data-accent="magenta"] { --accent: #ff2e88; --accent-ink: #ffffff; --accent-soft: rgba(255,46,136,.18); }
+:root[data-accent="violet"] { --accent: #7b3fe4; --accent-ink: #ffffff; --accent-soft: rgba(123,63,228,.13); }
+:root[data-theme="dark"][data-accent="violet"] { --accent: #a66bff; --accent-ink: #ffffff; --accent-soft: rgba(166,107,255,.18); }
+/* Neon glow around the bright colour, like light bleeding off a screen */
+:root { --glow: color-mix(in srgb, var(--accent) 50%, transparent); --glow2: color-mix(in srgb, var(--accent) 22%, transparent); }
+:root[data-theme="dark"] { --glow: color-mix(in srgb, var(--accent) 80%, transparent); --glow2: color-mix(in srgb, var(--accent) 42%, transparent); }
 :root[data-accent="electric"] { --accent: #1668e3; --accent-ink: #ffffff; --accent-soft: rgba(22,104,227,.12); }
 :root[data-theme="dark"][data-accent="electric"] { --accent: #3d95ff; --accent-ink: #ffffff; --accent-soft: rgba(61,149,255,.18); }
 :root[data-accent="volt"] { --accent: #4f9a00; --accent-ink: #ffffff; --accent-soft: rgba(79,154,0,.13); }
@@ -93,6 +96,11 @@ nav.tabs .row { max-width: 640px; margin: 0 auto; display: grid; grid-template-c
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
 :root[data-theme="light"] .card { box-shadow: 0 6px 20px rgba(60,50,30,.06); }
+.btn.primary, .mod[aria-current="true"] { box-shadow: 0 0 0 1px var(--glow), 0 0 14px var(--glow), 0 0 38px var(--glow2), inset 0 1px 0 rgb(255 255 255 / .25); }
+.tab[aria-current="page"] svg { filter: drop-shadow(0 0 7px var(--glow)); }
+.tab[aria-current="page"] span { text-shadow: 0 0 12px var(--glow); }
+circle[stroke="var(--accent)"][stroke-width="14"] { filter: drop-shadow(0 0 10px var(--glow)); }
+.swatch i { box-shadow: 0 0 12px currentColor; }
 /* Settings sheet */
 .setgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .swatch { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); font-weight: 600; text-align: left; }
