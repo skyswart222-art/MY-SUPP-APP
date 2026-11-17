@@ -1030,10 +1030,6 @@ const MDEFAULT = {
   targets: { kcal: 2400, protein: 180, carbs: 250, fat: 75 },
   slots: [
     { id: "meal1", name: "Meal 1", time: "07:00" },
-    { id: "meal2", name: "Meal 2", time: "10:00" },
-    { id: "meal3", name: "Meal 3", time: "13:00" },
-    { id: "meal4", name: "Meal 4", time: "16:00" },
-    { id: "meal5", name: "Meal 5", time: "19:00" },
   ],
 };
 S.module = "supplements"; S.mtab = "mtoday";
@@ -1054,7 +1050,7 @@ function minitDb(db, id) {
   mstore.foods.onSnapshot((snap) => { S.meals.foods = snap.docs.map((d) => ({ ...d.data(), id: d.id })); msoft(); }, () => {});
   mstore.settings.onSnapshot((snap) => { if (snap.exists) { S.meals.settings = { ...S.meals.settings, ...snap.data() }; msoft(); } }, () => {});
 }
-function msoft() { if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm || S.mrename) { renderChrome(); return; } render(); }
+function msoft() { if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm || S.mrename || S.msave) { renderChrome(); return; } render(); }
 async function msaveDay(date) {
   const d = S.meals.days[date] || { date, entries: [] };
   if (store.kind === "db" && mstore.days) return queued("md/" + date, () => mstore.days.doc(date).set({ date, entries: JSON.parse(JSON.stringify(d.entries)) }));
@@ -1083,7 +1079,7 @@ function msum(list) {
 }
 const kc = (n) => fmtN(Math.round(n), 0);
 const gr = (n) => fmtN(Math.round(n), 0) + " g";
-function nextSlot() { const nowT = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`; const sl = mslots(); let pick = sl[0]; for (const s of sl) if (s.time <= nowT) pick = s; return pick?.id; }
+function nextSlot() { const nowT = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`; const sl = mslots(); let pick = sl[0]; for (const s of sl) if (s.time <= nowT) pick = s; return pick?.id || "other"; }
 
 /* ---------- Meals views ---------- */
 function mealView() {
@@ -1099,13 +1095,36 @@ function macroBar(label, val, target, cls) {
   return `<div class="mm"><div class="row between"><span class="small muted">${label}</span><span class="small num"><b>${gr(val)}</b><span class="muted"> / ${gr(target)}</span></span></div><div class="mbar ${cls} ${over ? "over" : ""}"><i style="width:${pct}%"></i></div></div>`;
 }
 const PENCIL = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
+const TRASH = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
 function mprepHead(sl, i, st, sub) {
-  const editing = S.mrename === sl.id && sl.id !== "other";
-  const name = editing ? `<div class="row" style="gap:6px"><input class="in" id="mren-in" value="${esc(sl.name)}" maxlength="40" aria-label="Meal name" style="padding:6px 10px;font-size:16px"><button type="button" class="btn sm primary" data-act="mrensave">Save</button><button type="button" class="btn sm" data-act="mrencancel">Cancel</button></div>`
-    : `<div class="row" style="gap:6px"><h3 class="mprep-name">${esc(sl.name)}</h3>${sl.id !== "other" ? `<button type="button" class="mprep-edit" data-act="mrename" data-meal="${esc(sl.id)}" aria-label="Rename ${esc(sl.name)}">${PENCIL}</button>` : ""}</div>`;
-  return `<div class="mprep-head"><span class="mprep-n num">${sl.id === "other" ? "+" : i + 1}</span><div class="grow" style="min-width:0">${name}<span class="ov-ttime">${sl.time ? fmtTime(sl.time) : ""}${sub ? " · " + sub : ""}</span></div>
-    ${editing ? "" : `<div class="mprep-kcal"><b class="num">${kc(st.kcal)}</b><span class="small muted">kcal</span></div>`}</div>
-    <div class="mprep-mac num"><span><i style="background:var(--mp)"></i>P ${Math.round(st.protein)}g</span><span><i style="background:var(--mc)"></i>C ${Math.round(st.carbs)}g</span><span><i style="background:var(--mf)"></i>F ${Math.round(st.fat)}g</span></div>`;
+  const real = sl.id !== "other";
+  if (real && S.mrename === sl.id) return `<div class="mprep-head"><span class="mprep-n num">${i + 1}</span><div class="grow mren">
+      <label class="fl"><span>Meal name</span><input class="in" id="mren-in" value="${esc(sl.name)}" maxlength="40"></label>
+      <label class="fl"><span>Time</span><input class="in num" id="mren-t" type="time" value="${esc(sl.time || "12:00")}"></label>
+      <div class="row" style="gap:8px"><button type="button" class="btn sm primary" data-act="mrensave">Save</button><button type="button" class="btn sm" data-act="mrencancel">Cancel</button></div></div></div>`;
+  const confirm = real && S.mdel === sl.id ? `<div class="inline-confirm"><span style="flex-basis:100%">Delete ${esc(sl.name)}? Food you've already logged stays in your history.</span><button class="btn sm danger" data-act="mdelslot" data-meal="${esc(sl.id)}">Delete meal</button><button class="btn sm" data-act="mdelcancel">Cancel</button></div>` : "";
+  return `<div class="mprep-head"><span class="mprep-n num">${real ? i + 1 : "+"}</span><div class="grow" style="min-width:0"><h3 class="mprep-name">${esc(sl.name)}</h3>
+    <span class="ov-ttime">${sl.time ? fmtTime(sl.time) : ""}${sub ? " · " + sub : ""}</span></div>
+    <div class="mprep-kcal"><b class="num">${kc(st.kcal)}</b><span class="small muted">kcal</span></div>
+    ${real ? `<div class="mprep-tools"><button type="button" class="mprep-edit" data-act="mrename" data-meal="${esc(sl.id)}" aria-label="Edit ${esc(sl.name)}">${PENCIL}</button><button type="button" class="mprep-edit" data-act="mdelask" data-meal="${esc(sl.id)}" aria-label="Delete ${esc(sl.name)}">${TRASH}</button></div>` : ""}</div>
+    <div class="mprep-mac num"><span><i style="background:var(--mp)"></i>P ${Math.round(st.protein)}g</span><span><i style="background:var(--mc)"></i>C ${Math.round(st.carbs)}g</span><span><i style="background:var(--mf)"></i>F ${Math.round(st.fat)}g</span></div>${confirm}`;
+}
+/* Saved days and saved meals (kept in meal settings so they sync with the account) */
+const mDayT = () => S.meals.settings.dayTemplates || [];
+const mMealT = () => S.meals.settings.mealTemplates || [];
+const mstrip = (e) => ({ name: e.name, serving: e.serving || "", kcal: num(e.kcal), protein: num(e.protein), carbs: num(e.carbs), fat: num(e.fat), qty: num(e.qty, 1) || 1 });
+function msaveForm(kind, meal) {
+  const ph = kind === "day" ? "e.g. Training day, Rest day" : "e.g. Oats and berries";
+  return `<div class="msave"><label class="fl"><span>${kind === "day" ? "Name this day" : "Name this meal"}</span><input class="in" id="msave-in" maxlength="40" placeholder="${ph}"></label>
+    <div class="row" style="gap:8px"><button type="button" class="btn sm primary" data-act="msavego" data-kind="${kind}" ${meal ? `data-meal="${esc(meal)}"` : ""}>Save</button><button type="button" class="btn sm" data-act="msavecancel">Cancel</button></div></div>`;
+}
+function mloadList(kind, meal) {
+  const list = kind === "day" ? mDayT() : mMealT();
+  if (!list.length) return `<div class="msave small muted">Nothing saved yet.</div>`;
+  return `<div class="msave mtlist">${list.map((t) => { const foods = kind === "day" ? t.meals.flatMap((m) => m.foods) : t.foods; const tt = msum(foods);
+    return `<div class="mtrow"><div class="grow" style="min-width:0"><b>${esc(t.name)}</b><br><span class="small muted num">${kind === "day" ? plural(t.meals.length, "meal") + " · " : ""}${kc(tt.kcal)} kcal · P ${Math.round(tt.protein)} · C ${Math.round(tt.carbs)} · F ${Math.round(tt.fat)}</span></div>
+      <button type="button" class="btn sm primary" data-act="mloadgo" data-kind="${kind}" data-id="${t.id}" ${meal ? `data-meal="${esc(meal)}"` : ""}>Load</button><button type="button" class="iconbtn" data-act="mtdel" data-kind="${kind}" data-id="${t.id}" aria-label="Delete ${esc(t.name)}">${I.x}</button></div>`; }).join("")}
+    <button type="button" class="btn sm" data-act="mloadcancel" style="align-self:flex-start">Close</button></div>`;
 }
 const mfoodRow = (e, act, extra = "") => `<button class="mfood" data-act="${act}" ${extra} data-id="${e.id}"><span class="grow">${esc(e.name)}${num(e.qty, 1) !== 1 ? ` <span class="muted">×${fmtN(num(e.qty, 1), 2)}</span>` : ""}${e.serving ? `<br><span class="small muted">${esc(e.serving)}</span>` : ""}</span><span class="num muted">${kc(num(e.kcal) * (num(e.qty, 1) || 1))} kcal</span></button>`;
 function mealToday() {
@@ -1131,12 +1150,15 @@ function mealToday() {
   const todoPlan = slots.filter((sl) => !logged.has(sl.id) && mplanItems(sl.id).length);
   if (todoPlan.length > 1) html += `<div class="row between card" style="gap:10px;padding:10px 14px"><span class="small muted grow">Eating to plan ${isToday ? "today" : "this day"}?</span><button class="btn sm primary" data-act="matedayplan">Log ${todoPlan.length === slots.length ? "whole day" : "rest of day"} as planned</button></div>`;
   html += `<div class="mprep">`;
+  const dayOpen = S.msave?.kind === "day" ? msaveForm("day") : S.mload?.kind === "day" ? mloadList("day") : "";
+  html += `<div class="card mdaybar"><div class="row between" style="gap:8px;flex-wrap:wrap"><span class="eyebrow">Saved days</span><div class="row" style="gap:8px">${all.length ? `<button class="btn sm" data-act="msaveopen" data-kind="day">Save this day</button>` : ""}<button class="btn sm" data-act="mloadopen" data-kind="day" ${mDayT().length ? "" : "disabled"}>Load a day${mDayT().length ? ` (${mDayT().length})` : ""}</button></div></div>${dayOpen}</div>`;
   const tile = (sl, list, i) => {
     const st = msum(list), planned = mplanItems(sl.id), isNext = sl.id === nx && !list.length;
     const body = list.length ? `<div class="ov-items">${list.map((e) => mfoodRow(e, "medit")).join("")}</div>`
       : planned.length ? `<div class="mplanned">${planned.map((e) => `<span>${esc(e.name)}${e.serving ? " · " + esc(e.serving) : ""}</span>`).join("")}<span class="num">Plan · ${kc(msum(planned).kcal)} kcal</span></div>` : `<div class="small muted">Nothing logged yet.</div>`;
     return `<section class="mprep-card ${isNext ? "is-next" : ""}">${mprepHead(sl, i, st, isNext ? "Up next" : list.length ? "Done" : "")}${body}
-      <div class="row" style="gap:8px;flex-wrap:wrap">${!list.length && planned.length ? `<button class="madd solid" data-act="mateplan" data-meal="${esc(sl.id)}">Ate as planned</button>` : ""}<button class="madd" data-act="madd" data-meal="${esc(sl.id)}">+ Add food</button></div></section>`;
+      <div class="row" style="gap:8px;flex-wrap:wrap">${!list.length && planned.length ? `<button class="madd solid" data-act="mateplan" data-meal="${esc(sl.id)}">Ate as planned</button>` : ""}<button class="madd" data-act="madd" data-meal="${esc(sl.id)}">+ Add food</button>${sl.id !== "other" && mMealT().length ? `<button class="madd" data-act="mloadopen" data-kind="meal" data-meal="${esc(sl.id)}">Load saved meal</button>` : ""}${list.length ? `<button class="madd" data-act="msaveopen" data-kind="meal" data-meal="${esc(sl.id)}">Save meal</button>` : ""}</div>
+      ${S.msave?.kind === "meal" && S.msave.meal === sl.id ? msaveForm("meal", sl.id) : S.mload?.kind === "meal" && S.mload.meal === sl.id ? mloadList("meal", sl.id) : ""}</section>`;
   };
   slots.forEach((sl, i) => { html += tile(sl, all.filter((e) => e.meal === sl.id), i); });
   const other = all.filter((e) => !known.has(e.meal));
@@ -1222,7 +1244,7 @@ function mealPlan() {
       <button class="madd" data-act="madd" data-meal="${esc(sl.id)}" data-plan="1">+ Add to ${esc(sl.name)}</button></section>`;
   });
   html += `<button class="btn ghost" data-act="maddmeal" style="align-self:flex-start">+ Add another meal</button></div>`;
-  html += `<p class="hint">Tap the pencil to rename a meal. Change meal times on the Targets tab.</p>`;
+  html += `<p class="hint">Use the pencil to rename a meal or change its time, and the bin to delete it.</p>`;
   return html;
 }
 function mopenEdit(id) {
@@ -1321,7 +1343,8 @@ async function mexample() {
   ].map((f) => ({ ...f, id: "ex_" + uid(), example: true, usedAt: new Date().toISOString() }));
   for (const f of foods) await msaveFood(f);
   const date = today(), day = S.meals.days[date] || (S.meals.days[date] = { date, entries: [] });
-  [["meal1", 0], ["meal3", 1], ["meal4", 2]].forEach(([meal, i]) => { const f = foods[i]; day.entries.push({ id: uid(), meal, name: f.name, serving: f.serving, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, qty: 1, example: true }); });
+  if (mslots().length < 3) { const base = mslots(); const add = [{ id: "meal2", name: "Meal 2", time: "12:30" }, { id: "meal3", name: "Meal 3", time: "15:30" }].filter((x) => !base.some((b) => b.id === x.id)); S.meals.settings = { ...S.meals.settings, slots: [...base, ...add].slice(0, Math.max(3, base.length)) }; await msaveSettings(); }
+  [[mslots()[0].id, 0], [mslots()[1].id, 1], [mslots()[2].id, 2]].forEach(([meal, i]) => { const f = foods[i]; day.entries.push({ id: uid(), meal, name: f.name, serving: f.serving, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, qty: 1, example: true }); });
   await msaveDay(date); render(); toast("Sample day loaded");
 }
 async function mclearExamples() {
@@ -1350,9 +1373,48 @@ async function mealClick(a, b) {
     case "mclearex": mclearExamples(); return true;
     case "mgoday": S.date = b.dataset.date; S.mtab = "mtoday"; render(); window.scrollTo(0, 0); return true;
     case "maddslot": S.mtargetsForm.slots.push({ id: "m" + uid().slice(0, 6), name: `Meal ${S.mtargetsForm.slots.length + 1}`, time: "20:00" }); render(); return true;
-    case "mrename": S.mrename = b.dataset.meal; render(); setTimeout(() => { const i = $("#mren-in"); i?.focus(); i?.select(); }, 0); return true;
+    case "mrename": S.mrename = b.dataset.meal; S.mdel = null; render(); setTimeout(() => { const i = $("#mren-in"); i?.focus(); i?.select(); }, 0); return true;
+    case "mdelask": S.mdel = b.dataset.meal; S.mrename = null; render(); return true;
+    case "mdelcancel": S.mdel = null; render(); return true;
+    case "mdelslot": { const sl = mslots().find((x) => x.id === b.dataset.meal); S.mdel = null; S.meals.settings = { ...S.meals.settings, slots: mslots().filter((x) => x.id !== b.dataset.meal) }; render(); toast(`Deleted ${sl?.name || "meal"}`); await msaveSettings(); return true; }
+    case "msaveopen": S.msave = { kind: b.dataset.kind, meal: b.dataset.meal || null }; S.mload = null; render(); setTimeout(() => $("#msave-in")?.focus(), 0); return true;
+    case "msavecancel": S.msave = null; render(); return true;
+    case "mloadopen": S.mload = { kind: b.dataset.kind, meal: b.dataset.meal || null }; S.msave = null; render(); return true;
+    case "mloadcancel": S.mload = null; render(); return true;
+    case "msavego": {
+      const name = ($("#msave-in")?.value || "").trim().slice(0, 40); if (!name) { toast("Give it a name first"); $("#msave-in")?.focus(); return true; }
+      const all = mentries(S.date);
+      if (b.dataset.kind === "day") {
+        const meals = mslots().map((sl) => ({ slot: sl.id, name: sl.name, time: sl.time, foods: all.filter((e) => e.meal === sl.id).map(mstrip) })).filter((m) => m.foods.length);
+        const other = all.filter((e) => !mslots().some((sl) => sl.id === e.meal)); if (other.length) meals.push({ name: "Other", time: "", foods: other.map(mstrip) });
+        S.meals.settings = { ...S.meals.settings, dayTemplates: [...mDayT().filter((t) => t.name.toLowerCase() !== name.toLowerCase()), { id: uid(), name, meals }] };
+      } else {
+        const foods = all.filter((e) => e.meal === b.dataset.meal).map(mstrip);
+        S.meals.settings = { ...S.meals.settings, mealTemplates: [...mMealT().filter((t) => t.name.toLowerCase() !== name.toLowerCase()), { id: uid(), name, foods }] };
+      }
+      S.msave = null; render(); toast(`Saved "${name}"`); await msaveSettings(); return true;
+    }
+    case "mloadgo": {
+      const date = S.date, day = S.meals.days[date] || (S.meals.days[date] = { date, entries: [] });
+      const add = (meal, foods) => { for (const f of foods) day.entries.push({ id: uid(), meal, ...f, at: new Date().toISOString() }); };
+      if (b.dataset.kind === "day") {
+        const t = mDayT().find((x) => x.id === b.dataset.id); if (!t) return true;
+        let slots = mslots();
+        for (const m of t.meals) {
+          let sl = slots.find((x) => m.slot && x.id === m.slot) || slots.find((x) => x.name.toLowerCase() === m.name.toLowerCase());
+          if (!sl) { sl = { id: "m" + uid().slice(0, 6), name: m.name === "Other" ? `Meal ${slots.length + 1}` : m.name, time: m.time || "12:00" }; slots = [...slots, sl]; }
+          add(sl.id, m.foods);
+        }
+        S.meals.settings = { ...S.meals.settings, slots }; S.mload = null; render(); toast(`Loaded "${t.name}"`); await msaveSettings(); await msaveDay(date);
+      } else {
+        const t = mMealT().find((x) => x.id === b.dataset.id); if (!t) return true;
+        add(b.dataset.meal, t.foods); S.mload = null; render(); toast(`Loaded "${t.name}"`); await msaveDay(date);
+      }
+      return true;
+    }
+    case "mtdel": { const k = b.dataset.kind === "day" ? "dayTemplates" : "mealTemplates"; const t = (S.meals.settings[k] || []).find((x) => x.id === b.dataset.id); S.meals.settings = { ...S.meals.settings, [k]: (S.meals.settings[k] || []).filter((x) => x.id !== b.dataset.id) }; render(); toast(`Deleted "${t?.name || "saved item"}"`); await msaveSettings(); return true; }
     case "mrencancel": S.mrename = null; render(); return true;
-    case "mrensave": { const v = ($("#mren-in")?.value || "").trim().slice(0, 40); const id = S.mrename; S.mrename = null; if (v) { const slots = mslots().map((x) => (x.id === id ? { ...x, name: v } : x)); S.meals.settings = { ...S.meals.settings, slots }; render(); toast(`Renamed to ${v}`); await msaveSettings(); } else render(); return true; }
+    case "mrensave": { const v = ($("#mren-in")?.value || "").trim().slice(0, 40), tm = $("#mren-t")?.value || ""; const id = S.mrename; S.mrename = null; if (v) { const slots = mslots().map((x) => (x.id === id ? { ...x, name: v, time: /^\d\d:\d\d$/.test(tm) ? tm : x.time } : x)); S.meals.settings = { ...S.meals.settings, slots }; render(); toast("Meal updated"); await msaveSettings(); } else render(); return true; }
     case "maddmeal": { const sl = mslots(), last = sl[sl.length - 1]; const [h, m] = (last?.time || "17:00").split(":").map(Number); const t = `${pad(Math.min(23, h + 3))}:${pad(m)}`; S.meals.settings = { ...S.meals.settings, slots: [...sl, { id: "m" + uid().slice(0, 6), name: `Meal ${sl.length + 1}`, time: t }] }; render(); toast(`Added Meal ${sl.length + 1}`); await msaveSettings(); return true; }
     case "mrmslot": S.mtargetsForm.slots.splice(Number(b.dataset.i), 1); render(); return true;
   }
