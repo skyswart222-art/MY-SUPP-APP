@@ -1,0 +1,2971 @@
+/* Built from planner.html by build.py. Edit planner.html, then run build.py again. */
+(() => {
+"use strict";
+
+/* ---------- Plans registry: new modules slot in here ---------- */
+const MODULES = [
+  { id: "supplements", name: "Supplements", ready: true },
+  { id: "workouts", name: "Workouts", ready: true },
+  { id: "meals", name: "Meals", ready: true },
+  { id: "progress", name: "Progress", ready: true },
+  { id: "skincare", name: "Skincare", ready: true },
+  { id: "cycle", name: "Cycle", ready: true },
+];
+
+/* ---------- Icons ---------- */
+const I = {
+  today: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  totals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>',
+  stock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="6" y="7" width="12" height="14" rx="2.5"/><path d="M8 3h8v4H8z"/><path d="M6 12h12"/></svg>',
+  add: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  spend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h3"/></svg>',
+  dumbbell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>',
+  up: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  down: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
+  vial: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v3M14 3v3"/><rect x="7" y="6" width="10" height="15" rx="2.5"/><path d="M7 12h10"/></svg>',
+  drop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5c3.5 4.4 6 7.8 6 11a6 6 0 0 1-12 0c0-3.2 2.5-6.6 6-11z"/></svg>',
+  scale: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8.5 9a5 5 0 0 1 7 0M12 9.5l1.3-2"/></svg>',
+  target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.3 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M4.5 15v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V15"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+  left: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  right: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>',
+  x: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  bottle: '<svg class="bottle" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><rect x="18" y="8" width="28" height="9" rx="2"/><path d="M16 17h32v37a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4z"/><rect x="22" y="28" width="20" height="16" rx="2"/><path d="M27 36h10"/></svg>',
+};
+
+/* ---------- Helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const pad = (n) => String(n).padStart(2, "0");
+const dstr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseD = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseD(s); d.setDate(d.getDate() + n); return dstr(d); };
+const today = () => dstr(new Date());
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+const fmtHour = (h) => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? " AM" : " PM");
+const fmtTime = (t) => { const [h, m] = t.split(":").map(Number); return `${h % 12 === 0 ? 12 : h % 12}:${pad(m)} ${h < 12 ? "AM" : "PM"}`; };
+const num = (v, d = 0) => { const n = parseFloat(v); return Number.isFinite(n) ? n : d; };
+const fmtN = (n, max = 2) => Number(n).toLocaleString(undefined, { maximumFractionDigits: max });
+const plural = (n, w) => `${fmtN(n, 1)} ${w}${Math.abs(n) === 1 ? "" : "s"}`;
+const COUNT_UNITS = ["capsule", "tablet", "softgel", "gummy", "scoop", "drop", "chew", "packet"];
+const unitLabel = (u, n) => (COUNT_UNITS.includes(u) ? (n === 1 ? u : u + "s") : u);
+const amountStr = (n, u) => `${fmtN(n, 1)} ${unitLabel(u, n)}`;
+
+/* Ingredient units: mass converts to mg for summing; others summed as-is */
+const MASS = { mcg: 0.001, "µg": 0.001, ug: 0.001, mg: 1, g: 1000 };
+function normIng(name, amount, unit) {
+  const u = String(unit || "").trim().toLowerCase().replace("μ", "µ");
+  if (u in MASS) return { key: name.trim().toLowerCase() + "|mass", mg: amount * MASS[u], kind: "mass" };
+  return { key: name.trim().toLowerCase() + "|" + u, val: amount, unit: unit || "", kind: "other" };
+}
+function fmtMass(mg) {
+  if (mg >= 1000) return fmtN(mg / 1000, 2) + " g";
+  if (mg < 1) return fmtN(mg * 1000, 1) + " mcg";
+  return fmtN(mg, 1) + " mg";
+}
+
+/* ---------- State ---------- */
+const S = {
+  supps: [], days: {}, date: today(), tab: "today", totalsMode: "planned",
+  form: null, photos: { front: null, back: null }, ai: { busy: false, msg: "", kind: "" },
+  confirm: null, mode: "loading", canPhoto: null,
+  settings: { currency: guessCurrency() }, spendMonth: null,
+};
+S.todayView = "overview";
+try { const tv = localStorage.getItem("planner.todayView"); if (tv === "full" || tv === "week") S.todayView = tv; } catch {}
+/* Theme: dark by default, remembered per device */
+S.theme = "dark";
+try { const th = localStorage.getItem("planner.theme"); if (th === "light" || th === "dark") S.theme = th; } catch {}
+function applyTheme() { document.documentElement.setAttribute("data-theme", S.theme); }
+applyTheme();
+try { const t = localStorage.getItem("planner.tab"); if (["today", "totals", "stock", "spend", "add"].includes(t)) S.tab = t; } catch {}
+
+/* ---------- Money ---------- */
+function guessCurrency() {
+  const region = (navigator.language || "en-US").split("-")[1] || "";
+  const m = { US: "USD", ZA: "ZAR", GB: "GBP", AU: "AUD", CA: "CAD", NZ: "NZD", IN: "INR", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR", PT: "EUR", BE: "EUR", AT: "EUR", FI: "EUR", NG: "NGN", KE: "KES", AE: "AED", SG: "SGD", JP: "JPY", CH: "CHF", SE: "SEK", NO: "NOK", DK: "DKK", BR: "BRL", MX: "MXN" };
+  return m[region] || "USD";
+}
+const CURRENCIES = ["ZAR", "USD", "EUR", "GBP", "AUD", "CAD", "NZD", "INR", "NGN", "KES", "AED", "SGD", "CHF", "SEK", "NOK", "DKK", "JPY", "BRL", "MXN"];
+function money(n, dp) {
+  try { return new Intl.NumberFormat(undefined, { style: "currency", currency: S.settings.currency, maximumFractionDigits: dp ?? (Math.abs(n) < 10 ? 2 : 0), minimumFractionDigits: dp ?? (Math.abs(n) < 10 ? 2 : 0) }).format(n || 0); }
+  catch { return (S.settings.currency + " " + fmtN(n || 0, 2)); }
+}
+const monthKey = (s) => s.slice(0, 7);
+const monthLabel = (k, long) => { const [y, m] = k.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleDateString(undefined, long ? { month: "long", year: "numeric" } : { month: "short" }); };
+function purchasesOf(s) { return (s.purchases || []).filter((p) => num(p.price) > 0).sort((a, b) => (a.date || "").localeCompare(b.date || "")); }
+function allPurchases() { const out = []; for (const s of S.supps) for (const p of purchasesOf(s)) out.push({ ...p, s }); return out.sort((a, b) => (b.date || "").localeCompare(a.date || "")); }
+/* Cost per counted unit (capsule, gram…) from the most recent purchase */
+function unitCost(s) {
+  const p = purchasesOf(s).slice(-1)[0];
+  if (!p) return null;
+  const amt = num(p.amount) || num(s.containerAmount);
+  return amt > 0 ? num(p.price) / amt : null;
+}
+function costInfo(s) {
+  const uc = unitCost(s);
+  if (uc == null) return null;
+  const perServing = uc * (num(s.servingSize, 1) || 1);
+  const perDay = s.status === "cupboard" ? 0 : uc * dailyUnits(s);
+  return { uc, perServing, perDay, perMonth: perDay * 30.44 };
+}
+
+/* ---------- Storage: private db per person, local fallback ---------- */
+const store = { kind: "local", items: null, daysCol: null, queues: new Map() };
+const LS_KEY = "planner.supplements.v1";
+function lsLoad() { try { const d = JSON.parse(localStorage.getItem(LS_KEY) || "{}"); S.supps = d.supps || []; S.days = d.days || {}; if (d.settings) S.settings = { ...S.settings, ...d.settings }; } catch {} }
+function lsSave() { try { localStorage.setItem(LS_KEY, JSON.stringify({ supps: S.supps, days: S.days, settings: S.settings })); } catch {} }
+async function saveSettings() {
+  if (store.kind === "db") return queued("settings", () => store.settings.set({ ...S.settings }));
+  lsSave();
+}
+function queued(path, fn) {
+  const prev = store.queues.get(path) || Promise.resolve();
+  const next = prev.catch(() => {}).then(fn);
+  store.queues.set(path, next);
+  return next.catch((e) => { toast(e?.code === "quota_exceeded" ? "Storage is full. Delete something and try again." : "Couldn't save that change. Check your connection."); throw e; });
+}
+async function saveSupp(s) {
+  const i = S.supps.findIndex((x) => x.id === s.id);
+  if (i >= 0) S.supps[i] = s; else S.supps.push(s);
+  if (store.kind === "db") return queued("i/" + s.id, () => store.items.doc(s.id).set(JSON.parse(JSON.stringify(s))));
+  lsSave();
+}
+async function deleteSupp(id) {
+  S.supps = S.supps.filter((x) => x.id !== id);
+  if (store.kind === "db") return queued("i/" + id, () => store.items.doc(id).delete());
+  lsSave();
+}
+async function saveDay(date) {
+  const d = S.days[date] || { date, taken: {} };
+  if (store.kind === "db") return queued("d/" + date, () => store.daysCol.doc(date).set({ date, taken: d.taken }));
+  lsSave();
+}
+
+async function initStore() {
+  const c = window.claude;
+  let db = null, user = null;
+  if (c && typeof c.use === "function") {
+    try { [db, user] = await Promise.all([c.use("db"), c.use("user")]); } catch { db = null; }
+  }
+  let id = null;
+  if (db && user) { try { id = await user.id(); } catch { id = null; } }
+  if (!db || !id) {
+    lsLoad(); mlsLoad(); wlsLoad(); clsLoad(); plsLoad(); klsLoad(); S.mode = "local"; store.kind = "local";
+    setSync("Saved on this device only");
+    render(); return;
+  }
+  store.kind = "db";
+  const base = `data/users/${id}/supplements`;
+  store.items = db.collection(base + "/items");
+  store.daysCol = db.collection(base + "/days");
+  store.settings = db.collection(base + "/settings").doc("main");
+  minitDb(db, id);
+  winitDb(db, id);
+  cinitDb(db, id);
+  pinitDb(db, id);
+  kinitDb(db, id);
+  store.settings.onSnapshot((snap) => { if (snap.exists) { S.settings = { ...S.settings, ...snap.data() }; softRender(); } }, () => {});
+  let loaded = false;
+  const timer = setTimeout(() => { if (!loaded) { setSync("Still connecting…"); } }, 10000);
+  store.items.onSnapshot((snap) => {
+    loaded = true; clearTimeout(timer);
+    S.supps = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+    S.mode = "db"; setSync("Synced to your account");
+    softRender();
+  }, (e) => { clearTimeout(timer); setSync("Can't reach your saved data"); if (S.mode === "loading") { S.mode = "error"; render(); } });
+  store.daysCol.orderBy("date", "desc").limit(90).onSnapshot((snap) => {
+    const days = {};
+    snap.docs.forEach((d) => { const v = d.data(); days[d.id] = { date: d.id, taken: v.taken || {} }; });
+    S.days = days; softRender();
+  }, () => {});
+  // photo autofill availability
+}
+function setSync(t) { $("#syncnote").textContent = t; }
+
+async function initSample() {
+  const c = window.claude;
+  if (!c || typeof c.use !== "function") { S.canPhoto = false; return; }
+  try {
+    const sample = await c.use("sample");
+    if (!sample) { S.canPhoto = false; return; }
+    const lim = await sample.limits().catch(() => null);
+    S.sample = sample; S.canPhoto = !!lim?.images; S.imgLimits = lim?.images || null;
+  } catch { S.canPhoto = false; }
+  if (S.tab === "add") render();
+}
+
+/* ---------- Derived data ---------- */
+const active = () => S.supps.filter((s) => s.status !== "cupboard");
+const cupboard = () => S.supps.filter((s) => s.status === "cupboard");
+function dosesFor(date) {
+  const wd = parseD(date).getDay();
+  const out = [];
+  for (const s of active()) {
+    const days = s.days && s.days.length ? s.days : ALL_DAYS;
+    if (!days.includes(wd)) continue;
+    (s.schedule || []).forEach((r) => { if (r.time) out.push({ s, time: r.time, servings: num(r.servings, 1), note: r.note || "", key: `${s.id}|${r.time}` }); });
+  }
+  return out.sort((a, b) => a.time.localeCompare(b.time) || a.s.name.localeCompare(b.s.name));
+}
+function dailyUnits(s) {
+  const days = s.days && s.days.length ? s.days : ALL_DAYS;
+  const perDay = (s.schedule || []).reduce((a, r) => a + num(r.servings, 1), 0) * num(s.servingSize, 1);
+  return perDay * days.length / 7;
+}
+function stockInfo(s) {
+  const rem = Math.max(0, num(s.remaining));
+  const size = num(s.servingSize, 1) || 1;
+  const servingsLeft = rem / size;
+  const daily = s.status === "cupboard" ? 0 : dailyUnits(s);
+  const daysLeft = daily > 0 ? rem / daily : null;
+  const alertDays = num(s.alertDays, 10);
+  let level = "ok";
+  if (rem <= 0) level = "crit";
+  else if (daysLeft !== null && daysLeft <= Math.max(3, alertDays / 3)) level = "crit";
+  else if (daysLeft !== null && daysLeft <= alertDays) level = "warn";
+  const full = num(s.containerAmount) || rem || 1;
+  const pct = Math.max(0, Math.min(100, (rem / full) * 100));
+  let outDate = null;
+  if (daysLeft !== null) { const d = new Date(); d.setDate(d.getDate() + Math.floor(daysLeft)); outDate = d; }
+  return { rem, servingsLeft, daily, daysLeft, level, pct, outDate };
+}
+function lowItems() {
+  return active().map((s) => ({ s, i: stockInfo(s) })).filter((x) => x.i.level !== "ok")
+    .sort((a, b) => (a.i.daysLeft ?? 0) - (b.i.daysLeft ?? 0));
+}
+function addIng(map, s, servings) {
+  for (const g of s.ingredients || []) {
+    const amt = num(g.amount);
+    if (!g.name || !amt) continue;
+    const n = normIng(g.name, amt * servings, g.unit);
+    const e = map.get(n.key) || { name: g.name.trim(), kind: n.kind, unit: n.unit, total: 0, from: new Map() };
+    const v = n.kind === "mass" ? n.mg : n.val;
+    e.total += v;
+    e.from.set(s.id, (e.from.get(s.id) || 0) + v);
+    map.set(n.key, e);
+  }
+}
+function plannedTotals(dates) {
+  const map = new Map();
+  for (const date of dates) for (const d of dosesFor(date)) addIng(map, d.s, d.servings);
+  return map;
+}
+function takenTotals(dates) {
+  const map = new Map();
+  for (const date of dates) {
+    const taken = S.days[date]?.taken || {};
+    for (const [key, units] of Object.entries(taken)) {
+      const s = S.supps.find((x) => x.id === key.split("|")[0]);
+      if (!s) continue;
+      addIng(map, s, num(units) / (num(s.servingSize, 1) || 1));
+    }
+  }
+  return map;
+}
+const fmtTotal = (e) => (e.kind === "mass" ? fmtMass(e.total) : `${fmtN(e.total, 1)} ${esc(e.unit)}`);
+function weekDates(anchor) { const d = parseD(anchor); const start = addDays(anchor, -((d.getDay() + 6) % 7)); return Array.from({ length: 7 }, (_, i) => addDays(start, i)); }
+
+/* ---------- Actions ---------- */
+async function toggleDose(key, date) {
+  const dose = dosesFor(date).find((d) => d.key === key);
+  if (!dose) return;
+  const day = S.days[date] || (S.days[date] = { date, taken: {} });
+  const s = { ...dose.s };
+  if (day.taken[key] != null) {
+    s.remaining = num(s.remaining) + num(day.taken[key]);
+    delete day.taken[key];
+  } else {
+    const units = dose.servings * num(s.servingSize, 1);
+    day.taken[key] = units;
+    s.remaining = Math.max(0, num(s.remaining) - units);
+  }
+  render();
+  await Promise.all([saveDay(date), saveSupp(s)]);
+}
+async function takeAllAt(time, date) {
+  const day = S.days[date] || (S.days[date] = { date, taken: {} });
+  const todo = dosesFor(date).filter((d) => d.time.slice(0, 2) === time && day.taken[d.key] == null);
+  const writes = [];
+  for (const d of todo) {
+    const units = d.servings * num(d.s.servingSize, 1);
+    day.taken[d.key] = units;
+    const s = { ...S.supps.find((x) => x.id === d.s.id) };
+    s.remaining = Math.max(0, num(s.remaining) - units);
+    writes.push(saveSupp(s));
+  }
+  render();
+  await Promise.all([saveDay(date), ...writes]);
+}
+
+function blankForm(status = "active") {
+  return {
+    id: null, name: "", brand: "", form: "capsule", unit: "capsule", servingSize: 1, servingDesc: "",
+    servingsPerContainer: "", containerAmount: "", remaining: "", status,
+    schedule: status === "active" ? [{ time: "08:00", servings: 1, note: "" }] : [],
+    days: [...ALL_DAYS], alertDays: 10, ingredients: [{ name: "", amount: "", unit: "mg" }], notes: "", directions: "",
+    price: "", boughtOn: today(), purchases: [],
+  };
+}
+function openEdit(id) {
+  const s = S.supps.find((x) => x.id === id);
+  if (!s) return;
+  S.form = JSON.parse(JSON.stringify({ ...blankForm(), ...s }));
+  if (!S.form.ingredients?.length) S.form.ingredients = [{ name: "", amount: "", unit: "mg" }];
+  const last = purchasesOf(s).slice(-1)[0];
+  S.form.price = last ? last.price : ""; S.form.boughtOn = last ? last.date : today();
+  S.photos = { front: null, back: null }; S.ai = { busy: false, msg: "", kind: "" };
+  setTab("add");
+}
+async function submitForm() {
+  const f = S.form;
+  if (!f.name.trim()) { toast("Give it a name first."); return; }
+  const isNew = !f.id;
+  const cont = num(f.containerAmount) || (num(f.servingsPerContainer) * num(f.servingSize, 1)) || 0;
+  const purchases = (f.purchases || []).map((p) => ({ ...p }));
+  const photos = { ...(f.photos || {}) };
+  let photoFail = false;
+  if (S.photos.front?.blob || S.photos.back?.blob) toast("Saving photos…");
+  for (const side of ["front", "back"]) {
+    if (!S.photos[side]?.blob) continue;
+    try { photos[side] = await storePhoto(S.photos[side].blob); } catch { photoFail = true; }
+  }
+  const price = num(f.price);
+  if (price > 0) {
+    const last = purchases.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")).slice(-1)[0];
+    if (last && f.id) { last.price = price; last.date = f.boughtOn || last.date; last.amount = last.amount || cont; }
+    else purchases.push({ id: uid(), date: f.boughtOn || today(), price, amount: cont });
+  }
+  const s = {
+    id: f.id || uid(), name: f.name.trim(), brand: f.brand.trim(), form: f.form, unit: f.unit || "capsule",
+    servingSize: num(f.servingSize, 1) || 1, servingDesc: f.servingDesc || "",
+    servingsPerContainer: num(f.servingsPerContainer) || (cont ? cont / (num(f.servingSize, 1) || 1) : 0),
+    containerAmount: cont,
+    remaining: f.remaining === "" || f.remaining == null ? cont : num(f.remaining),
+    status: f.status, schedule: (f.schedule || []).filter((r) => r.time).map((r) => ({ time: r.time, servings: num(r.servings, 1) || 1, note: r.note || "" })),
+    days: f.days?.length ? [...f.days].sort() : [...ALL_DAYS], alertDays: num(f.alertDays, 10),
+    ingredients: (f.ingredients || []).filter((g) => g.name && g.name.trim()).map((g) => ({ name: g.name.trim(), amount: num(g.amount), unit: g.unit || "mg" })),
+    notes: f.notes || "", directions: f.directions || "", example: !!f.example, purchases, photos,
+    addedAt: f.addedAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
+  };
+  S.form = null; S.photos = { front: null, back: null }; S.ai = { busy: false, msg: "", kind: "" };
+  setTab(s.status === "cupboard" ? "stock" : "today");
+  toast(photoFail ? `Saved ${s.name}, but the photos couldn't be stored` : isNew ? `Added ${s.name}` : `Saved ${s.name}`);
+  await saveSupp(s);
+}
+
+/* ---------- Photo autofill (Claude vision through the page's sample capability) ---------- */
+async function shrink(file, maxDim = 1568, q = 0.85) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const max = maxDim, sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc);
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    return await new Promise((res) => cv.toBlob((b) => res(b || file), "image/jpeg", q));
+  } catch { return file; } finally { URL.revokeObjectURL(url); }
+}
+const PROMPT = `You are reading photos of a dietary supplement container label. The first image is the FRONT, the second (if present) is the BACK with the Supplement Facts / Nutrition panel.
+Extract the product details and answer with ONLY a JSON object, no prose, in exactly this shape:
+{
+ "name": string (product name as a person would say it, e.g. "Magnesium Glycinate"),
+ "brand": string,
+ "form": one of "capsule","tablet","softgel","gummy","powder","liquid","other",
+ "unit": the unit to count what's in the container: "capsule","tablet","softgel","gummy" for countable forms; "g" for powders (or "scoop" only if no gram weight is printed); "ml" for liquids,
+ "servingSize": number of those units per serving (e.g. 2 for "2 capsules"; 5 for "1 scoop (5 g)" when unit is "g"),
+ "servingDescription": the serving size exactly as printed,
+ "servingsPerContainer": number or null,
+ "containerAmount": total units in the container (count of capsules, or net weight in g, or volume in ml) or null,
+ "ingredients": [ { "name": string (short common name, keep the form in brackets if printed, e.g. "Magnesium (as glycinate)"), "amount": number per ONE serving, "unit": "mg","mcg","g","IU","CFU","ml" or as printed } ],
+ "directions": string (suggested use as printed, or ""),
+ "uncertain": string (anything you could not read clearly, or "")
+}
+Rules: list every active ingredient from the facts panel with its per-serving amount. Leave out "other ingredients" like fillers and capsule shells. If containerAmount is not printed but servingsPerContainer and servingSize are, multiply them. Use null rather than guessing a number you cannot see.`;
+
+async function runAutofill() {
+  const imgs = [S.photos.front?.blob, S.photos.back?.blob].filter(Boolean);
+  if (!imgs.length || !S.sample) return;
+  S.ai = { busy: true, msg: "Reading the label…", kind: "" }; render();
+  try {
+    const max = S.imgLimits?.maxCount || 2;
+    const data = await S.sample.json(PROMPT, { images: imgs.slice(0, max), modelTier: "default" });
+    applyAutofill(data || {});
+    S.ai = { busy: false, msg: data?.uncertain ? `Filled in from the label. Check this: ${data.uncertain}` : "Filled in from the label. Check the numbers, then pick your times.", kind: "ok" };
+  } catch (e) {
+    const code = e?.code;
+    const msg = code === "not_granted" ? "Photo reading is turned off for this page. You can still fill the form in by hand."
+      : code === "rate_limited" ? "Too many photo reads in a row. Wait a minute and try again."
+      : code === "image_rejected" ? "That photo couldn't be used. Try a JPEG or PNG under the size limit."
+      : "Couldn't read the label this time. Try a sharper, closer photo, or fill it in by hand.";
+    if (code === "not_granted") S.canPhoto = false;
+    S.ai = { busy: false, msg, kind: "err" };
+  }
+  render();
+}
+function applyAutofill(d) {
+  const f = S.form || (S.form = blankForm());
+  const set = (k, v) => { if (v !== null && v !== undefined && v !== "") f[k] = v; };
+  set("name", d.name); set("brand", d.brand);
+  if (["capsule", "tablet", "softgel", "gummy", "powder", "liquid", "other"].includes(d.form)) f.form = d.form;
+  set("unit", d.unit); set("servingSize", num(d.servingSize) || null); set("servingDesc", d.servingDescription);
+  set("servingsPerContainer", num(d.servingsPerContainer) || null);
+  const cont = num(d.containerAmount) || (num(d.servingsPerContainer) * num(d.servingSize)) || null;
+  set("containerAmount", cont); if (cont) f.remaining = cont;
+  set("directions", d.directions);
+  if (Array.isArray(d.ingredients) && d.ingredients.length) {
+    f.ingredients = d.ingredients.filter((g) => g && g.name).map((g) => ({ name: String(g.name), amount: g.amount ?? "", unit: g.unit || "mg" }));
+  }
+}
+
+/* ---------- Example stack (clearly marked) ---------- */
+const EXAMPLES = [
+  { name: "Vitamin D3 + K2", brand: "Example", form: "softgel", unit: "softgel", servingSize: 1, containerAmount: 120, remaining: 9, schedule: [{ time: "08:00", servings: 1, note: "with breakfast" }], ingredients: [{ name: "Vitamin D3", amount: 125, unit: "mcg" }, { name: "Vitamin K2 (MK-7)", amount: 100, unit: "mcg" }] },
+  { name: "Omega-3 Fish Oil", brand: "Example", form: "softgel", unit: "softgel", servingSize: 2, containerAmount: 180, remaining: 132, schedule: [{ time: "08:00", servings: 1, note: "with food" }, { time: "18:30", servings: 1, note: "" }], ingredients: [{ name: "EPA", amount: 650, unit: "mg" }, { name: "DHA", amount: 450, unit: "mg" }] },
+  { name: "Creatine Monohydrate", brand: "Example", form: "powder", unit: "g", servingSize: 5, containerAmount: 500, remaining: 310, schedule: [{ time: "12:00", servings: 1, note: "in water" }], ingredients: [{ name: "Creatine monohydrate", amount: 5, unit: "g" }] },
+  { name: "Magnesium Glycinate", brand: "Example", form: "capsule", unit: "capsule", servingSize: 2, containerAmount: 120, remaining: 22, schedule: [{ time: "21:30", servings: 1, note: "before bed" }], ingredients: [{ name: "Magnesium", amount: 200, unit: "mg" }] },
+  { name: "Zinc Picolinate", brand: "Example", form: "capsule", unit: "capsule", servingSize: 1, containerAmount: 60, remaining: 60, status: "cupboard", schedule: [], ingredients: [{ name: "Zinc", amount: 30, unit: "mg" }] },
+];
+async function loadExamples() {
+  const now = new Date().toISOString();
+  const prices = [[249, 112], [389, 25, 120], [459, 70], [299, 50, 140], [179, 5]]; // [price, days ago of last buy, days ago of earlier buy]
+  const list = EXAMPLES.map((e, i) => {
+    const [price, ago, ago2] = prices[i];
+    const purchases = [{ id: uid(), date: addDays(today(), -ago), price, amount: e.containerAmount }];
+    if (ago2) purchases.unshift({ id: uid(), date: addDays(today(), -ago2), price: Math.round(price * 0.95), amount: e.containerAmount });
+    return { status: "active", days: [...ALL_DAYS], alertDays: 10, notes: "", directions: "", servingDesc: "", ...e, purchases, servingsPerContainer: e.containerAmount / e.servingSize, id: "ex_" + uid(), example: true, addedAt: now };
+  });
+  for (const s of list) await saveSupp(s);
+  render(); toast("Example stack loaded. Remove it any time from Stock.");
+}
+async function removeExamples() { for (const s of S.supps.filter((x) => x.example)) await deleteSupp(s.id); render(); toast("Examples removed"); }
+
+/* ---------- Rendering ---------- */
+const SUN = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+function renderChrome() {
+  const tb = $("#themebtn");
+  if (tb) { tb.innerHTML = S.theme === "dark" ? SUN : MOON; tb.setAttribute("aria-label", S.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"); }
+  $("#modules").innerHTML = MODULES.map((m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`).join("");
+  if (S.module === "cycle") {
+    const ct = [["ctoday", "Today", I.today], ["ccycle", "Cycle", I.vial], ["cstock", "Stock", I.stock], ["cbloods", "Bloods", I.drop]];
+    const lowc = S.cy.compounds.filter(cLow).length;
+    $("#tabs").style.gridTemplateColumns = "repeat(4, 1fr)";
+    $("#tabs").innerHTML = ct.map(([id, label, ic]) => `<button class="tab" data-act="ctab" data-tab="${id}" ${S.ctab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "cstock" && lowc ? `<span class="dot">${lowc}</span>` : ""}</button>`).join("");
+    return;
+  }
+  if (S.module === "skincare") {
+    const kt = [["ktoday", "Today", I.today], ["kweek", "Week", I.calendar], ["kproducts", "Products", I.stock], ["kadd", S.kform?.id ? "Edit" : "Add", I.add]];
+    const lowk = kActive().filter(kLow).length;
+    $("#tabs").style.gridTemplateColumns = "repeat(4, 1fr)";
+    $("#tabs").innerHTML = kt.map(([id, label, ic]) => `<button class="tab" data-act="ktab" data-tab="${id}" ${S.ktab === id && !S.kview ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "kproducts" && lowk ? `<span class="dot">${lowk}</span>` : ""}</button>`).join("");
+    return;
+  }
+  if (S.module === "progress") {
+    const pt = [["ptoday", "Overview", I.scale], ["plog", "Log", I.calendar], ["pmeasure", "Measure", I.totals], ["pgoals", "Goals", I.target], ["phealth", "Health", I.heart]];
+    $("#tabs").style.gridTemplateColumns = "repeat(5, 1fr)";
+    $("#tabs").innerHTML = pt.map(([id, label, ic]) => `<button class="tab" data-act="ptab" data-tab="${id}" ${S.ptab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+    return;
+  }
+  if (S.module === "workouts") {
+    const wt = [["wtoday", "Today", I.today], ["wplan", "Plan", I.dumbbell], ["wcardio", "Cardio", I.heart], ["whistory", "History", I.calendar], ["wmax", "Maxes", I.target]];
+    $("#tabs").style.gridTemplateColumns = "repeat(5, 1fr)";
+    $("#tabs").innerHTML = wt.map(([id, label, ic]) => `<button class="tab" data-act="wtab" data-tab="${id}" ${S.wtab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+    return;
+  }
+  if (S.module === "meals") {
+    const mt = [["mtoday", "Today", I.today], ["mplan", "Plan", I.calendar], ["mweek", "Week", I.totals], ["mfoods", "Foods", I.stock], ["mtargets", "Targets", I.spend]];
+    $("#tabs").style.gridTemplateColumns = "repeat(5, 1fr)";
+    $("#tabs").innerHTML = mt.map(([id, label, ic]) => `<button class="tab" data-act="mtab" data-tab="${id}" ${S.mtab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+    return;
+  }
+  $("#tabs").style.gridTemplateColumns = "";
+  const low = lowItems().length;
+  const tabs = [["today", "Today", I.today], ["totals", "Totals", I.totals], ["stock", "Stock", I.stock], ["spend", "Spend", I.spend], ["add", S.form?.id ? "Edit" : "Add", I.add]];
+  $("#tabs").innerHTML = tabs.map(([id, label, ic]) => `<button class="tab" data-act="tab" data-tab="${id}" ${S.tab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "stock" && low ? `<span class="dot">${low}</span>` : ""}</button>`).join("");
+}
+function render() {
+  renderChrome();
+  const v = $("#view");
+  if (S.mode === "loading") return;
+  if (S.mode === "error") { v.innerHTML = `<div class="card empty"><h3>Your saved data didn't load</h3><p>Reload the page to try again.</p></div>`; return; }
+  if (S.module === "meals") { v.innerHTML = mealView(); renderOverlay(); return; }
+  if (S.module === "workouts") { v.innerHTML = workoutView(); renderOverlay(); return; }
+  if (S.module === "cycle") { v.innerHTML = cycleView(); renderOverlay(); return; }
+  if (S.module === "progress") { v.innerHTML = progressView(); renderOverlay(); return; }
+  if (S.module === "skincare") { v.innerHTML = skinView(); renderOverlay(); return; }
+  v.innerHTML = S.tab === "today" ? viewToday() : S.tab === "totals" ? viewTotals() : S.tab === "stock" ? viewStock() : S.tab === "spend" ? viewSpend() : viewAdd();
+  renderOverlay();
+}
+function softRender() { if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail) { renderChrome(); return; } render(); return; } if (S.tab === "add" && S.form) { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
+
+function emptyState() {
+  return `<div class="card empty">${I.bottle}<h3>Your stack goes here</h3>
+  <p>Add a supplement by photographing its label, then pick the times you take it. Each day shows up hour by hour.</p>
+  <div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="new">Add a supplement</button><button class="btn" data-act="examples">Try an example stack</button></div></div>`;
+}
+
+function viewSwitch() {
+  const v = S.todayView;
+  return `<div class="seg" role="group" aria-label="View"><button data-act="tview" data-v="overview" aria-pressed="${v !== "full" && v !== "week"}">Overview</button><button data-act="tview" data-v="full" aria-pressed="${v === "full"}">Hourly</button><button data-act="tview" data-v="week" aria-pressed="${v === "week"}">Week</button></div>`;
+}
+function viewWeek() {
+  const week = weekDates(S.date), td = today();
+  const nowT = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
+  const thisWeek = week.includes(td);
+  // every dose slot that appears this week, in time order
+  const slots = new Map();
+  const perDay = week.map((date) => { const ds = dosesFor(date); ds.forEach((x) => { if (!slots.has(x.key)) slots.set(x.key, x); }); return { date, keys: new Set(ds.map((x) => x.key)), ds }; });
+  const rows = [...slots.values()].sort((a, b) => a.time.localeCompare(b.time) || a.s.name.localeCompare(b.s.name));
+  const state = (date, x) => {
+    const tk = (S.days[date]?.taken || {})[x.key] != null;
+    if (tk) return "taken";
+    if (date < td || (date === td && x.time < nowT)) return "missed";
+    return "due";
+  };
+  let doneSoFar = 0, dueSoFar = 0, total = 0;
+  const dayStats = perDay.map(({ date, ds }) => {
+    let t = 0, m = 0;
+    for (const x of ds) { const st = state(date, x); total++; if (st === "taken") { t++; doneSoFar++; dueSoFar++; } else if (st === "missed") { m++; dueSoFar++; } }
+    return { date, n: ds.length, t, m };
+  });
+  const first = parseD(week[0]), last = parseD(week[6]);
+  const range = `${first.toLocaleDateString(undefined, { day: "numeric", month: "short" })} – ${last.toLocaleDateString(undefined, { day: "numeric", month: "short" })}`;
+  let html = `<div class="daybar"><button class="iconbtn" data-act="day" data-n="-7" aria-label="Previous week">${I.left}</button>
+    <div class="grow"><h2>${thisWeek ? "This week" : week[0] > td ? "Next week" : "Week"}</h2><div class="muted small">${esc(range)}</div></div>
+    ${thisWeek ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="7" aria-label="Next week">${I.right}</button></div>`;
+  const pct = dueSoFar ? Math.round((doneSoFar / dueSoFar) * 100) : null;
+  html += `<div class="statgrid"><div class="stat"><div class="v">${doneSoFar}<span class="muted" style="font-size:14px"> / ${total}</span></div><div class="k">doses taken ${thisWeek ? "this week" : "that week"}</div></div>
+    <div class="stat"><div class="v">${pct === null ? "–" : pct + "%"}</div><div class="k">of doses due so far</div></div>
+    <div class="stat"><div class="v">${dueSoFar - doneSoFar}</div><div class="k">missed</div></div></div>`;
+  html += `<div class="row between"><span class="eyebrow">Week at a glance</span>${viewSwitch()}</div>`;
+  if (!rows.length) return html + `<div class="card empty"><p>Nothing scheduled this week.</p></div>`;
+  html += `<div class="card wk-card"><div class="tablewrap"><table class="wk"><thead><tr><th class="wk-name"></th>${dayStats.map((d) => {
+    const dd = parseD(d.date);
+    return `<th class="${d.date === td ? "is-today" : ""}"><button class="wk-day" data-act="goday" data-date="${d.date}" aria-label="Open ${dd.toLocaleDateString(undefined, { weekday: "long" })}"><span>${DOW[dd.getDay()].slice(0, 2)}</span><b class="num">${dd.getDate()}</b></button></th>`;
+  }).join("")}</tr></thead><tbody>`;
+  let lastTime = null;
+  for (const x of rows) {
+    const newTime = x.time !== lastTime; lastTime = x.time;
+    html += `<tr class="${newTime ? "wk-newtime" : ""}"><th class="wk-name" scope="row"><button class="linkbtn" data-act="detail" data-id="${x.s.id}">${esc(x.s.name)}</button><span class="num">${fmtTime(x.time)}</span></th>`;
+    for (const { date, keys } of perDay) {
+      if (!keys.has(x.key)) { html += `<td class="${date === td ? "is-today" : ""}"><span class="wk-off" aria-hidden="true"></span></td>`; continue; }
+      const st = state(date, x);
+      html += `<td class="${date === td ? "is-today" : ""}"><button class="wk-cell ${st}" data-act="wkdose" data-key="${esc(x.key)}" data-date="${date}" aria-pressed="${st === "taken"}" aria-label="${esc(x.s.name)} ${fmtTime(x.time)} ${date}: ${st}">${st === "taken" ? I.check : st === "missed" ? I.x : ""}</button></td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody><tfoot><tr><th class="wk-name"><span class="small muted">Done</span></th>${dayStats.map((d) => `<td class="${d.date === td ? "is-today" : ""}"><span class="num small ${d.n && d.t === d.n ? "wk-full" : "muted"}">${d.n ? `${d.t}/${d.n}` : "–"}</span></td>`).join("")}</tr></tfoot></table></div>
+    <div class="wk-legend small muted"><span><i class="wk-cell taken">${I.check}</i> taken</span><span><i class="wk-cell missed">${I.x}</i> missed</span><span><i class="wk-cell due"></i> still to come</span></div></div>
+    <p class="hint">Tap a square to tick off or undo a dose on that day. Tap a day to open it hour by hour.</p>`;
+  return html;
+}
+
+/* ---------- Overview: progress ring + time-of-day blocks ---------- */
+const BUCKETS = ["Morning", "Midday", "Evening", "Night"];
+const bucketOf = (time) => { const h = Number(time.slice(0, 2)); return h < 11 ? 0 : h < 15 ? 1 : h < 20 ? 2 : 3; };
+function streakDays() {
+  const full = (d) => { const ds = dosesFor(d); const tk = S.days[d]?.taken || {}; return ds.length ? ds.every((x) => tk[x.key] != null) : null; };
+  let n = 0;
+  for (let i = 1; i < 366; i++) { const r = full(addDays(today(), -i)); if (r === null) continue; if (!r) break; n++; }
+  if (full(today())) n++;
+  return n;
+}
+function viewOverview() {
+  const date = S.date, isToday = date === today();
+  const doses = dosesFor(date);
+  const taken = S.days[date]?.taken || {};
+  const done = doses.filter((x) => taken[x.key] != null).length;
+  const d = parseD(date);
+  const title = isToday ? "Today’s stack" : date === addDays(today(), -1) ? "Yesterday" : date === addDays(today(), 1) ? "Tomorrow" : DOW[d.getDay()] + "’s stack";
+  const now = new Date(), nowT = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const open = doses.filter((x) => taken[x.key] == null);
+  const next = isToday ? (open.find((x) => x.time >= nowT) || open[0]) : open[0];
+  const C = 2 * Math.PI * 68, frac = doses.length ? done / doses.length : 0;
+  const low = lowItems()[0];
+  const streak = streakDays();
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
+    <div class="grow"><div class="eyebrow">${esc(d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }))}</div><h2 class="ov-title">${title}</h2></div>
+    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  html += `<div class="row between"><span class="eyebrow">Overview</span>${viewSwitch()}</div>`;
+  if (!doses.length) return html + `<div class="card empty"><h3>Nothing scheduled ${isToday ? "today" : "this day"}</h3><p>Supplements in your cupboard don't show here until you give them a time.</p><button class="btn" data-act="tab" data-tab="stock">Open stock</button></div>`;
+  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${done} of ${doses.length} doses taken">
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
+      <div class="ov-ringtxt"><span class="ov-big">${done}<span>/${doses.length}</span></span><span class="small muted">doses taken</span></div></div>
+    <div class="ov-stats">
+      <div><span class="small muted">Next</span><b>${next ? `${fmtTime(next.time)} · ${esc(next.s.name)}` : "All done for the day"}</b></div>
+      <div><span class="small muted">Streak</span><b>${streak ? plural(streak, "full day") : "Starts today"}</b></div>
+      <div><span class="small ${low ? "warntxt" : "muted"}">Low stock</span><b>${low ? `<button class="linkbtn ov-low" data-act="tab" data-tab="stock">${esc(low.s.name)} · ${low.i.rem <= 0 ? "empty" : esc(amountStr(low.i.rem, low.s.unit)) + " left"}</button>` : "All stocked"}</b></div>
+    </div></div>`;
+  html += `<div class="ov-grid">`;
+  for (let bi = 0; bi < 4; bi++) {
+    const at = doses.filter((x) => bucketOf(x.time) === bi);
+    if (!at.length) continue;
+    const t = at.filter((x) => taken[x.key] != null).length;
+    const isNext = next && bucketOf(next.time) === bi && t < at.length;
+    const late = isToday && at.some((x) => taken[x.key] == null && x.time < nowT) && !isNext;
+    const state = t === at.length ? `<span class="ov-state done">DONE</span>` : isNext ? `<span class="ov-state next">NEXT</span>` : `<span class="ov-state ${late ? "late" : ""}">${t}/${at.length}</span>`;
+    const times = [...new Set(at.map((x) => fmtTime(x.time)))].join(", ");
+    html += `<div class="ov-tile ${isNext ? "is-next" : ""}"><div class="row between"><span class="ov-tlabel">${BUCKETS[bi]}</span>${state}</div><span class="ov-ttime">${times}</span>
+      <div class="ov-items">${at.map((x) => {
+        const tk = taken[x.key] != null;
+        return `<div class="ov-item ${tk ? "taken" : ""}"><button class="ov-ck" data-act="dose" data-key="${esc(x.key)}" aria-pressed="${tk}" aria-label="${tk ? "Taken. Tap to undo" : "Mark taken"}: ${esc(x.s.name)} at ${fmtTime(x.time)}">${I.check}</button><button class="ov-name" data-act="detail" data-id="${x.s.id}">${esc(x.s.name)}<span>${esc(amountStr(x.servings * num(x.s.servingSize, 1), x.s.unit))}</span></button></div>`;
+      }).join("")}</div></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function viewToday() {
+  if (!S.supps.length) return emptyState();
+  if (S.todayView === "week") return viewWeek();
+  const groups = reminderGroups();
+  return (S.todayView === "full" ? viewDay() : viewOverview()) + (groups.length ? `<div class="card row between wrapflex" style="gap:10px"><div class="grow" style="min-width:180px"><div class="eyebrow">Reminders</div><div class="small muted">Get a phone notification at each dose time through your calendar.</div></div><button class="btn sm" data-act="reminders">Set up reminders</button></div>` : "");
+}
+/* ---------- Calendar reminders (Google Calendar links; repeating events) ---------- */
+const BYDAY = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+function reminderGroups() {
+  const map = new Map();
+  for (const s of active()) {
+    const days = (s.days && s.days.length ? s.days : ALL_DAYS).slice().sort();
+    for (const r of s.schedule || []) {
+      if (!r.time) continue;
+      const k = r.time + "|" + days.join("");
+      const g = map.get(k) || { time: r.time, days, items: [] };
+      g.items.push({ s, servings: num(r.servings, 1), note: r.note || "" });
+      map.set(k, g);
+    }
+  }
+  return [...map.values()].sort((a, b) => a.time.localeCompare(b.time));
+}
+function nextDateFor(days) { for (let i = 0; i < 7; i++) { const d = addDays(today(), i); if (days.includes(parseD(d).getDay())) return d; } return today(); }
+function gcalLink(g) {
+  const start = nextDateFor(g.days).replace(/-/g, "") + "T" + g.time.replace(":", "") + "00";
+  const [h, m] = g.time.split(":").map(Number); const endM = h * 60 + m + 10;
+  const endDate = endM >= 1440 ? addDays(nextDateFor(g.days), 1) : nextDateFor(g.days);
+  const end = endDate.replace(/-/g, "") + "T" + pad(Math.floor(endM % 1440 / 60)) + pad(endM % 60) + "00";
+  const rrule = g.days.length === 7 ? "RRULE:FREQ=DAILY" : "RRULE:FREQ=WEEKLY;BYDAY=" + g.days.map((d) => BYDAY[d]).join(",");
+  const title = "Take: " + g.items.map((x) => x.s.name).join(", ");
+  const details = g.items.map((x) => `• ${x.s.name}: ${amountStr(x.servings * num(x.s.servingSize, 1), x.s.unit)}${x.note ? " (" + x.note + ")" : ""}`).join("\n") + "\n\nFrom your Planner. Tick them off in the app once taken.";
+  let tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch {}
+  const q = new URLSearchParams({ action: "TEMPLATE", text: title, dates: `${start}/${end}`, details, recur: rrule });
+  if (tz) q.set("ctz", tz);
+  return "https://calendar.google.com/calendar/render?" + q.toString();
+}
+function reminderSheet() {
+  const groups = reminderGroups();
+  return `<div class="sheet-bg" data-act="close-detail"><div class="sheet" role="dialog" aria-modal="true" aria-label="Reminders" data-stop>
+    <div class="grab"></div>
+    <div class="row between" style="align-items:flex-start"><div class="grow"><h2 style="font-size:22px">Dose reminders</h2><div class="muted small">Each button adds one repeating event to Google Calendar. Your phone then notifies you at that time, using your calendar's alert setting.</div></div>
+      <button class="iconbtn" data-act="close-detail" aria-label="Close">${I.x}</button></div>
+    <div class="card plist" style="padding:2px 14px">${groups.map((g) => `<div class="pi" style="align-items:center"><div class="grow"><b class="num">${fmtTime(g.time)}</b> <span class="small muted">${g.days.length === 7 ? "every day" : g.days.map((d) => DOW[d]).join(", ")}</span><br><span class="small">${g.items.map((x) => esc(x.s.name)).join(", ")}</span></div><a class="btn sm" href="${esc(gcalLink(g))}" target="_blank" rel="noopener">Add</a></div>`).join("")}</div>
+    <div class="hint">Tap Add for each time, then Save in Google Calendar. On an iPhone, events show in the Apple Calendar too if your Google account is added there. If you change a supplement's times later, delete the old event in your calendar and add the new one here.</div>
+    <div class="actions"><button class="btn" data-act="close-detail">Done</button></div></div></div>`;
+}
+function viewDay() {
+  const date = S.date, isToday = date === today();
+  const doses = dosesFor(date);
+  const taken = S.days[date]?.taken || {};
+  const done = doses.filter((d) => taken[d.key] != null).length;
+  const d = parseD(date);
+  const title = isToday ? "Today" : date === addDays(today(), -1) ? "Yesterday" : date === addDays(today(), 1) ? "Tomorrow" : DOW[d.getDay()];
+  const sub = d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const now = new Date(), nowH = now.getHours();
+  const hours = doses.map((x) => Number(x.time.slice(0, 2)));
+  const startH = Math.min(6, ...hours), endH = Math.max(22, ...hours);
+  const low = lowItems();
+  const lowIds = new Set(low.map((x) => x.s.id));
+  let html = `<div class="daybar"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
+    <div class="grow"><h2>${title}</h2><div class="muted small">${esc(sub)}</div></div>
+    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  html += `<div class="card progress"><div class="grow"><div class="row between"><span class="eyebrow">Taken</span><span class="num small">${done} of ${doses.length}</span></div>
+    <div class="meter" style="margin-top:6px"><i style="width:${doses.length ? (done / doses.length) * 100 : 0}%"></i></div></div></div>`;
+  if (low.length && isToday) {
+    html += `<div class="alerts">${low.slice(0, 3).map(({ s, i }) => `<div class="alert ${i.level === "crit" ? "crit" : ""}"><span class="pip"></span><div><b>${esc(s.name)}</b> ${i.rem <= 0 ? "is empty." : `runs out in about ${plural(Math.max(0, Math.floor(i.daysLeft)), "day")} (${amountStr(i.rem, s.unit)} left).`} <button class="linkbtn" data-act="tab" data-tab="stock">Restock</button></div></div>`).join("")}</div>`;
+  }
+  if (!doses.length) {
+    html += `<div class="card empty"><h3>Nothing scheduled ${isToday ? "today" : "this day"}</h3><p>Supplements in your cupboard don't show here until you give them a time.</p><button class="btn" data-act="tab" data-tab="stock">Open stock</button></div>`;
+    return html;
+  }
+  html += `<div class="row between"><span class="eyebrow">${S.todayView === "compact" ? "Whole day" : "Hour by hour"}</span>${viewSwitch()}</div>`;
+  if (S.todayView === "compact") {
+    const times = [...new Set(doses.map((x) => x.time))];
+    const nowT = `${pad(nowH)}:${pad(now.getMinutes())}`;
+    const nextT = isToday ? times.find((t) => t >= nowT) : null;
+    html += `<div class="card compact">`;
+    for (const t of times) {
+      const at = doses.filter((x) => x.time === t);
+      const allDone = at.every((x) => taken[x.key] != null);
+      const past = isToday && t < nowT;
+      html += `<div class="crow ${allDone ? "done" : ""} ${past && !allDone ? "late" : ""} ${t === nextT ? "next" : ""}"><div class="ctime num">${fmtTime(t)}${t === nextT ? '<br><span class="nexttag">Next</span>' : ""}</div><div class="cchips">${at.map((x) => {
+        const tk = taken[x.key] != null;
+        return `<span class="cchip ${tk ? "taken" : ""}"><button class="cck" data-act="dose" data-key="${esc(x.key)}" aria-pressed="${tk}" aria-label="${tk ? "Taken. Tap to undo" : "Mark taken"}: ${esc(x.s.name)}">${I.check}</button><button class="cname" data-act="detail" data-id="${x.s.id}">${esc(x.s.name)} <span class="muted num">${amountStr(x.servings * num(x.s.servingSize, 1), x.s.unit)}</span></button></span>`;
+      }).join("")}</div></div>`;
+    }
+    html += `</div>`;
+    return html;
+  }
+  html += `<div class="timeline" id="timeline">`;
+  for (let h = startH; h <= endH; h++) {
+    const hh = pad(h);
+    const at = doses.filter((x) => x.time.slice(0, 2) === hh);
+    const cls = [at.length ? "" : "idle", isToday && h < nowH ? "past" : "", isToday && h === nowH ? "now" : ""].join(" ");
+    const open = at.filter((x) => taken[x.key] == null).length;
+    html += `<div class="hour ${cls}" data-h="${h}"><div class="lbl">${fmtHour(h)}</div><div class="slot">`;
+    if (isToday && h === nowH) html += `<div class="nowline" style="top:${(now.getMinutes() / 60) * 100}%;left:-14px" aria-hidden="true"></div>`;
+    for (const x of at) {
+      const t = taken[x.key] != null;
+      const units = x.servings * num(x.s.servingSize, 1);
+      const ing = (x.s.ingredients || []).slice(0, 2).map((g) => `${esc(g.name)} ${fmtN(num(g.amount) * x.servings, 1)} ${esc(g.unit)}`).join(" · ");
+      html += `<div class="dose ${t ? "taken" : ""} ${lowIds.has(x.s.id) ? "low" : ""}">
+        <button class="check" data-act="dose" data-key="${esc(x.key)}" aria-pressed="${t}" aria-label="${t ? "Taken. Tap to undo" : "Mark taken"}: ${esc(x.s.name)}">${I.check}</button>
+        <button class="info" data-act="detail" data-id="${x.s.id}"><span class="dname">${esc(x.s.name)}</span><br><span class="dmeta"><span class="num">${amountStr(units, x.s.unit)}</span>${x.note ? " · " + esc(x.note) : ""}${ing ? "<br>" + ing : ""}</span></button>
+        <span class="dtime">${fmtTime(x.time)}</span></div>`;
+    }
+    if (open > 1) html += `<div class="slothead"><button class="linkbtn" data-act="takeall" data-h="${hh}">Mark all ${open} taken</button></div>`;
+    html += `</div></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function viewTotals() {
+  if (!S.supps.length) return emptyState();
+  const mode = S.totalsMode === "taken" ? "taken" : "planned";
+  const week = weekDates(S.date);
+  const last7 = Array.from({ length: 7 }, (_, i) => addDays(today(), -i));
+  const dayMap = mode === "planned" ? plannedTotals([S.date]) : takenTotals([S.date]);
+  const weekMap = mode === "planned" ? plannedTotals(week) : takenTotals(last7);
+  const keys = [...new Set([...weekMap.keys(), ...dayMap.keys()])].sort((x, y) => (weekMap.get(x) || dayMap.get(x)).name.localeCompare((weekMap.get(y) || dayMap.get(y)).name));
+  const isToday = S.date === today();
+  const dayLabel = isToday ? "Today" : parseD(S.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const weekLabel = mode === "planned" ? `Week of ${parseD(week[0]).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : "Last 7 days";
+  const doseCount = dosesFor(S.date).length;
+  const unitsPerDay = active().reduce((a, s) => a + (COUNT_UNITS.includes(s.unit) ? dailyUnits(s) : 0), 0);
+  const fmtV = (e, v) => (e.kind === "mass" ? fmtMass(v) : `${fmtN(v, 1)} ${esc(e.unit)}`);
+  let html = `<div class="row between wrapflex"><div><h2 style="font-size:22px">Ingredient totals</h2><div class="muted small">Every ingredient added up across all your supplements. Tap one to see where it comes from.</div></div>
+    <div class="seg" role="group" aria-label="Show"><button data-act="tmode" data-m="planned" aria-pressed="${mode === "planned"}">Planned</button><button data-act="tmode" data-m="taken" aria-pressed="${mode === "taken"}">Taken</button></div></div>`;
+  html += `<div class="daybar"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button><div class="grow small"><b>${esc(dayLabel)}</b> <span class="muted">and ${esc(mode === "planned" ? weekLabel.replace("Week", "the week") : "the last 7 days")}</span></div>${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}<button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  html += `<div class="statgrid"><div class="stat"><div class="v">${active().length}</div><div class="k">supplements in your stack</div></div>
+    <div class="stat"><div class="v">${doseCount}</div><div class="k">doses ${isToday ? "today" : "that day"}</div></div>
+    <div class="stat"><div class="v">${fmtN(unitsPerDay, 0)}</div><div class="k">pills a day on average</div></div></div>`;
+  if (!keys.length) html += `<div class="card empty"><p>${mode === "taken" ? "Nothing ticked off yet. Tick doses on Today and they add up here." : "Add ingredients to your supplements to see totals here."}</p></div>`;
+  else {
+    html += `<div class="card" style="padding:4px 12px"><div class="ingrid inghead"><span>Ingredient</span><span class="r">${esc(dayLabel)}</span><span class="r">${mode === "planned" ? "Week" : "7 days"}</span></div>`;
+    for (const k of keys) {
+      const d = dayMap.get(k), w = weekMap.get(k), e = w || d;
+      const ids = [...new Set([...(w?.from.keys() || []), ...(d?.from.keys() || [])])];
+      html += `<details class="ingdet"><summary class="ingrid"><span><span class="ingname">${esc(e.name)}</span><br><span class="ingsrc">${ids.length} supplement${ids.length === 1 ? "" : "s"}</span></span><span class="r num">${d ? fmtV(e, d.total) : '<span class="muted">–</span>'}</span><span class="r num">${w ? fmtV(e, w.total) : '<span class="muted">–</span>'}</span></summary>
+        ${ids.map((id) => { const s = S.supps.find((x) => x.id === id); return `<div class="ingrid sub"><button class="linkbtn" data-act="detail" data-id="${id}">${esc(s?.name || "Removed supplement")}</button><span class="r num">${d?.from.get(id) ? fmtV(e, d.from.get(id)) : "–"}</span><span class="r num">${w?.from.get(id) ? fmtV(e, w.from.get(id)) : "–"}</span></div>`; }).join("")}</details>`;
+    }
+    html += `</div>`;
+  }
+  html += `<p class="hint">mcg, mg and g are combined for the same ingredient name. Other units (IU, CFU) are listed separately. These are sums from your labels, not medical advice.</p>`;
+  const stack = active().slice().sort((a, b) => a.name.localeCompare(b.name));
+  html += `<section class="stock"><div class="eyebrow">Your stack · ${stack.length}</div><div class="card plist" style="padding:2px 14px">${stack.map((s) => {
+    const servings = (s.schedule || []).reduce((a, r) => a + num(r.servings, 1), 0);
+    const days = s.days && s.days.length && s.days.length < 7 ? s.days.map((d) => DOW[d]).join(", ") : "Every day";
+    return `<button class="pi stackrow" data-act="detail" data-id="${s.id}"><span class="grow"><b>${esc(s.name)}</b><br><span class="small muted">${amountStr(servings * num(s.servingSize, 1), s.unit)} a day · ${(s.schedule || []).map((r) => fmtTime(r.time)).join(", ") || "no times"} · ${esc(days)}</span></span>${I.right}</button>`;
+  }).join("") || '<div class="pi muted small">Nothing in your daily stack yet.</div>'}</div></section>`;
+  return html;
+}
+
+function stockCard(s) {
+  const i = stockInfo(s);
+  const isCup = s.status === "cupboard";
+  const chip = i.level === "crit" && !isCup ? `<span class="chip crit">${i.rem <= 0 ? "Empty" : "Very low"}</span>` : i.level === "warn" && !isCup ? `<span class="chip warn">Low</span>` : "";
+  const conf = S.confirm && S.confirm.id === s.id ? S.confirm : null;
+  let line;
+  if (isCup) line = `${amountStr(i.rem, s.unit)} left · ${plural(Math.floor(i.servingsLeft), "serving")}`;
+  else if (i.daysLeft !== null) line = `${amountStr(i.rem, s.unit)} left · about ${plural(Math.floor(i.daysLeft), "day")}${i.outDate ? `, runs out around ${i.outDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}`;
+  else line = `${amountStr(i.rem, s.unit)} left · no times set`;
+  return `<div class="card sitem"><div class="top"><div class="grow"><div class="row wrapflex" style="gap:6px"><h3><button class="linkbtn" style="font:inherit;color:var(--ink);text-align:left;padding:0" data-act="detail" data-id="${s.id}">${esc(s.name)}</button></h3>${chip}${s.example ? '<span class="chip ex">Example</span>' : ""}</div>
+    <div class="muted small">${esc(s.brand || "")}${s.brand ? " · " : ""}${amountStr(num(s.servingSize, 1), s.unit)} per serving</div></div></div>
+    <div class="level ${isCup ? "" : i.level}"><i style="width:${i.pct}%"></i></div>
+    <div class="small num">${line}</div>
+    ${conf ? confirmBox(s, conf) : `<div class="actions"><button class="btn sm" data-act="edit" data-id="${s.id}">Edit</button>
+      <button class="btn sm" data-act="ask" data-kind="refill" data-id="${s.id}">Restock</button>
+      <button class="btn sm" data-act="ask" data-kind="count" data-id="${s.id}">Set count</button>
+      ${isCup ? `<button class="btn sm primary" data-act="activate" data-id="${s.id}">Start taking</button>` : `<button class="btn sm ghost" data-act="shelve" data-id="${s.id}">Move to cupboard</button>`}
+      <button class="btn sm ghost danger" data-act="ask" data-kind="delete" data-id="${s.id}">Delete</button></div>`}</div>`;
+}
+function confirmBox(s, c) {
+  if (c.kind === "delete") return `<div class="inline-confirm">Delete ${esc(s.name)} and its history? <button class="btn sm danger" data-act="do-delete" data-id="${s.id}">Delete</button><button class="btn sm" data-act="cancel">Keep</button></div>`;
+  if (c.kind === "refill") { const last = purchasesOf(s).slice(-1)[0]; return `<div class="inline-confirm"><span style="flex-basis:100%">Add a new container (${amountStr(num(s.containerAmount), s.unit)})</span><label class="fl" style="flex:1;min-width:120px"><span>Price paid (${esc(S.settings.currency)})</span><input class="in num" id="price-${s.id}" type="number" inputmode="decimal" min="0" step="any" value="${last ? esc(last.price) : ""}" placeholder="optional"></label><button class="btn sm primary" data-act="do-refill" data-id="${s.id}">Add</button><button class="btn sm" data-act="cancel">Cancel</button></div>`; }
+  return `<div class="inline-confirm"><label class="fl" style="flex:1;min-width:120px"><span>${esc(unitLabel(s.unit, 2))} left</span><input class="in num" id="count-${s.id}" type="number" inputmode="decimal" min="0" step="any" value="${fmtN(num(s.remaining), 2).replace(/,/g, "")}"></label><button class="btn sm primary" data-act="do-count" data-id="${s.id}">Save</button><button class="btn sm" data-act="cancel">Cancel</button></div>`;
+}
+function viewStock() {
+  if (!S.supps.length) return emptyState();
+  const act = active().map((s) => ({ s, i: stockInfo(s) })).sort((a, b) => (a.i.daysLeft ?? 1e9) - (b.i.daysLeft ?? 1e9));
+  const cup = cupboard().sort((a, b) => a.name.localeCompare(b.name));
+  const low = lowItems();
+  let html = `<div class="row between"><h2 style="font-size:22px">Stock</h2><button class="btn sm" data-act="new-cup">Add to cupboard</button></div>`;
+  if (low.length) html += `<div class="alerts">${low.map(({ s, i }) => `<div class="alert ${i.level === "crit" ? "crit" : ""}"><span class="pip"></span><div><b>${esc(s.name)}</b> ${i.rem <= 0 ? "is empty." : `has about ${plural(Math.floor(i.daysLeft), "day")} left.`}${cup.some((c) => c.name.toLowerCase() === s.name.toLowerCase()) ? " You have one in the cupboard." : ""}</div></div>`).join("")}</div>`;
+  html += `<section class="stock"><div class="eyebrow">Taking now · ${act.length}</div>${act.length ? act.map((x) => stockCard(x.s)).join("") : `<div class="card muted small">Nothing in your daily stack.</div>`}</section>`;
+  html += `<section class="stock"><div class="eyebrow">In the cupboard · ${cup.length}</div>${cup.length ? cup.map(stockCard).join("") : `<div class="card muted small">Unopened or paused supplements go here so you can see what you have. Use "Add to cupboard" or "Move to cupboard".</div>`}</section>`;
+  if (S.supps.some((s) => s.example)) html += `<div><button class="btn sm ghost danger" data-act="rm-examples">Remove example supplements</button></div>`;
+  return html;
+}
+
+function viewAdd() {
+  const f = S.form || (S.form = blankForm());
+  const editing = !!f.id;
+  const ph = (side) => {
+    const p = S.photos[side];
+    const src = p?.url || (f.photos?.[side] ? storedSrc(f.photos[side]) : null);
+    return `<label class="photo" for="ph-${side}"><span class="tag">${side === "front" ? "Front" : "Back (facts panel)"}</span>
+      ${src ? `<img src="${esc(src)}" alt="${side} of label">` : `<span class="ph">${I.cam}<span>Take or choose<br>a photo</span></span>`}
+      <input id="ph-${side}" type="file" accept="image/*" data-photo="${side}"></label>`;
+  };
+  let html = `<div class="row between"><h2 style="font-size:22px">${editing ? "Edit " + esc(f.name || "supplement") : "Add a supplement"}</h2>${editing || S.form?.name ? `<button class="btn sm ghost" data-act="discard">${editing ? "Cancel" : "Clear"}</button>` : ""}</div>`;
+  html += `<div class="card" style="display:flex;flex-direction:column;gap:10px"><div><div class="eyebrow">${editing ? "Label photos" : "Step 1 · Photograph the label"}</div>
+    <div class="small muted">${editing ? "Tap a photo to replace it. Photos are kept with this supplement so you can check the label later." : "Front for the name, back for the Supplement Facts. Claude reads both and fills in the form below. The photos are saved with the supplement."}</div></div>
+    <div class="photos">${ph("front")}${ph("back")}</div>`;
+  if (S.canPhoto === false) { if (!editing) html += `<div class="status">Photo reading isn't available in this view, so fill in the form by hand. It works when you open the page in the Claude app or on claude.ai while signed in.</div>`; }
+  else if (!editing || S.photos.front || S.photos.back) html += `<button class="btn ${editing ? "" : "primary"}" data-act="autofill" ${S.ai.busy || !(S.photos.front || S.photos.back) || !S.canPhoto ? "disabled" : ""}>${S.ai.busy ? '<span class="spin"></span> Reading the label…' : editing ? "Fill in again from the new photo" : "Fill in from photos"}</button>`;
+  if (S.ai.msg && !S.ai.busy) html += `<div class="status ${S.ai.kind}">${esc(S.ai.msg)}</div>`;
+  html += `</div>`;
+  const opt = (v, cur, label) => `<option value="${v}" ${v === cur ? "selected" : ""}>${label || v}</option>`;
+  html += `<form class="f card" id="sform" novalidate>
+  <fieldset><legend>${editing ? "Details" : "Step 2 · Check the details"}</legend>
+    <div class="fgrid">
+      <label class="fl full">Name<input class="in" id="f-name" data-f="name" value="${esc(f.name)}" placeholder="e.g. Magnesium Glycinate" autocomplete="off"></label>
+      <label class="fl">Brand<input class="in" id="f-brand" data-f="brand" value="${esc(f.brand)}" autocomplete="off"></label>
+      <label class="fl">Form<select class="in" id="f-form" data-f="form">${["capsule", "tablet", "softgel", "gummy", "powder", "liquid", "other"].map((x) => opt(x, f.form)).join("")}</select></label>
+      <label class="fl">Counted in<select class="in" id="f-unit" data-f="unit">${["capsule", "tablet", "softgel", "gummy", "scoop", "g", "ml", "drop", "chew", "packet"].map((x) => opt(x, f.unit, COUNT_UNITS.includes(x) ? x + "s" : x)).join("")}</select></label>
+      <label class="fl">Per serving<input class="in num" id="f-ss" type="number" inputmode="decimal" min="0" step="any" data-f="servingSize" value="${esc(f.servingSize)}"></label>
+      <label class="fl">In the container<input class="in num" id="f-cont" type="number" inputmode="decimal" min="0" step="any" data-f="containerAmount" value="${esc(f.containerAmount)}" placeholder="e.g. 120"></label>
+      <label class="fl">Left right now<input class="in num" id="f-rem" type="number" inputmode="decimal" min="0" step="any" data-f="remaining" value="${esc(f.remaining)}" placeholder="full"></label>
+      <label class="fl">Price paid (${esc(S.settings.currency)})<input class="in num" id="f-price" type="number" inputmode="decimal" min="0" step="any" data-f="price" value="${esc(f.price)}" placeholder="optional"></label>
+      <label class="fl">Bought on<input class="in num" id="f-bought" type="date" data-f="boughtOn" value="${esc(f.boughtOn)}"></label>
+      ${f.id && (f.purchases || []).length > 1 ? `<div class="hint full">This edits your latest purchase. Earlier ones are listed on the Spend tab.</div>` : ""}
+      ${f.servingDesc ? `<div class="hint full">Label says: serving ${esc(f.servingDesc)}${f.servingsPerContainer ? `, ${esc(f.servingsPerContainer)} servings per container` : ""}</div>` : ""}
+    </div>
+  </fieldset>
+  <fieldset><legend>Ingredients per serving</legend>
+    ${(f.ingredients || []).map((g, i) => `<div class="ingrow">
+      <label class="fl ingname-field"><span>Ingredient</span><input class="in" id="g-n-${i}" data-g="${i}" data-k="name" value="${esc(g.name)}" placeholder="e.g. Vitamin D3"></label>
+      <label class="fl"><span>Amount</span><input class="in num" id="g-a-${i}" type="number" inputmode="decimal" step="any" data-g="${i}" data-k="amount" value="${esc(g.amount)}"></label>
+      <label class="fl"><span>Unit</span><select class="in" id="g-u-${i}" data-g="${i}" data-k="unit">${[...new Set(["mg", "mcg", "g", "IU", "CFU", "ml", g.unit || "mg"])].map((x) => opt(x, g.unit || "mg")).join("")}</select></label>
+      <button type="button" class="iconbtn" data-act="rm-ing" data-i="${i}" aria-label="Remove ingredient">${I.x}</button></div>`).join("")}
+    <div><button type="button" class="btn sm" data-act="add-ing">Add ingredient</button></div>
+  </fieldset>
+  <fieldset><legend>When you take it</legend>
+    <label class="fl">Where it lives<select class="in" id="f-status" data-f="status">${opt("active", f.status, "In my daily stack")}${opt("cupboard", f.status, "In the cupboard (not taking yet)")}</select></label>
+    ${f.status === "active" ? `
+    ${(f.schedule || []).map((r, i) => `<div class="schedrow">
+      <label class="fl"><span>Time</span><input class="in num" id="s-t-${i}" type="time" data-s="${i}" data-k="time" value="${esc(r.time)}"></label>
+      <label class="fl"><span>Servings</span><input class="in num" id="s-v-${i}" type="number" inputmode="decimal" min="0" step="any" data-s="${i}" data-k="servings" value="${esc(r.servings)}"></label>
+      <label class="fl note-field"><span>Note</span><input class="in" id="s-n-${i}" data-s="${i}" data-k="note" value="${esc(r.note)}" placeholder="with food"></label>
+      <button type="button" class="iconbtn" data-act="rm-time" data-i="${i}" aria-label="Remove time">${I.x}</button></div>`).join("")}
+    <div><button type="button" class="btn sm" data-act="add-time">Add a time</button></div>
+    <div class="fl">Days<div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" data-act="dow" data-d="${d}" aria-pressed="${(f.days || ALL_DAYS).includes(d)}">${DOW[d].slice(0, 2)}</button>`).join("")}</div></div>
+    <label class="fl">Warn me when this many days are left<input class="in num" id="f-alert" type="number" inputmode="numeric" min="1" step="1" data-f="alertDays" value="${esc(f.alertDays)}"></label>
+    ${f.directions ? `<div class="hint">Label directions: ${esc(f.directions)}</div>` : ""}` : `<div class="hint">It'll show in Stock with how much is left. Use "Start taking" there when you want it on your schedule.</div>`}
+    <label class="fl">Notes<textarea class="in" id="f-notes" data-f="notes" placeholder="Anything to remember">${esc(f.notes)}</textarea></label>
+  </fieldset>
+  <div class="sticky-save"><button type="submit" class="btn primary">${editing ? "Save changes" : "Save supplement"}</button></div>
+  </form>`;
+  return html;
+}
+
+/* ---------- Spend ---------- */
+function viewSpend() {
+  if (!S.supps.length) return emptyState();
+  const buys = allPurchases();
+  const cur = monthKey(today());
+  const months = Array.from({ length: 12 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (11 - i)); return dstr(d).slice(0, 7); });
+  const byMonth = Object.fromEntries(months.map((m) => [m, 0]));
+  for (const b of buys) if (b.date && monthKey(b.date) in byMonth) byMonth[monthKey(b.date)] += num(b.price);
+  const sel = S.spendMonth && S.spendMonth in byMonth ? S.spendMonth : cur;
+  const year = months.reduce((a, m) => a + byMonth[m], 0);
+  const runRate = active().reduce((a, s) => a + (costInfo(s)?.perMonth || 0), 0);
+  const priced = active().filter((s) => costInfo(s));
+  const unpriced = active().filter((s) => !costInfo(s));
+  const max = Math.max(1, ...months.map((m) => byMonth[m]));
+  let html = `<div class="row between wrapflex"><h2 style="font-size:22px">Spending</h2>
+    <label class="row small muted" style="gap:6px">Currency <select class="in" id="currency" data-setting="currency" style="width:auto;padding:5px 8px">${[...new Set([S.settings.currency, ...CURRENCIES])].map((c) => `<option ${c === S.settings.currency ? "selected" : ""}>${c}</option>`).join("")}</select></label></div>`;
+  html += `<div class="statgrid"><div class="stat"><div class="v">${money(byMonth[cur])}</div><div class="k">bought this month</div></div>
+    <div class="stat"><div class="v">${money(runRate)}</div><div class="k">your stack costs a month</div></div>
+    <div class="stat"><div class="v">${money(year)}</div><div class="k">last 12 months</div></div></div>`;
+  if (!buys.length) {
+    return html + `<div class="card empty"><h3>No prices yet</h3><p>Add what you paid when you add or restock a supplement, or open one and tap Edit to add its price. Spending shows up here by month.</p></div>`;
+  }
+  // Monthly purchases chart (single series)
+  html += `<div class="card"><div class="row between"><div><div class="eyebrow">Bought per month</div><div class="small muted">Tap a month to see what you bought</div></div><div class="small num muted">max ${money(max)}</div></div>
+    <div class="chart" style="margin-top:22px"><div class="bars" role="group" aria-label="Spending per month">${months.map((m) => `<button data-act="smonth" data-m="${m}" aria-pressed="${m === sel}" aria-label="${monthLabel(m, true)}: ${money(byMonth[m])}" title="${monthLabel(m, true)}: ${money(byMonth[m])}"><i style="height:${byMonth[m] ? Math.max(2, (byMonth[m] / max) * 100) : 0}%"></i></button>`).join("")}</div>
+    <div class="charttip" style="left:${((months.indexOf(sel) + 0.5) / 12) * 100}%">${monthLabel(sel)} · ${money(byMonth[sel])}</div>
+    <div class="barlbls">${months.map((m, i) => `<span>${i % 2 === 11 % 2 ? monthLabel(m).slice(0, 3) : ""}</span>`).join("")}</div></div>`;
+  const inMonth = buys.filter((b) => b.date && monthKey(b.date) === sel);
+  html += `<div style="margin-top:14px"><div class="eyebrow">${monthLabel(sel, true)}</div><div class="plist">${inMonth.length ? inMonth.map((b) => `<div class="pi"><button class="linkbtn grow" style="text-align:left" data-act="detail" data-id="${b.s.id}">${esc(b.s.name)}</button><span class="small muted num">${parseD(b.date).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span><span class="num">${money(num(b.price), 2)}</span></div>`).join("") : '<div class="pi small muted">Nothing bought this month.</div>'}</div></div></div>`;
+  // Where the money goes: running cost per supplement
+  const rows = priced.map((s) => ({ s, c: costInfo(s) })).sort((a, b) => b.c.perMonth - a.c.perMonth);
+  html += `<section class="card" style="display:flex;flex-direction:column;gap:12px"><div><div class="eyebrow">Where the money goes</div><div class="small muted">What each supplement costs you per month at your current doses, from the last price you paid</div></div>
+    <div class="share">${rows.map(({ s, c }) => `<div class="sh"><div class="row between"><button class="linkbtn" style="color:var(--ink);font-weight:600;text-align:left" data-act="detail" data-id="${s.id}">${esc(s.name)}</button><span class="num">${money(c.perMonth)}<span class="muted small"> /mo</span></span></div>
+      <div class="bar"><i style="width:${runRate ? (c.perMonth / runRate) * 100 : 0}%"></i></div>
+      <div class="small muted num">${runRate ? Math.round((c.perMonth / runRate) * 100) : 0}% · ${money(c.perServing, 2)} a serving · ${money(c.perDay, 2)} a day</div></div>`).join("") || '<div class="small muted">Add prices to the supplements you take to see this.</div>'}</div>
+    ${unpriced.length ? `<div class="hint">No price yet for ${unpriced.map((s) => esc(s.name)).join(", ")}.</div>` : ""}</section>`;
+  // Cupboard value
+  const cupVal = cupboard().reduce((a, s) => { const uc = unitCost(s); return a + (uc ? uc * num(s.remaining) : 0); }, 0);
+  if (cupVal) html += `<div class="card row between"><div><div class="eyebrow">Sitting in the cupboard</div><div class="small muted">Value of what's left in supplements you're not taking</div></div><div class="num">${money(cupVal)}</div></div>`;
+  // History
+  html += `<section class="card"><div class="eyebrow">All purchases</div><div class="plist">${buys.slice(0, 60).map((b) => `<div class="pi"><button class="linkbtn grow" style="text-align:left" data-act="detail" data-id="${b.s.id}">${esc(b.s.name)}</button><span class="small muted num">${parseD(b.date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" })}</span><span class="num">${money(num(b.price), 2)}</span></div>`).join("")}</div></section>`;
+  return html;
+}
+
+/* ---------- Photos: stored as assets (account) or small data URLs (this device) ---------- */
+function storedSrc(ref) { if (!ref) return null; if (window.__blobSrc && !/^(data:|blob:|https?:|\/)/.test(ref)) return window.__blobSrc(ref); return /^(data:|blob:|https?:|\/)/.test(ref) ? ref : "/_blob/" + ref; }
+async function storePhoto(blob) {
+  if (store.kind === "db") {
+    const assets = await (window.claude?.use?.("assets") ?? null);
+    if (!assets) throw new Error("no_assets");
+    const r = await assets.upload(blob);
+    return r.id;
+  }
+  // Local mode: keep a smaller copy so it fits in browser storage
+  const small = await shrink(blob, 900, 0.7);
+  return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(small); });
+}
+
+/* ---------- Detail sheet and zoom ---------- */
+function renderOverlay() {
+  let host = $("#overlay");
+  if (!host) { host = document.createElement("div"); host.id = "overlay"; document.body.appendChild(host); }
+  if (S.mealAdd) { host.innerHTML = mealSheet(); document.body.style.overflow = "hidden"; return; }
+  if (S.reminders) { host.innerHTML = reminderSheet(); document.body.style.overflow = "hidden"; return; }
+  const s = S.detail && S.supps.find((x) => x.id === S.detail);
+  if (!s) { host.innerHTML = ""; document.body.style.overflow = ""; return; }
+  document.body.style.overflow = "hidden";
+  const i = stockInfo(s), c = costInfo(s), buys = purchasesOf(s).slice().reverse();
+  const ph = s.photos || {};
+  const days = s.days && s.days.length && s.days.length < 7 ? s.days.map((d) => DOW[d]).join(", ") : "Every day";
+  let h = `<div class="sheet-bg" data-act="close-detail"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(s.name)}" data-stop>
+    <div class="grab"></div>
+    <div class="row between" style="align-items:flex-start"><div class="grow"><h2 style="font-size:22px">${esc(s.name)}</h2><div class="muted small">${esc(s.brand || "")}${s.brand ? " · " : ""}${esc(s.form || "")}${s.status === "cupboard" ? " · in the cupboard" : ""}${s.example ? " · example" : ""}</div></div>
+      <button class="iconbtn" data-act="close-detail" aria-label="Close">${I.x}</button></div>`;
+  if (ph.front || ph.back) h += `<div class="thumbs">${["front", "back"].filter((k) => ph[k]).map((k) => `<button data-act="zoom" data-side="${k}" aria-label="Zoom into the ${k} photo"><img src="${esc(storedSrc(ph[k]))}" alt="${k} of label" loading="lazy"><span class="tag">${k === "front" ? "Front" : "Back"} · tap to zoom</span></button>`).join("")}</div>`;
+  else h += `<div class="status small">No label photos saved. Tap Edit to add the front and back.</div>`;
+  h += `<div class="card"><dl class="kv" style="margin:0">
+    <dt>Serving</dt><dd>${amountStr(num(s.servingSize, 1), s.unit)}${s.servingDesc ? ` <span class="muted">(${esc(s.servingDesc)})</span>` : ""}</dd>
+    <dt>Container</dt><dd>${amountStr(num(s.containerAmount), s.unit)}</dd>
+    <dt>Left</dt><dd>${amountStr(i.rem, s.unit)} · ${plural(Math.floor(i.servingsLeft), "serving")}</dd>
+    ${i.daysLeft !== null ? `<dt>Lasts</dt><dd>about ${plural(Math.floor(i.daysLeft), "day")}</dd>` : ""}
+    ${s.status !== "cupboard" ? `<dt>When</dt><dd>${(s.schedule || []).map((r) => `${fmtTime(r.time)} × ${fmtN(num(r.servings, 1))}`).join(", ") || "no times"}<br><span class="muted">${esc(days)}</span></dd>` : ""}
+    ${c ? `<dt>Cost</dt><dd>${money(c.perServing, 2)} a serving${c.perMonth ? `<br>${money(c.perMonth)} a month` : ""}</dd>` : ""}
+  </dl></div>`;
+  h += `<div class="card"><div class="eyebrow" style="margin-bottom:6px">Per serving</div>${(s.ingredients || []).length ? `<dl class="kv" style="margin:0">${s.ingredients.map((g) => `<dt style="color:var(--ink)">${esc(g.name)}</dt><dd>${fmtN(num(g.amount), 2)} ${esc(g.unit)}</dd>`).join("")}</dl>` : '<div class="small muted">No ingredients entered.</div>'}</div>`;
+  if (s.directions || s.notes) h += `<div class="card small">${s.directions ? `<div><span class="eyebrow">Label directions</span><br>${esc(s.directions)}</div>` : ""}${s.notes ? `<div style="margin-top:${s.directions ? 8 : 0}px"><span class="eyebrow">Notes</span><br>${esc(s.notes)}</div>` : ""}</div>`;
+  if (buys.length) h += `<div class="card"><div class="eyebrow">Purchases</div><div class="plist">${buys.map((b) => `<div class="pi"><span class="grow small num">${parseD(b.date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</span><span class="num">${money(num(b.price), 2)}</span></div>`).join("")}</div></div>`;
+  h += `<div class="actions"><button class="btn primary" data-act="edit" data-id="${s.id}">Edit</button><button class="btn" data-act="close-detail">Close</button></div></div></div>`;
+  if (S.zoom) {
+    const src = storedSrc(ph[S.zoom.side]);
+    h += `<div class="zoom" role="dialog" aria-modal="true" aria-label="Label photo"><div class="zbar"><span class="small">${S.zoom.side === "front" ? "Front" : "Back"} · ${Math.round(S.zoom.z * 100)}%</span><span class="row" style="gap:6px">
+      <button data-act="zout" aria-label="Zoom out">−</button><button data-act="zin" aria-label="Zoom in">+</button>${ph.front && ph.back ? `<button data-act="zswap">${S.zoom.side === "front" ? "Back" : "Front"}</button>` : ""}<button data-act="zclose" aria-label="Close">${I.x}</button></span></div>
+      <div class="zarea" id="zarea"><img id="zimg" src="${esc(src)}" alt="Label photo" style="width:${S.zoom.z * 100}%"></div></div>`;
+  }
+  host.innerHTML = h;
+  if (S.zoom) bindPinch();
+}
+function setZoom(z, cx, cy) {
+  const area = $("#zarea"), img = $("#zimg");
+  if (!area || !img) return;
+  const old = S.zoom.z; z = Math.max(1, Math.min(6, z)); S.zoom.z = z;
+  const rect = area.getBoundingClientRect();
+  const px = (cx ?? rect.width / 2), py = (cy ?? rect.height / 2);
+  const fx = (area.scrollLeft + px) / old, fy = (area.scrollTop + py) / old;
+  img.style.width = z * 100 + "%";
+  area.scrollLeft = fx * z - px; area.scrollTop = fy * z - py;
+  const lbl = document.querySelector(".zoom .zbar .small"); if (lbl) lbl.textContent = `${S.zoom.side === "front" ? "Front" : "Back"} · ${Math.round(z * 100)}%`;
+}
+function bindPinch() {
+  const area = $("#zarea"); if (!area) return;
+  const pts = new Map(); let start = null;
+  area.addEventListener("pointerdown", (e) => { pts.set(e.pointerId, e); if (pts.size === 2) { const [a, b] = [...pts.values()]; start = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z: S.zoom.z }; } });
+  area.addEventListener("pointermove", (e) => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, e);
+    if (pts.size === 2 && start) { e.preventDefault(); const [a, b] = [...pts.values()]; const r = area.getBoundingClientRect(); setZoom(start.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / start.d, (a.clientX + b.clientX) / 2 - r.left, (a.clientY + b.clientY) / 2 - r.top); }
+  });
+  const end = (e) => { pts.delete(e.pointerId); if (pts.size < 2) start = null; };
+  area.addEventListener("pointerup", end); area.addEventListener("pointercancel", end);
+  area.addEventListener("dblclick", (e) => { const r = area.getBoundingClientRect(); setZoom(S.zoom.z > 1.5 ? 1 : 2.5, e.clientX - r.left, e.clientY - r.top); });
+  area.addEventListener("wheel", (e) => { if (!e.ctrlKey) return; e.preventDefault(); const r = area.getBoundingClientRect(); setZoom(S.zoom.z * (e.deltaY < 0 ? 1.1 : 0.9), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  area.style.touchAction = "pan-x pan-y";
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (S.mealAdd) { S.mealAdd = null; renderOverlay(); } else if (S.zoom) { S.zoom = null; renderOverlay(); } else if (S.detail) { S.detail = null; renderOverlay(); } } });
+
+/* ====================== MEALS MODULE ====================== */
+const MDEFAULT = {
+  targets: { kcal: 2400, protein: 180, carbs: 250, fat: 75 },
+  slots: [
+    { id: "breakfast", name: "Breakfast", time: "07:30" },
+    { id: "lunch", name: "Lunch", time: "12:30" },
+    { id: "snack", name: "Snack", time: "15:30" },
+    { id: "dinner", name: "Dinner", time: "18:30" },
+  ],
+};
+S.module = "supplements"; S.mtab = "mtoday";
+try { const m = localStorage.getItem("planner.module"); if (["meals", "workouts", "cycle", "progress", "skincare"].includes(m)) S.module = m; const t = localStorage.getItem("planner.mtab"); if (["mtoday", "mplan", "mweek", "mfoods", "mtargets"].includes(t)) S.mtab = t; } catch {}
+S.meals = { days: {}, foods: [], settings: JSON.parse(JSON.stringify(MDEFAULT)) };
+S.mealAdd = null; S.mtargetsForm = null;
+
+const mstore = { days: null, foods: null, settings: null };
+const MLS = "planner.meals.v1";
+function mlsLoad() { try { const d = JSON.parse(localStorage.getItem(MLS) || "{}"); if (d.days) S.meals.days = d.days; if (d.foods) S.meals.foods = d.foods; if (d.settings) S.meals.settings = { ...S.meals.settings, ...d.settings }; } catch {} }
+function mlsSave() { try { localStorage.setItem(MLS, JSON.stringify(S.meals)); } catch {} }
+function minitDb(db, id) {
+  const base = `data/users/${id}/meals`;
+  mstore.days = db.collection(base + "/days");
+  mstore.foods = db.collection(base + "/foods");
+  mstore.settings = db.collection(base + "/settings").doc("main");
+  mstore.days.orderBy("date", "desc").limit(60).onSnapshot((snap) => { const days = {}; snap.docs.forEach((d) => { const v = d.data(); days[d.id] = { date: d.id, entries: v.entries || [] }; }); S.meals.days = days; msoft(); }, () => {});
+  mstore.foods.onSnapshot((snap) => { S.meals.foods = snap.docs.map((d) => ({ ...d.data(), id: d.id })); msoft(); }, () => {});
+  mstore.settings.onSnapshot((snap) => { if (snap.exists) { S.meals.settings = { ...S.meals.settings, ...snap.data() }; msoft(); } }, () => {});
+}
+function msoft() { if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm) { renderChrome(); return; } render(); }
+async function msaveDay(date) {
+  const d = S.meals.days[date] || { date, entries: [] };
+  if (store.kind === "db" && mstore.days) return queued("md/" + date, () => mstore.days.doc(date).set({ date, entries: JSON.parse(JSON.stringify(d.entries)) }));
+  mlsSave();
+}
+async function msaveFood(f) {
+  const i = S.meals.foods.findIndex((x) => x.id === f.id); if (i >= 0) S.meals.foods[i] = f; else S.meals.foods.push(f);
+  if (store.kind === "db" && mstore.foods) return queued("mf/" + f.id, () => mstore.foods.doc(f.id).set(JSON.parse(JSON.stringify(f))));
+  mlsSave();
+}
+async function mdeleteFood(id) {
+  S.meals.foods = S.meals.foods.filter((x) => x.id !== id);
+  if (store.kind === "db" && mstore.foods) return queued("mf/" + id, () => mstore.foods.doc(id).delete());
+  mlsSave();
+}
+async function msaveSettings() {
+  if (store.kind === "db" && mstore.settings) return queued("ms", () => mstore.settings.set(JSON.parse(JSON.stringify(S.meals.settings))));
+  mlsSave();
+}
+
+const mslots = () => (S.meals.settings.slots || MDEFAULT.slots).slice().sort((a, b) => a.time.localeCompare(b.time));
+const mtargets = () => ({ ...MDEFAULT.targets, ...(S.meals.settings.targets || {}) });
+const mentries = (date) => S.meals.days[date]?.entries || [];
+function msum(list) {
+  return list.reduce((a, e) => { const q = num(e.qty, 1) || 1; a.kcal += num(e.kcal) * q; a.protein += num(e.protein) * q; a.carbs += num(e.carbs) * q; a.fat += num(e.fat) * q; return a; }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+}
+const kc = (n) => fmtN(Math.round(n), 0);
+const gr = (n) => fmtN(Math.round(n), 0) + " g";
+function nextSlot() { const nowT = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`; const sl = mslots(); let pick = sl[0]; for (const s of sl) if (s.time <= nowT) pick = s; return pick?.id; }
+
+/* ---------- Meals views ---------- */
+function mealView() {
+  if (S.mtab === "mweek") return mealWeek();
+  if (S.mtab === "mplan") return mealPlan();
+  if (S.mtab === "mfoods") return mealFoods();
+  if (S.mtab === "mtargets") return mealTargets();
+  return mealToday();
+}
+function macroBar(label, val, target, cls) {
+  const pct = target ? Math.min(100, (val / target) * 100) : 0;
+  const over = target && val > target * 1.05;
+  return `<div class="mm"><div class="row between"><span class="small muted">${label}</span><span class="small num"><b>${gr(val)}</b><span class="muted"> / ${gr(target)}</span></span></div><div class="mbar ${cls} ${over ? "over" : ""}"><i style="width:${pct}%"></i></div></div>`;
+}
+function mealToday() {
+  const date = S.date, isToday = date === today(), d = parseD(date);
+  const T = mtargets(), all = mentries(date), tot = msum(all);
+  const title = isToday ? "Today’s meals" : date === addDays(today(), -1) ? "Yesterday" : DOW[d.getDay()] + "’s meals";
+  const C = 2 * Math.PI * 68, frac = Math.min(1, T.kcal ? tot.kcal / T.kcal : 0);
+  const left = T.kcal - tot.kcal;
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
+    <div class="grow"><div class="eyebrow">${esc(d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }))}</div><h2 class="ov-title">${title}</h2></div>
+    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${kc(tot.kcal)} of ${kc(T.kcal)} calories">
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
+      <circle cx="80" cy="80" r="68" fill="none" stroke="${left < 0 ? "var(--warn)" : "var(--accent)"}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
+      <div class="ov-ringtxt"><span class="ov-big" style="font-size:34px">${kc(tot.kcal)}</span><span class="small muted">of ${kc(T.kcal)} kcal</span></div></div>
+    <div class="ov-stats" style="gap:10px"><div><span class="small ${left < 0 ? "warntxt" : "muted"}">${left < 0 ? "Over by" : "Left today"}</span><b class="num">${kc(Math.abs(left))} kcal</b></div>
+      ${macroBar("Protein", tot.protein, T.protein, "p")}${macroBar("Carbs", tot.carbs, T.carbs, "c")}${macroBar("Fat", tot.fat, T.fat, "f")}</div></div>`;
+  const slots = mslots();
+  const known = new Set(slots.map((s) => s.id));
+  const nx = isToday ? nextSlot() : null;
+  const logged = new Set(all.map((e) => e.meal));
+  const todoPlan = slots.filter((sl) => !logged.has(sl.id) && mplanItems(sl.id).length);
+  if (todoPlan.length > 1) html += `<div class="row between card" style="gap:10px;padding:10px 14px"><span class="small muted grow">Eating to plan ${isToday ? "today" : "this day"}?</span><button class="btn sm primary" data-act="matedayplan">Log ${todoPlan.length === slots.length ? "whole day" : "rest of day"} as planned</button></div>`;
+  html += `<div class="ov-grid">`;
+  const tile = (sl, list) => {
+    const st = msum(list);
+    return `<div class="ov-tile ${sl.id === nx && !list.length ? "is-next" : ""}"><div class="row between"><span class="ov-tlabel">${esc(sl.name)}</span><span class="ov-state ${list.length ? "done" : ""}">${list.length ? kc(st.kcal) + " kcal" : sl.id === nx ? "NOW" : "–"}</span></div>
+      <span class="ov-ttime">${sl.time ? fmtTime(sl.time) : ""}${list.length ? `<br>P ${Math.round(st.protein)} · C ${Math.round(st.carbs)} · F ${Math.round(st.fat)}` : ""}</span>
+      <div class="ov-items">${list.map((e) => `<button class="mfood" data-act="medit" data-id="${e.id}"><span class="grow">${esc(e.name)}${num(e.qty, 1) !== 1 ? ` <span class="muted">×${fmtN(num(e.qty, 1), 2)}</span>` : ""}</span><span class="num muted">${kc(num(e.kcal) * (num(e.qty, 1) || 1))}</span></button>`).join("")}</div>
+      ${!list.length && mplanItems(sl.id).length ? `<div class="mplanned">${mplanItems(sl.id).map((e) => `<span>${esc(e.name)}</span>`).join("")}<span class="num">Plan · ${kc(msum(mplanItems(sl.id)).kcal)} kcal</span></div><button class="madd solid" data-act="mateplan" data-meal="${esc(sl.id)}">Ate as planned</button>` : ""}
+      <button class="madd" data-act="madd" data-meal="${esc(sl.id)}">+ Add food</button></div>`;
+  };
+  for (const sl of slots) html += tile(sl, all.filter((e) => e.meal === sl.id));
+  const other = all.filter((e) => !known.has(e.meal));
+  if (other.length) html += tile({ id: "other", name: "Other", time: "" }, other);
+  html += `</div>`;
+  if (!S.meals.foods.length && !Object.keys(S.meals.days).length) html += `<div class="card row between wrapflex" style="gap:10px"><div class="grow small muted" style="min-width:180px">New here? Load a sample day to see how it works. You can clear it from Foods.</div><button class="btn sm" data-act="mexample">Try a sample day</button></div>`;
+  html += `<p class="hint">Targets are a starting point. Change them on the Targets tab.</p>`;
+  return html;
+}
+function mealWeek() {
+  const week = weekDates(S.date), T = mtargets();
+  const days = week.map((date) => ({ date, t: msum(mentries(date)), n: mentries(date).length }));
+  const logged = days.filter((x) => x.n);
+  const avg = logged.length ? msum(logged.map((x) => ({ kcal: x.t.kcal, protein: x.t.protein, carbs: x.t.carbs, fat: x.t.fat }))) : null;
+  if (avg) for (const k in avg) avg[k] /= logged.length;
+  const max = Math.max(T.kcal * 1.15, ...days.map((x) => x.t.kcal));
+  const first = parseD(week[0]), last = parseD(week[6]);
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-7" aria-label="Previous week">${I.left}</button><div class="grow"><div class="eyebrow">${first.toLocaleDateString(undefined, { day: "numeric", month: "short" })} – ${last.toLocaleDateString(undefined, { day: "numeric", month: "short" })}</div><h2 class="ov-title">${week.includes(today()) ? "This week" : "Week"}</h2></div><button class="iconbtn" data-act="day" data-n="7" aria-label="Next week">${I.right}</button></div>`;
+  html += `<div class="statgrid"><div class="stat"><div class="v">${avg ? kc(avg.kcal) : "–"}</div><div class="k">avg kcal a day</div></div><div class="stat"><div class="v">${avg ? Math.round(avg.protein) + "g" : "–"}</div><div class="k">avg protein</div></div><div class="stat"><div class="v">${logged.length}/7</div><div class="k">days logged</div></div></div>`;
+  html += `<div class="card"><div class="row between"><span class="eyebrow">Calories per day</span><span class="small muted">line = ${kc(T.kcal)} target</span></div>
+    <div class="mweek"><div class="mtarget" style="bottom:calc(20px + ${((T.kcal / max) * 150).toFixed(1)}px)"></div>${days.map((x) => { const dd = parseD(x.date); return `<button class="mwcol" data-act="mgoday" data-date="${x.date}" aria-label="${dd.toLocaleDateString(undefined, { weekday: "long" })}: ${kc(x.t.kcal)} kcal"><span class="mwval num">${x.n ? kc(x.t.kcal) : ""}</span><i style="height:${(x.t.kcal / max) * 100}%" class="${x.t.kcal > T.kcal * 1.05 ? "over" : ""}"></i><span class="mwday ${x.date === today() ? "is-today" : ""}">${DOW[dd.getDay()].slice(0, 2)}</span></button>`; }).join("")}</div></div>`;
+  html += `<div class="card" style="padding:4px 12px"><div class="ingrid inghead mwhead" style="grid-template-columns:minmax(0,1fr) 60px 36px 36px 36px"><span>Day</span><span class="r">kcal</span><span class="r">P</span><span class="r">C</span><span class="r">F</span></div>${days.map((x) => `<button class="ingrid mwrow" data-act="mgoday" data-date="${x.date}" style="grid-template-columns:minmax(0,1fr) 60px 36px 36px 36px"><span>${parseD(x.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric" })}</span><span class="r num">${x.n ? kc(x.t.kcal) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.protein) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.carbs) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.fat) : "–"}</span></button>`).join("")}</div>`;
+  return html;
+}
+function mealFoods() {
+  const foods = S.meals.foods.slice().sort((a, b) => a.name.localeCompare(b.name));
+  let html = `<div class="row between"><h2 style="font-size:22px">My foods</h2><button class="btn sm" data-act="madd" data-meal="${nextSlot()}" data-save="1">New food</button></div>
+    <p class="small muted" style="margin:0">Foods you save show up here for one-tap adding. Values are per serving.</p>`;
+  if (!foods.length) html += `<div class="card empty"><p>No saved foods yet. When you add a food, tick "Save to my foods".</p></div>`;
+  else html += `<div class="card plist" style="padding:2px 14px">${foods.map((f) => `<div class="pi" style="align-items:center"><div class="grow"><b>${esc(f.name)}</b>${f.example ? ' <span class="chip ex">Example</span>' : ""}<br><span class="small muted num">${kc(f.kcal)} kcal · P ${Math.round(num(f.protein))} · C ${Math.round(num(f.carbs))} · F ${Math.round(num(f.fat))}${f.serving ? " · " + esc(f.serving) : ""}</span></div><button class="btn sm" data-act="mquick" data-id="${f.id}">Add</button><button class="iconbtn" data-act="mdelfood" data-id="${f.id}" aria-label="Delete ${esc(f.name)}">${I.x}</button></div>`).join("")}</div>`;
+  const hasEx = S.meals.foods.some((f) => f.example) || Object.values(S.meals.days).some((d) => d.entries.some((e) => e.example));
+  if (hasEx) html += `<div><button class="btn sm ghost danger" data-act="mclearex">Remove sample foods and entries</button></div>`;
+  return html;
+}
+function mealTargets() {
+  const f = S.mtargetsForm || (S.mtargetsForm = JSON.parse(JSON.stringify({ targets: mtargets(), slots: mslots() })));
+  const fromMacros = Math.round(num(f.targets.protein) * 4 + num(f.targets.carbs) * 4 + num(f.targets.fat) * 9);
+  return `<h2 style="font-size:22px">Targets and meal times</h2>
+  <form class="f card" id="mtform" novalidate><fieldset><legend>Daily targets</legend><div class="fgrid">
+    <label class="fl">Calories (kcal)<input class="in num" id="mt-kcal" type="number" inputmode="numeric" data-mt="kcal" value="${esc(f.targets.kcal)}"></label>
+    <label class="fl">Protein (g)<input class="in num" id="mt-p" type="number" inputmode="numeric" data-mt="protein" value="${esc(f.targets.protein)}"></label>
+    <label class="fl">Carbs (g)<input class="in num" id="mt-c" type="number" inputmode="numeric" data-mt="carbs" value="${esc(f.targets.carbs)}"></label>
+    <label class="fl">Fat (g)<input class="in num" id="mt-f" type="number" inputmode="numeric" data-mt="fat" value="${esc(f.targets.fat)}"></label>
+    <div class="hint full">Your macros add up to about ${fmtN(fromMacros, 0)} kcal (protein and carbs 4 kcal per gram, fat 9).</div></div></fieldset>
+  <fieldset><legend>Meal schedule</legend>
+    ${f.slots.map((sl, i) => `<div class="schedrow" style="grid-template-columns:1.4fr 1fr 36px"><label class="fl"><span>Meal</span><input class="in" id="ms-n-${i}" data-ms="${i}" data-k="name" value="${esc(sl.name)}"></label><label class="fl"><span>Time</span><input class="in num" id="ms-t-${i}" type="time" data-ms="${i}" data-k="time" value="${esc(sl.time)}"></label><button type="button" class="iconbtn" data-act="mrmslot" data-i="${i}" aria-label="Remove meal">${I.x}</button></div>`).join("")}
+    <div><button type="button" class="btn sm" data-act="maddslot">Add a meal</button></div></fieldset>
+  <div class="sticky-save"><button type="submit" class="btn primary">Save targets</button></div></form>`;
+}
+
+/* ---------- Add / edit food sheet ---------- */
+function mopenAdd(meal, opts = {}) {
+  S.mealAdd = { meal, date: S.date, id: null, plan: !!opts.plan, save: !!opts.save, desc: "", photo: null, busy: false, msg: "", kind: "", form: { name: "", serving: "", kcal: "", protein: "", carbs: "", fat: "", qty: 1 } };
+  renderOverlay();
+}
+function mopenPlanEdit(meal, id) {
+  const e = mplan()[meal]?.find((x) => x.id === id); if (!e) return;
+  S.mealAdd = { meal, date: S.date, id, plan: true, save: false, desc: "", photo: null, busy: false, msg: "", kind: "", form: { name: e.name, serving: e.serving || "", kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat, qty: e.qty ?? 1 } };
+  renderOverlay();
+}
+const mplan = () => S.meals.settings.plan || {};
+function mplanItems(meal) { return mplan()[meal] || []; }
+async function mateAsPlanned(meals, date) {
+  const day = S.meals.days[date] || (S.meals.days[date] = { date, entries: [] });
+  let n = 0;
+  for (const meal of meals) for (const it of mplanItems(meal)) { day.entries.push({ id: uid(), meal, name: it.name, serving: it.serving || "", kcal: num(it.kcal), protein: num(it.protein), carbs: num(it.carbs), fat: num(it.fat), qty: num(it.qty, 1) || 1, planned: true, at: new Date().toISOString() }); n++; }
+  render(); toast(n ? `Logged ${plural(n, "planned food")}` : "Nothing planned for that meal"); await msaveDay(date);
+}
+function mealPlan() {
+  const T = mtargets(), slots = mslots(), plan = mplan();
+  const all = slots.flatMap((sl) => plan[sl.id] || []), tot = msum(all);
+  let html = `<div class="row between"><h2 style="font-size:22px">Meal plan</h2></div>
+    <p class="small muted" style="margin:0">Your usual day of eating. On the Today tab, tap "Ate as planned" on a meal (or log the whole day at once) instead of entering food every day.</p>`;
+  html += `<div class="card"><div class="row between"><span class="eyebrow">Plan totals vs targets</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+    <div class="mm"><div class="row between"><span class="small muted">Calories</span><span class="small num"><b>${kc(tot.kcal)}</b><span class="muted"> / ${kc(T.kcal)} kcal</span></span></div><div class="mbar ${tot.kcal > T.kcal * 1.05 ? "over" : ""}"><i style="width:${Math.min(100, T.kcal ? (tot.kcal / T.kcal) * 100 : 0)}%"></i></div></div>
+    ${macroBar("Protein", tot.protein, T.protein, "p")}${macroBar("Carbs", tot.carbs, T.carbs, "c")}${macroBar("Fat", tot.fat, T.fat, "f")}</div></div>`;
+  for (const sl of slots) {
+    const items = plan[sl.id] || [], st = msum(items);
+    html += `<section class="card"><div class="row between"><div><span class="ov-tlabel">${esc(sl.name)}</span> <span class="ov-ttime">${fmtTime(sl.time)}</span></div><span class="num small"><b>${kc(st.kcal)}</b> kcal</span></div>
+      <div class="small muted num" style="margin:2px 0 8px">P ${Math.round(st.protein)} g · C ${Math.round(st.carbs)} g · F ${Math.round(st.fat)} g</div>
+      <div class="ov-items">${items.map((e) => `<button class="mfood" data-act="mpedit" data-meal="${esc(sl.id)}" data-id="${e.id}"><span class="grow">${esc(e.name)}${num(e.qty, 1) !== 1 ? ` <span class="muted">×${fmtN(num(e.qty, 1), 2)}</span>` : ""}${e.serving ? `<br><span class="small muted">${esc(e.serving)}</span>` : ""}</span><span class="num muted">${kc(num(e.kcal) * (num(e.qty, 1) || 1))}</span></button>`).join("") || '<div class="small muted">Nothing planned yet.</div>'}</div>
+      <button class="madd" style="margin-top:8px" data-act="madd" data-meal="${esc(sl.id)}" data-plan="1">+ Add to ${esc(sl.name.toLowerCase())}</button></section>`;
+  }
+  html += `<p class="hint">Change meal names and times on the Targets tab.</p>`;
+  return html;
+}
+function mopenEdit(id) {
+  const e = mentries(S.date).find((x) => x.id === id); if (!e) return;
+  S.mealAdd = { meal: e.meal, date: S.date, id, save: false, desc: "", photo: null, busy: false, msg: "", kind: "", form: { name: e.name, serving: e.serving || "", kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat, qty: e.qty ?? 1 } };
+  renderOverlay();
+}
+function mealSheet() {
+  const A = S.mealAdd, f = A.form, slots = mslots();
+  const recent = S.meals.foods.slice().sort((a, b) => (b.usedAt || "").localeCompare(a.usedAt || "")).slice(0, 6);
+  const q = num(f.qty, 1) || 1;
+  return `<div class="sheet-bg" data-act="close-meal"><div class="sheet" role="dialog" aria-modal="true" aria-label="${A.plan ? "Meal plan" : A.id ? "Edit food" : "Add food"}" data-stop>
+    <div class="grab"></div>
+    <div class="row between"><h2 style="font-size:22px">${A.plan ? (A.id ? "Edit planned food" : "Add to meal plan") : A.id ? "Edit food" : "Add food"}</h2><button class="iconbtn" data-act="close-meal" aria-label="Close">${I.x}</button></div>
+    <label class="fl">Meal<select class="in" id="ma-meal" data-ma="meal">${slots.map((s) => `<option value="${esc(s.id)}" ${s.id === A.meal ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label>
+    ${!A.id && recent.length ? `<div><div class="eyebrow" style="margin-bottom:6px">My foods</div><div class="cchips">${recent.map((r) => `<button class="btn sm" data-act="mpick" data-id="${r.id}">${esc(r.name)} <span class="muted num">${kc(r.kcal)}</span></button>`).join("")}</div></div>` : ""}
+    ${!A.id ? `<div class="card" style="display:flex;flex-direction:column;gap:8px"><div class="eyebrow">Let Claude estimate it</div>
+      <textarea class="in" id="ma-desc" data-ma="desc" placeholder="e.g. 2 scrambled eggs, 2 slices sourdough with butter">${esc(A.desc)}</textarea>
+      <div class="row wrapflex" style="gap:8px"><label class="btn sm" for="ma-photo" style="cursor:pointer">${A.photo ? "Change photo" : "Add a photo"}<input id="ma-photo" type="file" accept="image/*" data-mphoto="1" hidden></label>${A.photo ? `<span class="small muted">Photo added</span>` : `<span class="small muted">a meal or a nutrition label</span>`}
+      <button class="btn sm primary" style="margin-left:auto" data-act="mestimate" ${A.busy || S.canPhoto === false || !S.sample ? "disabled" : ""}>${A.busy ? '<span class="spin"></span> Estimating…' : "Estimate"}</button></div>
+      ${S.canPhoto === false || !S.sample ? `<div class="hint">Estimating needs the Claude app or claude.ai, signed in. You can still type the numbers below.</div>` : ""}
+      ${A.msg ? `<div class="status ${A.kind}">${esc(A.msg)}</div>` : ""}</div>` : ""}
+    <form class="f" id="maform" novalidate><div class="fgrid">
+      <label class="fl full">Food<input class="in" id="ma-name" data-mf="name" value="${esc(f.name)}" placeholder="e.g. Chicken and rice"></label>
+      <label class="fl">Serving<input class="in" id="ma-serv" data-mf="serving" value="${esc(f.serving)}" placeholder="e.g. 1 bowl"></label>
+      <label class="fl">Servings eaten<input class="in num" id="ma-qty" type="number" inputmode="decimal" step="any" min="0" data-mf="qty" value="${esc(f.qty)}"></label>
+      <label class="fl">Calories (kcal)<input class="in num" id="ma-kcal" type="number" inputmode="decimal" step="any" data-mf="kcal" value="${esc(f.kcal)}"></label>
+      <label class="fl">Protein (g)<input class="in num" id="ma-p" type="number" inputmode="decimal" step="any" data-mf="protein" value="${esc(f.protein)}"></label>
+      <label class="fl">Carbs (g)<input class="in num" id="ma-c" type="number" inputmode="decimal" step="any" data-mf="carbs" value="${esc(f.carbs)}"></label>
+      <label class="fl">Fat (g)<input class="in num" id="ma-f" type="number" inputmode="decimal" step="any" data-mf="fat" value="${esc(f.fat)}"></label>
+      <div class="hint full" id="ma-total">${q !== 1 ? `Total: ${kc(num(f.kcal) * q)} kcal · P ${Math.round(num(f.protein) * q)} · C ${Math.round(num(f.carbs) * q)} · F ${Math.round(num(f.fat) * q)}` : "Numbers are per serving."}</div>
+      ${!A.id ? `<label class="row small full" style="gap:8px"><input type="checkbox" id="ma-save" data-ma="save" ${A.save ? "checked" : ""}> Save to my foods</label>` : ""}
+    </div>
+    <div class="actions">${A.id ? `<button type="button" class="btn danger" data-act="mdelentry">Delete</button>` : ""}<button type="submit" class="btn primary" style="margin-left:auto">${A.id ? "Save" : (A.plan ? "Add to plan · " : "Add to ") + esc((slots.find((s) => s.id === A.meal) || {}).name || "meal")}</button></div></form>
+  </div></div>`;
+}
+const MPROMPT = `Estimate the nutrition of the food described and/or shown. If a nutrition label is visible, read it exactly (per serving). For a photo of a meal, estimate portion sizes sensibly. Answer with ONLY a JSON object:
+{"name": short food name, "serving": the serving you assumed (e.g. "1 bowl, ~350 g"), "kcal": number, "protein": grams, "carbs": grams, "fat": grams, "note": one short sentence on assumptions or ""}
+The numbers are for ONE serving as you describe it.`;
+async function mestimate() {
+  const A = S.mealAdd; if (!A || !S.sample) return;
+  if (!A.desc.trim() && !A.photo) { A.msg = "Describe the food or add a photo first."; A.kind = "err"; renderOverlay(); return; }
+  A.busy = true; A.msg = ""; renderOverlay();
+  try {
+    const opts = { modelTier: "default" };
+    if (A.photo) opts.images = [A.photo];
+    const d = await S.sample.json(MPROMPT + (A.desc.trim() ? `\n\nDescription: ${A.desc.trim()}` : ""), opts);
+    const f = A.form;
+    if (d.name) f.name = String(d.name); if (d.serving) f.serving = String(d.serving);
+    for (const k of ["kcal", "protein", "carbs", "fat"]) if (d[k] != null && Number.isFinite(Number(d[k]))) f[k] = Math.round(Number(d[k]) * 10) / 10;
+    A.msg = "Estimated. Check the numbers, then add it." + (d.note ? " " + d.note : ""); A.kind = "ok";
+  } catch (e) {
+    A.msg = e?.code === "rate_limited" ? "Too many estimates in a row. Wait a minute and try again." : e?.code === "not_granted" ? "Estimating is turned off for this page. Type the numbers instead." : "Couldn't estimate that. Try a clearer description or photo.";
+    A.kind = "err";
+  }
+  A.busy = false; renderOverlay();
+}
+async function msubmit() {
+  const A = S.mealAdd, f = A.form;
+  if (!f.name.trim()) { toast("Give the food a name."); return; }
+  if (A.plan) {
+    const plan = { ...mplan() }; const list = (plan[A.meal] || []).slice();
+    const item = { id: A.id || uid(), name: f.name.trim(), serving: f.serving || "", kcal: num(f.kcal), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), qty: num(f.qty, 1) || 1 };
+    if (A.id) { for (const k of Object.keys(plan)) plan[k] = (plan[k] || []).filter((x) => x.id !== A.id); }
+    plan[A.meal] = [...(A.id ? (plan[A.meal] || []) : list), item];
+    S.meals.settings = { ...S.meals.settings, plan };
+    const save = A.save && !A.id;
+    S.mealAdd = null; render(); toast(`${A.id ? "Saved" : "Added"} ${item.name} to your plan`);
+    await msaveSettings();
+    if (save) await msaveFood({ id: uid(), name: item.name, serving: item.serving, kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat, usedAt: new Date().toISOString() });
+    return;
+  }
+  const day = S.meals.days[A.date] || (S.meals.days[A.date] = { date: A.date, entries: [] });
+  const entry = { id: A.id || uid(), meal: A.meal, name: f.name.trim(), serving: f.serving || "", kcal: num(f.kcal), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), qty: num(f.qty, 1) || 1, at: new Date().toISOString() };
+  const i = day.entries.findIndex((e) => e.id === entry.id);
+  if (i >= 0) day.entries[i] = { ...day.entries[i], ...entry }; else day.entries.push(entry);
+  const save = A.save && !A.id;
+  S.mealAdd = null; render(); toast(`${A.id ? "Saved" : "Added"} ${entry.name}`);
+  await msaveDay(A.date);
+  if (save) await msaveFood({ id: uid(), name: entry.name, serving: entry.serving, kcal: entry.kcal, protein: entry.protein, carbs: entry.carbs, fat: entry.fat, usedAt: new Date().toISOString() });
+}
+async function mquickAdd(foodId, meal, date) {
+  const f = S.meals.foods.find((x) => x.id === foodId); if (!f) return;
+  const day = S.meals.days[date] || (S.meals.days[date] = { date, entries: [] });
+  day.entries.push({ id: uid(), meal, name: f.name, serving: f.serving || "", kcal: num(f.kcal), protein: num(f.protein), carbs: num(f.carbs), fat: num(f.fat), qty: 1, at: new Date().toISOString(), ...(f.example ? { example: true } : {}) });
+  render(); toast(`Added ${f.name} to ${(mslots().find((s) => s.id === meal) || {}).name || "meal"}`);
+  await msaveDay(date);
+  await msaveFood({ ...f, usedAt: new Date().toISOString() });
+}
+async function mexample() {
+  const foods = [
+    { name: "Greek yoghurt with berries", serving: "1 bowl", kcal: 260, protein: 22, carbs: 30, fat: 5 },
+    { name: "Chicken, rice and greens", serving: "1 plate", kcal: 620, protein: 48, carbs: 70, fat: 14 },
+    { name: "Protein shake", serving: "1 scoop in milk", kcal: 280, protein: 32, carbs: 18, fat: 8 },
+    { name: "Salmon with sweet potato", serving: "1 plate", kcal: 680, protein: 42, carbs: 55, fat: 30 },
+  ].map((f) => ({ ...f, id: "ex_" + uid(), example: true, usedAt: new Date().toISOString() }));
+  for (const f of foods) await msaveFood(f);
+  const date = today(), day = S.meals.days[date] || (S.meals.days[date] = { date, entries: [] });
+  [["breakfast", 0], ["lunch", 1], ["snack", 2]].forEach(([meal, i]) => { const f = foods[i]; day.entries.push({ id: uid(), meal, name: f.name, serving: f.serving, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, qty: 1, example: true }); });
+  await msaveDay(date); render(); toast("Sample day loaded");
+}
+async function mclearExamples() {
+  for (const f of S.meals.foods.filter((x) => x.example)) await mdeleteFood(f.id);
+  for (const [date, d] of Object.entries(S.meals.days)) if (d.entries.some((e) => e.example)) { d.entries = d.entries.filter((e) => !e.example); await msaveDay(date); }
+  render(); toast("Samples removed");
+}
+
+/* ---------- Meals events ---------- */
+async function mealClick(a, b) {
+  switch (a) {
+    case "module": { const m = b.dataset.mod; if (m === S.module) return true; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
+    case "mtab": S.mtab = b.dataset.tab; S.mtargetsForm = null; try { localStorage.setItem("planner.mtab", S.mtab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "madd": mopenAdd(b.dataset.meal || nextSlot(), { save: !!b.dataset.save, plan: !!b.dataset.plan }); return true;
+    case "mpedit": mopenPlanEdit(b.dataset.meal, b.dataset.id); return true;
+    case "mateplan": mateAsPlanned([b.dataset.meal], S.date); return true;
+    case "matedayplan": { const logged = new Set(mentries(S.date).map((e) => e.meal)); mateAsPlanned(mslots().map((x) => x.id).filter((id) => !logged.has(id) && mplanItems(id).length), S.date); return true; }
+    case "medit": mopenEdit(b.dataset.id); return true;
+    case "close-meal": S.mealAdd = null; renderOverlay(); return true;
+    case "mpick": { const f = S.meals.foods.find((x) => x.id === b.dataset.id); if (f && S.mealAdd) { Object.assign(S.mealAdd.form, { name: f.name, serving: f.serving || "", kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, qty: 1 }); S.mealAdd.save = false; renderOverlay(); } return true; }
+    case "mestimate": mestimate(); return true;
+    case "mdelentry": if (S.mealAdd?.plan) { const A = S.mealAdd; const plan = { ...mplan() }; for (const k of Object.keys(plan)) plan[k] = (plan[k] || []).filter((x) => x.id !== A.id); S.meals.settings = { ...S.meals.settings, plan }; S.mealAdd = null; render(); toast("Removed from plan"); await msaveSettings(); return true; } else { const A = S.mealAdd; const day = S.meals.days[A.date]; if (day) day.entries = day.entries.filter((e) => e.id !== A.id); S.mealAdd = null; render(); toast("Deleted"); await msaveDay(A.date); return true; }
+    case "mquick": mquickAdd(b.dataset.id, nextSlot(), S.date); return true;
+    case "mdelfood": { const f = S.meals.foods.find((x) => x.id === b.dataset.id); await mdeleteFood(b.dataset.id); render(); toast(`Deleted ${f?.name || "food"}`); return true; }
+    case "mexample": mexample(); return true;
+    case "mclearex": mclearExamples(); return true;
+    case "mgoday": S.date = b.dataset.date; S.mtab = "mtoday"; render(); window.scrollTo(0, 0); return true;
+    case "maddslot": S.mtargetsForm.slots.push({ id: "m" + uid().slice(0, 6), name: "Meal", time: "20:00" }); render(); return true;
+    case "mrmslot": S.mtargetsForm.slots.splice(Number(b.dataset.i), 1); render(); return true;
+  }
+  return false;
+}
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.mf && S.mealAdd) {
+    S.mealAdd.form[t.dataset.mf] = t.value;
+    const f = S.mealAdd.form, q = num(f.qty, 1) || 1, el = document.getElementById("ma-total");
+    if (el) el.textContent = q !== 1 ? `Total: ${kc(num(f.kcal) * q)} kcal · P ${Math.round(num(f.protein) * q)} · C ${Math.round(num(f.carbs) * q)} · F ${Math.round(num(f.fat) * q)}` : "Numbers are per serving.";
+  } else if (t.dataset.ma === "desc" && S.mealAdd) S.mealAdd.desc = t.value;
+  else if (t.dataset.mt && S.mtargetsForm) S.mtargetsForm.targets[t.dataset.mt] = t.value;
+  else if (t.dataset.ms && S.mtargetsForm) S.mtargetsForm.slots[Number(t.dataset.ms)][t.dataset.k] = t.value;
+});
+document.addEventListener("change", async (e) => {
+  const t = e.target;
+  if (t.dataset.ma === "meal" && S.mealAdd) { S.mealAdd.meal = t.value; renderOverlay(); }
+  else if (t.dataset.ma === "save" && S.mealAdd) S.mealAdd.save = t.checked;
+  else if (t.dataset.mphoto && S.mealAdd && t.files?.[0]) { S.mealAdd.photo = await shrink(t.files[0]); renderOverlay(); }
+});
+document.addEventListener("submit", (e) => {
+  if (e.target.id === "maform") { e.preventDefault(); e.stopImmediatePropagation(); msubmit(); }
+  else if (e.target.id === "mtform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.mtargetsForm;
+    S.meals.settings = { ...S.meals.settings, targets: { kcal: num(f.targets.kcal, 2000), protein: num(f.targets.protein), carbs: num(f.targets.carbs), fat: num(f.targets.fat) }, slots: f.slots.filter((s) => s.name.trim()).map((s) => ({ id: s.id, name: s.name.trim(), time: s.time || "12:00" })) };
+    S.mtargetsForm = null; S.mtab = "mtoday"; render(); toast("Targets saved"); msaveSettings();
+  }
+}, true);
+
+/* ====================== WORKOUTS MODULE ====================== */
+S.wtab = "wtoday";
+try { const t = localStorage.getItem("planner.wtab"); if (["wtoday", "whistory", "wplan", "wcardio", "wmax", "wimport"].includes(t)) S.wtab = t; } catch {}
+S.wo = { plans: [], sessions: {}, settings: { maxes: {}, round: 2.5 } };
+S.wdraft = {}; S.wrest = null; S.wexpage = null; S.wmaxOpen = null; S.w1 = { kg: "", reps: "" };
+S.wplanForm = null; S.wimport = { busy: false, msg: "", kind: "", result: null, fileName: "" };
+const wstore = { plans: null, sessions: null };
+const WLS = "planner.workouts.v1";
+function wlsLoad() { try { const d = JSON.parse(localStorage.getItem(WLS) || "{}"); if (d.plans) S.wo.plans = d.plans; if (d.sessions) S.wo.sessions = d.sessions; if (d.settings) S.wo.settings = { maxes: {}, round: 2.5, ...d.settings }; } catch {} }
+function wlsSave() { try { localStorage.setItem(WLS, JSON.stringify(S.wo)); } catch {} }
+function winitDb(db, id) {
+  const base = `data/users/${id}/workouts`;
+  wstore.plans = db.collection(base + "/plans");
+  wstore.sessions = db.collection(base + "/sessions");
+  wstore.settings = db.collection(base + "/settings").doc("main");
+  wstore.settings.onSnapshot((snap) => { if (snap.exists) { S.wo.settings = { maxes: {}, round: 2.5, ...snap.data() }; wsoft(); } }, () => {});
+  wstore.plans.onSnapshot((snap) => { S.wo.plans = snap.docs.map((d) => ({ ...d.data(), id: d.id })); wsoft(); }, () => {});
+  wstore.sessions.orderBy("date", "desc").limit(90).onSnapshot((snap) => { const ss = {}; snap.docs.forEach((d) => { ss[d.id] = { ...d.data(), date: d.id }; }); S.wo.sessions = ss; wsoft(); }, () => {});
+}
+function wsoft() { if (S.module !== "workouts") return; const ae = document.activeElement?.dataset || {}; if (S.wplanForm || S.cdPlanForm || ae.cd != null || ae.cdp != null || ae.cdgoal != null || ae.wsk != null || ae.wmax != null || ae.w1 != null) { renderChrome(); return; } render(); }
+async function wsavePlan(p) {
+  const i = S.wo.plans.findIndex((x) => x.id === p.id); if (i >= 0) S.wo.plans[i] = p; else S.wo.plans.push(p);
+  if (store.kind === "db" && wstore.plans) return queued("wp/" + p.id, () => wstore.plans.doc(p.id).set(JSON.parse(JSON.stringify(p))));
+  wlsSave();
+}
+async function wdelPlan(id) {
+  S.wo.plans = S.wo.plans.filter((x) => x.id !== id);
+  if (store.kind === "db" && wstore.plans) return queued("wp/" + id, () => wstore.plans.doc(id).delete());
+  wlsSave();
+}
+function wsess(date) { const s = S.wo.sessions[date] || (S.wo.sessions[date] = { date, done: {}, kg: {}, extra: [], added: [] }); s.done ||= {}; s.extra ||= []; s.added ||= []; s.started ||= {}; s.finished ||= {}; return s; }
+async function wsaveSettings() { if (store.kind === "db" && wstore.settings) return queued("wset", () => wstore.settings.set(JSON.parse(JSON.stringify(S.wo.settings)))); wlsSave(); }
+/* ---------- Per-set logging, history and 1RM ---------- */
+const wkey = (n) => String(n || "").trim().toLowerCase().replace(/\s+/g, " ");
+const e1rm = (kg, reps) => { kg = num(kg); reps = num(reps); if (!kg || !reps) return 0; if (reps === 1) return kg; return kg * (1 + Math.min(reps, 15) / 30); };
+const wround = (kg) => { const r = num(S.wo.settings.round, 2.5) || 2.5; return Math.round(kg / r) * r; };
+const wmax = (name) => num(S.wo.settings.maxes?.[wkey(name)]?.kg) || 0;
+function wTarget(ex) { const raw = String(ex.kg ?? "").trim(); const m = raw.match(/([\d.]+)\s*%/); if (m) { const mx = wmax(ex.name); return { kg: mx ? wround((mx * Number(m[1])) / 100) : "", pct: Number(m[1]), missing: !mx }; } return { kg: raw === "" ? "" : num(raw), pct: null }; }
+function wRecName(k, rec) { if (rec?.ex) return rec.ex; const [pid, ei] = k.split("|"); return S.wo.plans.find((x) => x.id === pid)?.exercises?.[Number(ei)]?.name || ""; }
+function wHist(name) {
+  const key = wkey(name), out = [];
+  for (const [date, s] of Object.entries(S.wo.sessions)) {
+    const sets = Object.entries(s.done || {}).filter(([k, r]) => wkey(wRecName(k, r)) === key).sort((a, b) => (a[1].at || "").localeCompare(b[1].at || "") || Number(a[0].split("|")[2]) - Number(b[0].split("|")[2])).map(([, r]) => ({ kg: num(r.kg), reps: num(r.reps) }));
+    if (sets.length) { const best = Math.max(...sets.map((x) => e1rm(x.kg, x.reps))); out.push({ date, sets, best, top: Math.max(...sets.map((x) => x.kg)), vol: sets.reduce((a, x) => a + x.kg * x.reps, 0) }); }
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date));
+}
+const wLast = (name, before) => wHist(name).find((h) => h.date < before) || null;
+const setsTxt = (sets) => sets.map((x) => `${fmtN(x.kg, 1)}×${fmtN(x.reps, 0)}`).join(", ");
+function wPrefill(date, pid, ei, si, ex) {
+  const k = `${pid}|${ei}|${si}`, s = S.wo.sessions[date], d = s?.done?.[k];
+  if (d) return { kg: d.kg, reps: d.reps };
+  const dr = S.wdraft[date + "|" + k] || {}, t = wTarget(ex);
+  let kg = t.pct != null ? t.kg : "", reps = firstNum(ex.reps) || "";
+  if (kg === "") { const last = wLast(ex.name, date); if (last) { const ls = last.sets[Math.min(si, last.sets.length - 1)]; kg = ls.kg; } else kg = t.kg; }
+  if (si > 0) { const pd = s?.done?.[`${pid}|${ei}|${si - 1}`]; if (pd) kg = pd.kg; }
+  return { kg: dr.kg ?? kg, reps: dr.reps ?? reps };
+}
+const restSecs = (r) => { const t = String(r || "").toLowerCase(); const m = t.match(/([\d.]+)\s*(?:-\s*[\d.]+\s*)?(min|m\b|minutes?)/); if (m) return Math.round(Number(m[1]) * 60); const s2 = t.match(/([\d.]+)\s*s/); if (s2) return Math.round(Number(s2[1])); const n = Number(t); return n ? (n <= 10 ? n * 60 : n) : 0; };
+const mmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.max(0, Math.floor(sec % 60))).padStart(2, "0")}`;
+async function wsaveSess(date) {
+  const s = wsess(date);
+  if (store.kind === "db" && wstore.sessions) return queued("ws/" + date, () => wstore.sessions.doc(date).set(JSON.parse(JSON.stringify(s))));
+  wlsSave();
+}
+const firstNum = (v) => { const m = String(v ?? "").match(/[\d.]+/); return m ? Number(m[0]) : 0; };
+function wplansFor(date) {
+  const wd = parseD(date).getDay(), s = S.wo.sessions[date];
+  const ids = new Set(S.wo.plans.filter((p) => (p.days || []).includes(wd)).map((p) => p.id));
+  (s?.added || []).forEach((id) => ids.add(id));
+  return S.wo.plans.filter((p) => ids.has(p.id));
+}
+function wstats(date) {
+  const s = S.wo.sessions[date]; let planned = 0, done = 0, vol = 0;
+  for (const p of wplansFor(date)) (p.exercises || []).forEach((ex, ei) => { const n = Math.max(1, Math.round(num(ex.sets, 1))); planned += n; for (let si = 0; si < n; si++) { const d = s?.done?.[`${p.id}|${ei}|${si}`]; if (d) { done++; vol += num(d.kg) * num(d.reps); } } });
+  const extra = s?.extra?.length || 0;
+  return { planned, done, vol, extra, active: done > 0 || extra > 0 };
+}
+const DAYIDX = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+
+/* ---------- Views ---------- */
+function workoutView() {
+  if (S.wexpage) return wExPage();
+  if (S.wtab === "wmax") return wMaxes();
+  if (S.wtab === "wcardio") return wCardio();
+  if (S.wtab === "whistory") return wHistory();
+  if (S.wtab === "wplan") return S.wplanForm ? wPlanForm() : S.wlib ? wLibrary() : wPlanList();
+  if (S.wtab === "wimport") return wImport();
+  return wToday();
+}
+function wToday() {
+  const date = S.date, isToday = date === today(), d = parseD(date);
+  const plans = wplansFor(date), st = wstats(date), s = S.wo.sessions[date];
+  const title = isToday ? "Today’s training" : date === addDays(today(), -1) ? "Yesterday" : DOW[d.getDay()] + "’s training";
+  const week = weekDates(today()); const weekCount = week.filter((x) => wstats(x).active).length;
+  let nextTxt = "No plan yet";
+  for (let i = 1; i <= 7 && S.wo.plans.length; i++) { const nd = addDays(date, i), ps = S.wo.plans.filter((p) => (p.days || []).includes(parseD(nd).getDay())); if (ps.length) { nextTxt = `${i === 1 ? "Tomorrow" : DOW[parseD(nd).getDay()]} · ${ps.map((p) => p.name).join(", ")}`; break; } }
+  const C = 2 * Math.PI * 68, frac = st.planned ? st.done / st.planned : 0;
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
+    <div class="grow"><div class="eyebrow">${esc(d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }))}</div><h2 class="ov-title">${title}</h2></div>
+    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  if (!S.wo.plans.length) {
+    html += `<div class="card empty"><h3>Set up your training</h3><p>Import a workout plan from a PDF or photo, build one yourself, or start from a sample push/pull/legs plan.</p>
+      <div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="wtab" data-tab="wimport">Import a plan</button><button class="btn" data-act="wnewplan">Build one</button><button class="btn" data-act="wlibopen">Pick a program</button></div></div>`;
+    return html + wQuickLog(date, s);
+  }
+  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${st.done} of ${st.planned} sets done">
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
+      <div class="ov-ringtxt">${st.planned ? `<span class="ov-big">${st.done}<span>/${st.planned}</span></span><span class="small muted">sets done</span>` : `<span class="ov-big" style="font-size:24px">Rest</span><span class="small muted">day</span>`}</div></div>
+    <div class="ov-stats"><div><span class="small muted">This week</span><b>${plural(weekCount, "session")}</b></div>
+      <div><span class="small muted">Volume ${isToday ? "today" : ""}</span><b class="num">${fmtN(Math.round(st.vol), 0)} kg</b></div>
+      <div><span class="small muted">Next</span><b>${esc(nextTxt)}</b></div></div></div>`;
+  if (!plans.length) html += `<div class="card"><div class="eyebrow">Nothing scheduled</div><p class="small muted" style="margin:6px 0 10px">Training anyway? Pick a workout.</p><div class="cchips">${S.wo.plans.map((p) => `<button class="btn sm" data-act="waddtoday" data-id="${p.id}">${esc(p.name)}</button>`).join("")}</div></div>`;
+  for (const p of plans) {
+    const started = s?.started?.[p.id], finished = s?.finished?.[p.id];
+    html += `<section class="card wcard"><div class="row between"><h3 class="ov-tlabel">${esc(p.name)}</h3>${(s?.added || []).includes(p.id) ? `<button class="linkbtn" data-act="wremtoday" data-id="${p.id}">Remove</button>` : ""}</div>
+      <div class="wrun">${finished ? `<span class="small" style="color:var(--accent)">${I.check} Finished · ${esc(mmss(Math.max(0, (new Date(finished) - new Date(started || finished)) / 1000)).replace(/:\d+$/, ""))} min</span><button class="linkbtn" data-act="wresume" data-id="${p.id}">Resume</button>` : started ? `<span class="small"><span class="wlive"></span>In progress · <span class="num" data-wclock="${esc(started)}">${mmss((Date.now() - new Date(started)) / 1000)}</span></span><button class="btn sm" data-act="wfinish" data-id="${p.id}">Finish</button>` : isToday ? `<button class="btn sm primary" data-act="wstart" data-id="${p.id}">Start workout</button>` : ""}</div>`;
+    (p.exercises || []).forEach((ex, ei) => {
+      const n = Math.max(1, Math.round(num(ex.sets, 1))), t = wTarget(ex), last = wLast(ex.name, date), mx = wmax(ex.name);
+      html += `<div class="wex"><button class="wexhead wexbtn" data-act="wexhist" data-name="${esc(ex.name)}"><span class="grow"><b>${esc(ex.name)}</b><span class="small muted" style="display:block">${n} × ${esc(ex.reps || "?")}${t.pct != null ? ` · ${fmtN(t.pct, 1)}% of 1RM${t.missing ? " (set your 1RM)" : ` = ${fmtN(t.kg, 1)} kg`}` : ""}${ex.rest ? " · rest " + esc(ex.rest) : ""}${ex.notes ? " · " + esc(ex.notes) : ""}</span></span>${I.right}</button>
+        ${last ? `<div class="wlast small"><span class="muted">Last ${esc(shortD(last.date, { day: "numeric", month: "short" }))}:</span> <span class="num">${esc(setsTxt(last.sets))}</span></div>` : ""}
+        <div class="wsetrows">${Array.from({ length: n }, (_, si) => {
+          const k = `${p.id}|${ei}|${si}`, dd = s?.done?.[k], v = wPrefill(date, p.id, ei, si, ex);
+          return `<div class="wsetrow ${dd ? "done" : ""}"><span class="wsn">${si + 1}</span>
+            <label class="wnum"><input class="in num" type="number" inputmode="decimal" step="any" min="0" data-wsk="${esc(k)}" data-wf="kg" value="${esc(v.kg)}" aria-label="Set ${si + 1} weight in kg"><span>kg</span></label>
+            <label class="wnum"><input class="in num" type="number" inputmode="numeric" step="1" min="0" data-wsk="${esc(k)}" data-wf="reps" value="${esc(v.reps)}" aria-label="Set ${si + 1} reps"><span>reps</span></label>
+            <button class="wtick" data-act="wset" data-k="${esc(k)}" aria-pressed="${!!dd}" aria-label="${dd ? `Set ${si + 1} logged. Tap to undo` : `Log set ${si + 1}`}">${I.check}</button></div>`;
+        }).join("")}</div></div>`;
+    });
+    html += `</section>`;
+  }
+  if (S.wrest && S.wrest.date === date) html += `<div class="wrestbar" role="status"><span>Rest <b class="num" data-wrest>${mmss(Math.max(0, (S.wrest.end - Date.now()) / 1000))}</b> <span class="muted small">after ${esc(S.wrest.name)}</span></span><span class="row" style="gap:6px"><button class="btn sm" data-act="wrestadd">+30s</button><button class="btn sm" data-act="wrestskip">Skip</button></span></div>`;
+  return html + wQuickLog(date, s);
+}
+function wQuickLog(date, s) {
+  const planned = cdPlannedFor(date), doneTypes = new Set((s?.extra || []).map((x) => x.type || x.name));
+  return `<section class="card"><div class="row between"><span class="eyebrow">Cardio${planned.length ? " planned" : " and other activity"}</span><button class="linkbtn" data-act="wtab" data-tab="wcardio">Cardio tab</button></div>
+    ${planned.map((p) => `<div class="cdplan"><span class="grow"><b>${esc(p.type)}</b>${p.mins ? ` <span class="num">${fmtN(num(p.mins), 0)} min</span>` : ""}${p.km ? ` <span class="num">${fmtN(num(p.km), 1)} km</span>` : ""}${p.notes ? `<br><span class="small muted">${esc(p.notes)}</span>` : ""}</span>${doneTypes.has(p.type) ? `<span class="chip ok">Done</span>` : `<button class="btn sm primary" data-act="cdfromplan" data-id="${p.id}">Log it</button>`}</div>`).join("")}
+    ${(s?.extra || []).map((x) => `<div class="pi" style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><div class="grow"><b>${esc(x.name)}</b>${x.mins ? ` <span class="muted small num">${fmtN(num(x.mins), 0)} min</span>` : ""}${x.notes ? `<br><span class="small muted">${esc(x.notes)}</span>` : ""}</div><button class="iconbtn" data-act="wdelextra" data-id="${x.id}" aria-label="Remove ${esc(x.name)}">${I.x}</button></div>`).join("")}
+    <form id="wqform" class="schedrow" style="grid-template-columns:1.6fr 70px auto;margin-top:8px" novalidate>
+      <label class="fl"><span>Activity</span><input class="in" id="wq-name" placeholder="e.g. 5 km run"></label>
+      <label class="fl"><span>Minutes</span><input class="in num" id="wq-mins" type="number" inputmode="numeric" min="0"></label>
+      <button class="btn sm" type="submit" style="height:40px">Log</button></form></section>`;
+}
+function wHistory() {
+  const dates = Object.keys(S.wo.sessions).filter((d) => wstats(d).active).sort().reverse().slice(0, 40);
+  const week = weekDates(today());
+  let html = `<h2 style="font-size:22px">History</h2>
+    <div class="card"><div class="eyebrow" style="margin-bottom:8px">This week</div><div class="wweek">${week.map((d) => { const st = wstats(d); return `<button class="wwd ${st.active ? "on" : ""} ${d === today() ? "is-today" : ""}" data-act="wgoday" data-date="${d}" aria-label="${parseD(d).toLocaleDateString(undefined, { weekday: "long" })}${st.active ? ", trained" : ""}"><span>${DOW[parseD(d).getDay()].slice(0, 2)}</span><i>${st.active ? I.check : ""}</i></button>`; }).join("")}</div></div>`;
+  if (!dates.length) return html + `<div class="card empty"><p>Sessions show up here once you tick off sets or log an activity.</p></div>`;
+  html += wExList() + `<div class="eyebrow">Sessions</div>`;
+  html += `<div class="card plist" style="padding:2px 14px">${dates.map((d) => { const st = wstats(d), s = S.wo.sessions[d]; const names = wplansFor(d).filter((p) => (p.exercises || []).some((_, ei) => Object.keys(s.done || {}).some((k) => k.startsWith(p.id + "|" + ei + "|")))).map((p) => p.name); return `<button class="pi stackrow" data-act="wgoday" data-date="${d}"><span class="grow"><b>${esc(parseD(d).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }))}</b><br><span class="small muted">${esc([...names, ...(s.extra || []).map((x) => x.name)].join(", ") || "Logged")} · ${st.done} sets · ${fmtN(Math.round(st.vol), 0)} kg</span></span>${I.right}</button>`; }).join("")}</div>`;
+  return html;
+}
+function wExList() {
+  const names = new Map();
+  for (const [, s] of Object.entries(S.wo.sessions)) for (const [k, r] of Object.entries(s.done || {})) { const n = wRecName(k, r); if (n) names.set(wkey(n), n); }
+  if (!names.size) return "";
+  const rows = [...names.values()].map((n) => ({ n, h: wHist(n) })).sort((a, b) => b.h[0].date.localeCompare(a.h[0].date));
+  return `<div class="eyebrow">Exercises</div><div class="card plist" style="padding:2px 14px">${rows.map(({ n, h }) => { const best = Math.max(...h.map((x) => x.best)); const up = h.length > 1 ? h[0].best - h[1].best : 0; return `<button class="pi stackrow" data-act="wexhist" data-name="${esc(n)}"><span class="grow"><b>${esc(n)}</b><br><span class="small muted">Last ${esc(setsTxt(h[0].sets.slice(0, 4)))} · est. 1RM ${fmtN(Math.round(best * 2) / 2, 1)} kg${up > 0.01 ? ` · <span style="color:var(--accent)">▲ ${fmtN(up, 1)}</span>` : ""}</span></span>${I.right}</button>`; }).join("")}</div>`;
+}
+function wExPage() {
+  const name = S.wexpage, h = wHist(name), mx = wmax(name);
+  let html = `<div class="row between"><button class="btn sm ghost" data-act="wexback">${I.left}<span>Back</span></button></div><h2 style="font-size:22px">${esc(name)}</h2>`;
+  if (!h.length) return html + `<div class="card empty"><p>No sets logged yet. Log a set and your progress shows up here.</p></div>`;
+  const best = Math.max(...h.map((x) => x.best)), asc = h.slice().reverse();
+  html += `<div class="ov-stats" style="flex-direction:row;gap:18px;flex-wrap:wrap"><div><span class="small muted">Best est. 1RM</span><b class="num">${fmtN(Math.round(best * 2) / 2, 1)} kg</b></div><div><span class="small muted">Heaviest set</span><b class="num">${fmtN(Math.max(...h.map((x) => x.top)), 1)} kg</b></div><div><span class="small muted">Your 1RM</span><b class="num">${mx ? fmtN(mx, 1) + " kg" : `<button class="linkbtn" data-act="wtab" data-tab="wmax">Set it</button>`}</b></div></div>`;
+  if (asc.length > 1) {
+    const W = 340, H = 170, L = 40, R = 14, T = 14, B = 26, t0 = parseD(asc[0].date).getTime(), t1 = parseD(asc[asc.length - 1].date).getTime() || t0 + 1;
+    const vals = asc.flatMap((x) => [x.best, x.top]); const ax = niceAxis(Math.min(...vals) * 0.95, Math.max(...vals) * 1.03);
+    const xs = (d) => L + ((parseD(d).getTime() - t0) / (t1 - t0 || 1)) * (W - L - R), ys = (v) => T + (1 - (v - ax.y0) / (ax.y1 - ax.y0)) * (H - T - B);
+    let g = ax.ticks.map((v) => `<line x1="${L}" x2="${W - R}" y1="${ys(v).toFixed(1)}" y2="${ys(v).toFixed(1)}" stroke="var(--line)" opacity=".6"/><text x="${L - 6}" y="${(ys(v) + 3.5).toFixed(1)}" text-anchor="end" class="ctxt">${esc(fmtN(v, 1))}</text>`).join("");
+    const line = (k, col, dash) => `<path d="${asc.map((x, i) => `${i ? "L" : "M"}${xs(x.date).toFixed(1)} ${ys(x[k]).toFixed(1)}`).join(" ")}" fill="none" stroke="${col}" stroke-width="2.2" ${dash ? 'stroke-dasharray="4 4"' : ""}/>` + asc.map((x) => `<circle cx="${xs(x.date).toFixed(1)}" cy="${ys(x[k]).toFixed(1)}" r="3.5" fill="${col}"/>`).join("");
+    g += line("top", "var(--muted)", true) + line("best", "var(--accent)");
+    g += `<text x="${L}" y="${H - 8}" class="ctxt">${esc(shortD(asc[0].date, { day: "numeric", month: "short" }))}</text><text x="${W - R}" y="${H - 8}" text-anchor="end" class="ctxt">${esc(shortD(asc[asc.length - 1].date, { day: "numeric", month: "short" }))}</text>`;
+    html += `<section class="card"><div class="eyebrow">Progress</div><svg class="bchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(name)} progress">${g}</svg><div class="blegend small muted"><span><i class="sw cy" style="background:var(--accent)"></i>Est. 1RM</span><span><i class="sw" style="border-top:2px dashed var(--muted);height:0;border-radius:0"></i>Heaviest set</span></div></section>`;
+  }
+  html += `<div class="eyebrow">Sessions</div><div class="card" style="padding:2px 14px">${h.map((x, i) => { const pr = x.best >= best - 1e-6; return `<div class="brow"><span class="grow"><b>${esc(shortD(x.date, { weekday: "short", day: "numeric", month: "short" }))}</b>${pr ? ' <span class="chip ok">Best</span>' : ""}</span><span class="small muted num">${fmtN(Math.round(x.vol), 0)} kg vol</span><span class="small num" style="grid-column:1/-1">${esc(setsTxt(x.sets))}</span></div>`; }).join("")}</div>`;
+  return html;
+}
+function wLifts() {
+  const m = new Map();
+  for (const p of S.wo.plans) for (const ex of p.exercises || []) if (ex.name) m.set(wkey(ex.name), ex.name);
+  for (const [k, v] of Object.entries(S.wo.settings.maxes || {})) if (!m.has(k)) m.set(k, v.name || k);
+  return [...m.entries()].map(([k, n]) => { const h = wHist(n); return { k, n, est: h.length ? Math.max(...h.slice(0, 8).map((x) => x.best)) : 0, logged: h.length }; });
+}
+function wMaxes() {
+  const c = S.w1, ce = e1rm(c.kg, c.reps);
+  let html = `<h2 style="font-size:22px">1 rep maxes</h2>
+    <section class="card"><div class="eyebrow">Calculator</div><p class="small muted" style="margin:4px 0 8px">Enter a set you did, like 100 kg for 5 reps, to estimate your 1RM and what you could lift for other reps.</p>
+      <div class="fgrid"><label class="fl">Weight (kg)<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-w1="kg" value="${esc(c.kg)}"></label><label class="fl">Reps<input class="in num" type="number" inputmode="numeric" min="1" max="15" data-w1="reps" value="${esc(c.reps)}"></label></div>
+      <div id="w1out">${wCalcOut(ce)}</div></section>`;
+  const lifts = wLifts();
+  html += `<div class="row between"><span class="eyebrow">Your lifts</span><label class="small muted row" style="gap:6px">Round to<select class="in" data-wround style="width:auto;padding:5px 8px">${[1, 1.25, 2.5, 5].map((r) => `<option value="${r}" ${num(S.wo.settings.round, 2.5) === r ? "selected" : ""}>${r} kg</option>`).join("")}</select></label></div>`;
+  if (!lifts.length) return html + `<div class="card empty"><p>Add workouts on the Plan tab and your lifts show up here.</p></div>`;
+  html += lifts.map((l) => { const mx = wmax(l.n), open = S.wmaxOpen === l.k; return `<div class="card sitem"><div class="row between"><h3>${esc(l.n)}</h3><button class="linkbtn" data-act="wmaxopen" data-k="${esc(l.k)}">${open ? "Hide %" : "% table"}</button></div>
+    <div class="row" style="gap:10px;align-items:end"><label class="fl" style="width:120px">Your 1RM (kg)<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-wmax="${esc(l.k)}" data-name="${esc(l.n)}" value="${mx || ""}"></label>
+      <div class="small muted grow">${l.est ? `Estimated from your logs: <b class="num" style="color:var(--ink)">${fmtN(Math.round(l.est * 2) / 2, 1)} kg</b>${Math.abs(l.est - mx) > 0.5 ? ` <button class="linkbtn" data-act="wmaxuse" data-k="${esc(l.k)}" data-name="${esc(l.n)}" data-v="${Math.round(l.est * 2) / 2}">Use</button>` : ""}` : "Log some sets to get an estimate."}</div></div>
+    ${open ? (mx || l.est ? wPctTable(mx || l.est) : `<p class="small muted">Set a 1RM first.</p>`) : ""}</div>`; }).join("");
+  html += `<p class="hint">In a workout plan, put a % in the kg box (like 75%) and the app works out the weight from your 1RM. Estimates use the Epley formula and are most accurate for sets of 10 reps or fewer.</p>`;
+  return html;
+}
+function wCalcOut(ce) {
+  if (!ce) return "";
+  return `<div class="row between" style="margin-top:10px"><span class="small muted">Estimated 1RM</span><b class="num" style="font-size:20px">${fmtN(wround(ce), 2)} kg</b></div>
+    <div class="wpct">${[1, 2, 3, 4, 5, 6, 8, 10, 12].map((r) => `<div><span class="muted small">${r} rep${r > 1 ? "s" : ""}</span><b class="num">${fmtN(wround(r === 1 ? ce : ce / (1 + r / 30)), 2)}</b></div>`).join("")}</div>`;
+}
+function wPctTable(mx) { return `<div class="wpct">${[100, 95, 90, 85, 80, 75, 70, 65, 60, 50].map((p) => `<div><span class="muted small">${p}%</span><b class="num">${fmtN(wround((mx * p) / 100), 2)}</b></div>`).join("")}</div>`; }
+function wPlanList() {
+  let html = `<div class="row between"><h2 style="font-size:22px">My plan</h2><span class="row" style="gap:6px"><button class="btn sm" data-act="wlibopen">Programs</button><button class="btn sm" data-act="wtab" data-tab="wimport">Import</button><button class="btn sm" data-act="wnewplan">New</button></span></div>`;
+  if (!S.wo.plans.length) return html + `<div class="card empty"><p>No workouts yet. Import a plan or build one.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="wtab" data-tab="wimport">Import a plan</button><button class="btn" data-act="wlibopen">Pick a program</button></div></div>`;
+  const order = (p) => Math.min(...(p.days?.length ? p.days.map((x) => (x + 6) % 7) : [9]));
+  html += S.wo.plans.slice().sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name)).map((p) => `<div class="card sitem"><div class="row between"><h3>${esc(p.name)}</h3>${p.example ? '<span class="chip ex">Example</span>' : ""}</div>
+    <div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((dd) => `<span class="wdaychip ${(p.days || []).includes(dd) ? "on" : ""}">${DOW[dd].slice(0, 2)}</span>`).join("")}</div>
+    <div class="small muted">${(p.exercises || []).map((ex) => `${esc(ex.name)} ${fmtN(num(ex.sets, 1), 0)}×${esc(ex.reps || "?")}`).join(" · ") || "No exercises"}</div>
+    <div class="actions"><button class="btn sm" data-act="weditplan" data-id="${p.id}">Edit</button></div></div>`).join("");
+  if (S.wo.plans.some((p) => p.example)) html += `<div><button class="btn sm ghost danger" data-act="wclearex">Remove sample workouts</button></div>`;
+  return html;
+}
+function wPlanForm() {
+  const f = S.wplanForm;
+  return `<div class="row between"><h2 style="font-size:22px">${f.isNew ? "New workout" : "Edit workout"}</h2><button class="btn sm ghost" data-act="wcancelplan">Cancel</button></div>
+  <form class="f card" id="wpform" novalidate><fieldset><legend>Workout</legend>
+    <label class="fl">Name<input class="in" id="wp-name" data-wp="name" value="${esc(f.name)}" placeholder="e.g. Push day"></label>
+    <div class="fl">Days<div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((dd) => `<button type="button" data-act="wpdow" data-d="${dd}" aria-pressed="${f.days.includes(dd)}">${DOW[dd].slice(0, 2)}</button>`).join("")}</div></div></fieldset>
+  <fieldset><legend>Exercises</legend>
+    ${f.exercises.map((ex, i) => `<div class="wexform"><label class="fl wexname"><span>Exercise</span><input class="in" id="we-n-${i}" data-we="${i}" data-k="name" value="${esc(ex.name)}"></label>
+      <label class="fl"><span>Sets</span><input class="in num" id="we-s-${i}" type="number" inputmode="numeric" min="1" data-we="${i}" data-k="sets" value="${esc(ex.sets)}"></label>
+      <label class="fl"><span>Reps</span><input class="in num" id="we-r-${i}" data-we="${i}" data-k="reps" value="${esc(ex.reps)}" placeholder="8-10"></label>
+      <label class="fl"><span>kg or %</span><input class="in num" id="we-k-${i}" inputmode="decimal" data-we="${i}" data-k="kg" value="${esc(ex.kg)}" placeholder="75%"></label>
+      <label class="fl"><span>Rest</span><input class="in" id="we-t-${i}" data-we="${i}" data-k="rest" value="${esc(ex.rest)}" placeholder="90s"></label>
+      <button type="button" class="iconbtn" data-act="wrmex" data-i="${i}" aria-label="Remove exercise">${I.x}</button></div>`).join("")}
+    <div><button type="button" class="btn sm" data-act="waddex">Add exercise</button></div><p class="hint" style="margin:0">Put a fixed weight, or a % of your 1RM like 75%. Set your 1RMs on the Maxes tab.</p></fieldset>
+  <div class="sticky-save">${f.isNew ? "" : `<button type="button" class="btn danger" data-act="wdelplan">Delete</button>`}<button type="submit" class="btn primary">Save workout</button></div></form>`;
+}
+function wImport() {
+  const W = S.wimport;
+  let html = `<div class="row between"><button class="btn sm ghost" data-act="wtab" data-tab="wplan">${I.left}<span>My plan</span></button></div><h2 style="font-size:22px">Import a plan</h2>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="small muted" style="margin:0">Upload your workout plan as a PDF, or photos or screenshots of it. Claude reads it and turns it into workouts with days, exercises, sets, reps and rest. You check it before anything is added.</p>
+    <label class="photo" for="wi-file" style="aspect-ratio:auto;min-height:120px"><span class="ph">${I.cam}<span>${W.fileName ? esc(W.fileName) : "Choose a PDF or photos"}</span></span><input id="wi-file" type="file" accept="application/pdf,image/*" multiple data-wimport="1"></label>
+    ${S.canPhoto === false || !S.sample ? `<div class="status">Importing needs the Claude app or claude.ai, signed in. You can still build workouts by hand on the Plan tab.</div>` : ""}
+    ${W.busy ? `<div class="status"><span class="spin"></span> ${esc(W.msg || "Reading your plan…")}</div>` : W.msg ? `<div class="status ${W.kind}">${esc(W.msg)}</div>` : ""}</div>`;
+  const R = W.result;
+  if (R && R.length) {
+    html += `<div class="eyebrow">Found ${plural(R.length, "workout")}</div>`;
+    html += R.map((p, i) => `<div class="card sitem"><label class="row" style="gap:10px"><input type="checkbox" data-wikeep="${i}" ${p.keep ? "checked" : ""}><h3 class="grow">${esc(p.name)}</h3></label>
+      <div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((dd) => `<button type="button" data-act="widow" data-i="${i}" data-d="${dd}" aria-pressed="${p.days.includes(dd)}">${DOW[dd].slice(0, 2)}</button>`).join("")}</div>
+      <div class="small">${p.exercises.map((ex) => `<div class="row between" style="padding:3px 0;border-bottom:1px dashed var(--line)"><span>${esc(ex.name)}</span><span class="muted num">${fmtN(num(ex.sets, 1), 0)} × ${esc(ex.reps || "?")}${ex.rest ? " · " + esc(ex.rest) : ""}</span></div>`).join("")}</div></div>`).join("");
+    html += `<div class="sticky-save"><button class="btn" data-act="wiclear">Discard</button><button class="btn primary" data-act="wisave">Add to my plan</button></div><p class="hint">Tap the day buttons to set which days each workout falls on. You can edit everything later on the Plan tab.</p>`;
+  }
+  return html;
+}
+
+/* ---------- PDF and photo import ---------- */
+let pdfjsReady = null;
+function loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = src; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
+function loadPdfJs() {
+  if (!pdfjsReady) pdfjsReady = (async () => {
+    const base = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+    await loadScript(base + "pdf.min.js");
+    await loadScript(base + "pdf.worker.min.js"); // runs on the page (no separate worker)
+    const lib = window.pdfjsLib || window["pdfjs-dist/build/pdf"];
+    lib.GlobalWorkerOptions.workerSrc = base + "pdf.worker.min.js";
+    return lib;
+  })();
+  return pdfjsReady;
+}
+async function pdfToInputs(file, maxImages) {
+  const lib = await loadPdfJs();
+  const doc = await lib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise;
+  let text = "";
+  for (let i = 1; i <= Math.min(doc.numPages, 30); i++) { const pg = await doc.getPage(i); const tc = await pg.getTextContent(); text += `\n--- Page ${i} ---\n` + tc.items.map((it) => it.str + (it.hasEOL ? "\n" : " ")).join(""); }
+  if (text.replace(/\s|---|Page \d+/g, "").length > 150) return { text: text.slice(0, 60000), images: [] };
+  const images = [];
+  for (let i = 1; i <= Math.min(doc.numPages, maxImages); i++) {
+    const pg = await doc.getPage(i), vp = pg.getViewport({ scale: 1 }), sc = Math.min(2, 1400 / Math.max(vp.width, vp.height));
+    const v2 = pg.getViewport({ scale: sc }), cv = document.createElement("canvas"); cv.width = v2.width; cv.height = v2.height;
+    await pg.render({ canvasContext: cv.getContext("2d"), viewport: v2 }).promise;
+    images.push(await new Promise((r) => cv.toBlob(r, "image/jpeg", 0.85)));
+  }
+  return { text: "", images };
+}
+const WPROMPT = `You are reading a workout plan. Turn it into structured workouts. Answer with ONLY a JSON object:
+{"workouts": [{"name": short workout name (e.g. "Push A", "Upper body", "Week 1 Day 1"), "days": array of weekdays it falls on, using "Mon","Tue","Wed","Thu","Fri","Sat","Sun" (empty array if the plan doesn't say), "exercises": [{"name": exercise name, "sets": number, "reps": reps as written (e.g. "8-10", "12", "30s", "AMRAP"), "kg": starting weight in kg as a number or null, "rest": rest as written (e.g. "90s") or "", "notes": tempo, RPE or other cues, or ""}]}]}
+Rules: one entry per distinct workout or training day. If the plan repeats the same workouts over several weeks, return one week's worth and note progression in notes. Convert lb to kg. Don't invent exercises that are not in the plan.`;
+async function wrunImport(files) {
+  const W = S.wimport;
+  if (!S.sample) { W.msg = "Importing needs the Claude app or claude.ai, signed in."; W.kind = "err"; render(); return; }
+  W.busy = true; W.result = null; W.fileName = [...files].map((f) => f.name).join(", "); W.msg = "Reading your file…"; render();
+  try {
+    const maxImg = S.imgLimits?.maxCount || 5;
+    let text = "", images = [];
+    for (const f of files) {
+      if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) { const r = await pdfToInputs(f, maxImg - images.length); text += r.text; images.push(...r.images); }
+      else if (f.type.startsWith("image/") && images.length < maxImg) images.push(await shrink(f));
+    }
+    if (!text && !images.length) throw new Error("empty");
+    W.msg = "Claude is turning it into workouts…"; render();
+    const opts = { modelTier: "default" }; if (images.length) opts.images = images.slice(0, maxImg);
+    const out = await S.sample.json(WPROMPT + (text ? `\n\nThe plan's text:\n${text}` : "\n\nThe plan is in the images."), opts);
+    const list = (out?.workouts || []).filter((w) => w && w.name).map((w) => ({
+      keep: true, name: String(w.name), days: (w.days || []).map((x) => DAYIDX[String(x).slice(0, 3).toLowerCase()]).filter((x) => x != null),
+      exercises: (w.exercises || []).filter((e) => e && e.name).map((e) => ({ name: String(e.name), sets: num(e.sets, 3) || 3, reps: String(e.reps ?? ""), kg: e.kg == null ? "" : num(e.kg), rest: String(e.rest || ""), notes: String(e.notes || "") })),
+    }));
+    if (!list.length) throw new Error("none");
+    W.result = list; W.msg = "Check the workouts below, set their days, then add them."; W.kind = "ok";
+  } catch (e) {
+    W.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : e?.code === "not_granted" ? "Reading files is turned off for this page." : e?.message === "none" ? "Couldn't find workouts in that file. Try a clearer PDF or photos." : "Couldn't read that file. Try a different PDF, or photos of the pages.";
+    W.kind = "err";
+  }
+  W.busy = false; render();
+}
+/* Program library: ready-made programs people can pick instead of building their own */
+const WLIB = [
+  { id: "ppl", name: "Push / Pull / Legs", goal: "Muscle gain", level: "Intermediate", perWeek: 6, about: "Each muscle group twice a week across six sessions. A classic for building size and strength.",
+    plans: [["Push", [1, 4], [["Bench press", 4, "6-8", 70, "2 min"], ["Overhead press", 3, "8-10", 40, "90s"], ["Incline dumbbell press", 3, "10-12", 24, "90s"], ["Triceps pushdown", 3, "12-15", 25, "60s"]]],
+      ["Pull", [2, 5], [["Deadlift", 3, "5", 110, "3 min"], ["Pull-ups", 4, "6-10", "", "2 min"], ["Barbell row", 3, "8-10", 60, "90s"], ["Biceps curl", 3, "12", 14, "60s"]]],
+      ["Legs", [3, 6], [["Back squat", 4, "6-8", 90, "2-3 min"], ["Romanian deadlift", 3, "8-10", 80, "2 min"], ["Leg press", 3, "12", 160, "90s"], ["Calf raise", 4, "15", 60, "60s"]]]] },
+];
+const WGOALS = ["Muscle gain", "Strength", "Fat loss", "Cardio", "General fitness"];
+S.wlib = false; S.wlibGoal = "All";
+async function wexample(id = "ppl") {
+  const prog = WLIB.find((x) => x.id === id) || WLIB[0];
+  for (const [name, days, ex] of prog.plans) await wsavePlan({ id: "ex_" + uid(), name, days, example: true, program: prog.name, exercises: ex.map(([n, st, r, k, rest]) => ({ name: n, sets: st, reps: r, kg: k, rest, notes: "" })) });
+  S.wlib = false; S.wtab = "wplan"; render(); window.scrollTo(0, 0); toast(`${prog.name} added to your plan. Edit or remove it any time.`);
+}
+function wLibrary() {
+  const g = S.wlibGoal, list = WLIB.filter((x) => g === "All" || x.goal === g);
+  return `<div class="row between"><button class="btn sm ghost" data-act="wlibclose">${I.left}<span>My plan</span></button></div><h2 style="font-size:22px">Program library</h2>
+    <p class="small muted" style="margin:0">Pick a ready-made program and it fills in your plan. You can change days, weights and exercises after.</p>
+    <div class="bchips">${["All", ...WGOALS].map((x) => `<button class="bchip" data-act="wlibgoal" data-g="${esc(x)}" aria-pressed="${g === x}">${esc(x)}</button>`).join("")}</div>
+    ${list.length ? list.map((x) => `<div class="card sitem"><div class="row between"><h3>${esc(x.name)}</h3><span class="chip">${esc(x.goal)}</span></div><div class="small muted">${esc(x.level)} · ${plural(x.perWeek, "day")} a week</div><p class="small" style="margin:0">${esc(x.about)}</p>
+      <div class="small muted">${x.plans.map(([n, , ex]) => `<b style="color:var(--ink)">${esc(n)}:</b> ${esc(ex.map((e) => e[0]).join(", "))}`).join("<br>")}</div>
+      <div class="actions"><button class="btn sm primary" data-act="wuselib" data-id="${x.id}">Use this program</button></div></div>`).join("") : `<div class="card empty"><p>No ${esc(g.toLowerCase())} programs yet. More are coming.</p></div>`}`;
+}
+/* ---------- Workouts events ---------- */
+async function workoutClick(a, b) {
+  const W = S.wimport;
+  switch (a) {
+    case "wtab": S.wtab = b.dataset.tab; S.wexpage = null; S.wlib = false; if (S.wtab !== "wplan") S.wplanForm = null; try { localStorage.setItem("planner.wtab", S.wtab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "wset": {
+      const date = S.date, s = wsess(date), k = b.dataset.k;
+      if (s.done[k]) { delete s.done[k]; if (S.wrest?.k === k) S.wrest = null; }
+      else {
+        const [pid, ei] = k.split("|"); const p = S.wo.plans.find((x) => x.id === pid); const ex = p?.exercises?.[Number(ei)] || {};
+        const val = (f) => document.querySelector(`[data-wsk="${CSS.escape(k)}"][data-wf="${f}"]`)?.value ?? "";
+        const kg = num(val("kg")), reps = num(val("reps")) || firstNum(ex.reps);
+        const before = Math.max(0, ...wHist(ex.name).map((h) => h.best));
+        s.done[k] = { reps, kg, at: new Date().toISOString(), ex: ex.name || "" };
+        if (!s.started[pid] && date === today()) s.started[pid] = new Date().toISOString();
+        delete S.wdraft[date + "|" + k];
+        const e = e1rm(kg, reps); if (before && e > before + 0.01) toast(`New best for ${ex.name}: est. 1RM ${fmtN(Math.round(e * 2) / 2, 1)} kg`);
+        const rs = restSecs(ex.rest); if (rs && date === today()) { S.wrest = { k, date, name: ex.name, end: Date.now() + rs * 1000 }; try { navigator.vibrate?.(30); } catch {} }
+      }
+      render(); await wsaveSess(date); return true;
+    }
+    case "wstart": { const s = wsess(S.date); s.started[b.dataset.id] = new Date().toISOString(); delete s.finished[b.dataset.id]; render(); await wsaveSess(S.date); return true; }
+    case "wresume": { const s = wsess(S.date); delete s.finished[b.dataset.id]; render(); await wsaveSess(S.date); return true; }
+    case "wfinish": {
+      const s = wsess(S.date), pid = b.dataset.id; s.finished[pid] = new Date().toISOString(); S.wrest = null;
+      const sets = Object.entries(s.done).filter(([k]) => k.startsWith(pid + "|")); const vol = sets.reduce((a, [, r]) => a + num(r.kg) * num(r.reps), 0);
+      render(); toast(`Workout done: ${plural(sets.length, "set")}, ${fmtN(Math.round(vol), 0)} kg moved`); await wsaveSess(S.date); return true;
+    }
+    case "wrestskip": S.wrest = null; render(); return true;
+    case "wrestadd": if (S.wrest) S.wrest.end = Math.max(Date.now(), S.wrest.end) + 30000; wtick(); return true;
+    case "cdtype": S.cdForm.type = b.dataset.t; b.parentElement.querySelectorAll(".bchip").forEach((x) => x.setAttribute("aria-pressed", x === b)); return true;
+    case "cdptype": S.cdPlanForm.type = b.dataset.t; render(); return true;
+    case "cdpdow": { const d = Number(b.dataset.d), f = S.cdPlanForm; f.days = f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d]; b.setAttribute("aria-pressed", f.days.includes(d)); return true; }
+    case "cdplannew": S.cdPlanForm = { id: uid(), type: "Run", days: [], mins: "30", km: "", time: "07:00", notes: "" }; render(); return true;
+    case "cdplancancel": S.cdPlanForm = null; render(); return true;
+    case "cdplandel": S.wo.settings.cardioPlan = cdPlans().filter((x) => x.id !== b.dataset.id); render(); await wsaveSettings(); return true;
+    case "cdtypeprog": S.cdType = b.dataset.t; render(); return true;
+    case "cdmetric": S.cdMetric = b.dataset.m; render(); return true;
+    case "cddel": { const s = wsess(b.dataset.date); s.extra = s.extra.filter((x) => x.id !== b.dataset.id); render(); toast("Session deleted"); await wsaveSess(b.dataset.date); return true; }
+    case "cdimpclear": S.cdImp = { busy: false, msg: "", kind: "", list: null }; render(); return true;
+    case "cdimpsave": { const keep = (S.cdImp.list || []).filter((x) => x.keep); for (const x of keep) await cdAdd(x.date, { type: x.type, mins: x.mins, km: x.km, kcal: x.kcal, hr: x.hr, notes: "", src: "watch" }); S.cdImp = { busy: false, msg: `Added ${plural(keep.length, "session")}.`, kind: "ok", list: null }; render(); return true; }
+    case "cdfromplan": { const p = cdPlans().find((x) => x.id === b.dataset.id); if (!p) return true; S.cdForm = { type: p.type, date: S.date, mins: p.mins || "", km: p.km || "", kcal: "", hr: "", notes: p.notes || "" }; S.wtab = "wcardio"; render(); setTimeout(() => document.getElementById("cdform")?.scrollIntoView({ block: "center" }), 50); return true; }
+    case "wexhist": S.wexpage = b.dataset.name; render(); window.scrollTo(0, 0); return true;
+    case "wexback": S.wexpage = null; render(); return true;
+    case "wmaxopen": S.wmaxOpen = S.wmaxOpen === b.dataset.k ? null : b.dataset.k; render(); return true;
+    case "wmaxuse": { S.wo.settings.maxes = { ...(S.wo.settings.maxes || {}), [b.dataset.k]: { name: b.dataset.name, kg: num(b.dataset.v), date: today() } }; render(); toast(`1RM for ${b.dataset.name} set to ${fmtN(num(b.dataset.v), 1)} kg`); await wsaveSettings(); return true; }
+    case "waddtoday": { const s = wsess(S.date); if (!s.added.includes(b.dataset.id)) s.added.push(b.dataset.id); render(); await wsaveSess(S.date); return true; }
+    case "wremtoday": { const s = wsess(S.date); s.added = s.added.filter((x) => x !== b.dataset.id); render(); await wsaveSess(S.date); return true; }
+    case "wdelextra": { const s = wsess(S.date); s.extra = s.extra.filter((x) => x.id !== b.dataset.id); render(); await wsaveSess(S.date); return true; }
+    case "wgoday": S.date = b.dataset.date; S.wtab = "wtoday"; render(); window.scrollTo(0, 0); return true;
+    case "wnewplan": S.wtab = "wplan"; S.wplanForm = { isNew: true, id: uid(), name: "", days: [], exercises: [{ name: "", sets: 3, reps: "8-10", kg: "", rest: "90s", notes: "" }] }; render(); return true;
+    case "weditplan": { const p = S.wo.plans.find((x) => x.id === b.dataset.id); if (p) { S.wplanForm = { isNew: false, ...JSON.parse(JSON.stringify(p)) }; S.wplanForm.days = S.wplanForm.days || []; S.wplanForm.exercises = S.wplanForm.exercises || []; render(); window.scrollTo(0, 0); } return true; }
+    case "wcancelplan": S.wplanForm = null; render(); return true;
+    case "wpdow": { const d = Number(b.dataset.d), f = S.wplanForm; f.days = f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d]; b.setAttribute("aria-pressed", f.days.includes(d)); return true; }
+    case "waddex": S.wplanForm.exercises.push({ name: "", sets: 3, reps: "8-10", kg: "", rest: "90s", notes: "" }); render(); return true;
+    case "wrmex": S.wplanForm.exercises.splice(Number(b.dataset.i), 1); render(); return true;
+    case "wdelplan": { const f = S.wplanForm; S.wplanForm = null; await wdelPlan(f.id); render(); toast(`Deleted ${f.name || "workout"}`); return true; }
+    case "wexample": wexample(); return true;
+    case "wlibopen": S.wtab = "wplan"; S.wplanForm = null; S.wlib = true; render(); window.scrollTo(0, 0); return true;
+    case "wlibclose": S.wlib = false; render(); return true;
+    case "wlibgoal": S.wlibGoal = b.dataset.g; render(); return true;
+    case "wuselib": wexample(b.dataset.id); return true;
+    case "wclearex": for (const p of S.wo.plans.filter((x) => x.example)) await wdelPlan(p.id); render(); toast("Sample workouts removed"); return true;
+    case "widow": { const p = W.result[Number(b.dataset.i)], d = Number(b.dataset.d); p.days = p.days.includes(d) ? p.days.filter((x) => x !== d) : [...p.days, d]; b.setAttribute("aria-pressed", p.days.includes(d)); return true; }
+    case "wiclear": S.wimport = { busy: false, msg: "", kind: "", result: null, fileName: "" }; render(); return true;
+    case "wisave": { const keep = (W.result || []).filter((p) => p.keep); for (const p of keep) await wsavePlan({ id: uid(), name: p.name, days: p.days, exercises: p.exercises, importedFrom: W.fileName, addedAt: new Date().toISOString() }); S.wimport = { busy: false, msg: "", kind: "", result: null, fileName: "" }; S.wtab = "wplan"; render(); toast(`Added ${plural(keep.length, "workout")} to your plan`); return true; }
+  }
+  return false;
+}
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.wp && S.wplanForm) S.wplanForm[t.dataset.wp] = t.value;
+  else if (t.dataset.we && S.wplanForm) S.wplanForm.exercises[Number(t.dataset.we)][t.dataset.k] = t.value;
+  else if (t.dataset.cd) S.cdForm[t.dataset.cd] = t.value;
+  else if (t.dataset.cdp && S.cdPlanForm) S.cdPlanForm[t.dataset.cdp] = t.value;
+  else if (t.dataset.wsk) { const id = S.date + "|" + t.dataset.wsk; (S.wdraft[id] ||= {})[t.dataset.wf] = t.value; }
+  else if (t.dataset.w1) { S.w1[t.dataset.w1] = t.value; const o = document.getElementById("w1out"); if (o) o.innerHTML = wCalcOut(e1rm(S.w1.kg, S.w1.reps)); }
+});
+document.addEventListener("change", async (e) => {
+  const t = e.target;
+  if (t.dataset.wsk) { const s = wsess(S.date), d = s.done[t.dataset.wsk]; if (d) { d[t.dataset.wf] = num(t.value); await wsaveSess(S.date); } }
+  else if (t.dataset.wmax) { const k = t.dataset.wmax, mx = { ...(S.wo.settings.maxes || {}) }; if (t.value === "") delete mx[k]; else mx[k] = { name: t.dataset.name, kg: num(t.value), date: today() }; S.wo.settings.maxes = mx; await wsaveSettings(); }
+  else if (t.dataset.cdimport && t.files?.length) { const fs = [...t.files]; t.value = ""; cdImport(fs); }
+  else if (t.dataset.cdkeep != null && S.cdImp.list) { S.cdImp.list[Number(t.dataset.cdkeep)].keep = t.checked; render(); }
+  else if (t.dataset.cdgoal) { S.wo.settings.cardioGoal = num(t.value, 150) || 150; render(); await wsaveSettings(); }
+  else if (t.dataset.wround != null) { S.wo.settings.round = num(t.value, 2.5); render(); await wsaveSettings(); }
+  else if (t.dataset.wikeep != null && S.wimport.result) S.wimport.result[Number(t.dataset.wikeep)].keep = t.checked;
+  else if (t.dataset.wimport && t.files?.length) wrunImport([...t.files]);
+});
+document.addEventListener("submit", async (e) => {
+  if (e.target.id === "wpform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.wplanForm; if (!f.name.trim()) { toast("Give the workout a name."); return; }
+    const p = { id: f.id, name: f.name.trim(), days: [...f.days].sort(), exercises: f.exercises.filter((x) => x.name && x.name.trim()).map((x) => ({ name: x.name.trim(), sets: num(x.sets, 3) || 3, reps: String(x.reps || ""), kg: String(x.kg ?? "").trim() === "" ? "" : /%/.test(String(x.kg)) ? String(x.kg).replace(/\s+/g, "") : num(x.kg), rest: String(x.rest || ""), notes: String(x.notes || "") })), ...(f.example ? { example: true } : {}) };
+    S.wplanForm = null; render(); toast(`Saved ${p.name}`); await wsavePlan(p);
+  } else if (e.target.id === "cdform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.cdForm; if (!(num(f.mins) > 0)) { toast("Add how many minutes."); return; }
+    const date = f.date && f.date <= today() ? f.date : today();
+    await cdAdd(date, { type: f.type, mins: num(f.mins), km: num(f.km) || "", kcal: num(f.kcal) || "", hr: num(f.hr) || "", notes: (f.notes || "").trim(), src: "manual" });
+    S.cdForm = { type: f.type, date: today(), mins: "", km: "", kcal: "", hr: "", notes: "" }; S.cdType = f.type; render(); toast(`Logged ${f.type.toLowerCase()}, ${fmtN(num(f.mins), 0)} min`);
+  } else if (e.target.id === "cdpform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.cdPlanForm; if (!f.days.length) { toast("Pick at least one day."); return; }
+    S.wo.settings.cardioPlan = [...cdPlans().filter((x) => x.id !== f.id), { id: f.id, type: f.type, days: [...f.days].sort(), mins: num(f.mins) || "", km: num(f.km) || "", time: f.time || "", notes: (f.notes || "").trim() }];
+    S.cdPlanForm = null; render(); toast("Cardio plan saved"); await wsaveSettings();
+  } else if (e.target.id === "wqform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const name = $("#wq-name").value.trim(); if (!name) { toast("Name the activity first."); return; }
+    const s = wsess(S.date); s.extra.push({ id: uid(), name, mins: num($("#wq-mins").value), notes: "" }); render(); toast(`Logged ${name}`); await wsaveSess(S.date);
+  }
+}, true);
+
+/* ====================== CYCLE MODULE ====================== */
+S.ctab = "ctoday";
+try { const t = localStorage.getItem("planner.ctab"); if (["ctoday", "ccycle", "cstock", "cbloods"].includes(t)) S.ctab = t; } catch {}
+S.cy = { compounds: [], days: {}, panels: [], settings: { cycles: [], review: null } };
+const blankBimp = () => ({ busy: false, msg: "", kind: "", form: null, fileName: "", blobs: [] });
+S.cform = null; S.cycForm = null; S.bimp = blankBimp(); S.bmarker = null; S.bopen = null; S.bdel = false; S.breview = { busy: false, msg: "" };
+const cstore = {};
+const CLS = "planner.cycle.v1";
+function clsLoad() { try { const d = JSON.parse(localStorage.getItem(CLS) || "{}"); for (const k of ["compounds", "days", "panels"]) if (d[k]) S.cy[k] = d[k]; if (d.settings) S.cy.settings = { cycles: [], review: null, ...d.settings }; } catch {} }
+function clsSave() { try { localStorage.setItem(CLS, JSON.stringify(S.cy)); } catch {} }
+function cinitDb(db, id) {
+  const base = `data/users/${id}/cycle`;
+  cstore.compounds = db.collection(base + "/compounds");
+  cstore.days = db.collection(base + "/days");
+  cstore.panels = db.collection(base + "/panels");
+  cstore.settings = db.collection(base + "/settings").doc("main");
+  cstore.compounds.onSnapshot((snap) => { S.cy.compounds = snap.docs.map((d) => ({ ...d.data(), id: d.id })); csoft(); }, () => {});
+  cstore.days.orderBy("date", "desc").limit(200).onSnapshot((snap) => { const dd = {}; snap.docs.forEach((d) => { dd[d.id] = { taken: {}, ...d.data(), date: d.id }; }); S.cy.days = dd; csoft(); }, () => {});
+  cstore.panels.onSnapshot((snap) => { S.cy.panels = snap.docs.map((d) => ({ ...d.data(), id: d.id })); csoft(); }, () => {});
+  cstore.settings.onSnapshot((snap) => { if (snap.exists) { S.cy.settings = { cycles: [], review: null, ...snap.data() }; csoft(); } }, () => {});
+}
+function csoft() { if (S.module !== "cycle") return; const a = document.activeElement; if (S.cform || S.cycForm || S.bimp.form || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+const cjson = (o) => JSON.parse(JSON.stringify(o));
+async function csaveComp(c) { const i = S.cy.compounds.findIndex((x) => x.id === c.id); if (i >= 0) S.cy.compounds[i] = c; else S.cy.compounds.push(c); if (store.kind === "db" && cstore.compounds) return queued("cc/" + c.id, () => cstore.compounds.doc(c.id).set(cjson(c))); clsSave(); }
+async function cdelComp(id) { S.cy.compounds = S.cy.compounds.filter((x) => x.id !== id); if (store.kind === "db" && cstore.compounds) return queued("cc/" + id, () => cstore.compounds.doc(id).delete()); clsSave(); }
+async function csaveDay(date) { const d = S.cy.days[date] || { date, taken: {} }; if (store.kind === "db" && cstore.days) return queued("cd/" + date, () => cstore.days.doc(date).set(cjson({ date, taken: d.taken }))); clsSave(); }
+async function csavePanel(p) { const i = S.cy.panels.findIndex((x) => x.id === p.id); if (i >= 0) S.cy.panels[i] = p; else S.cy.panels.push(p); if (store.kind === "db" && cstore.panels) return queued("cp/" + p.id, () => cstore.panels.doc(p.id).set(cjson(p))); clsSave(); }
+async function cdelPanel(id) { S.cy.panels = S.cy.panels.filter((x) => x.id !== id); if (store.kind === "db" && cstore.panels) return queued("cp/" + id, () => cstore.panels.doc(id).delete()); clsSave(); }
+async function csaveSettings() { if (store.kind === "db" && cstore.settings) return queued("cs", () => cstore.settings.set(cjson(S.cy.settings))); clsSave(); }
+
+/* ---------- Cycle maths ---------- */
+function niceAxis(lo, hi, n = 3) { const raw = (hi - lo) / n || 1, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag, step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag; const a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step; const ticks = []; for (let v = a; v <= b + step / 2; v += step) ticks.push(+v.toFixed(6)); return { y0: a, y1: b, ticks }; }
+const dDiff = (a, b) => Math.round((parseD(b) - parseD(a)) / 86400000);
+const cAmt = (c) => (num(c.conc) > 0 ? num(c.dose) / num(c.conc) : 0);
+const cAmtTxt = (c, amt = cAmt(c)) => (c.kind === "oral" ? plural(+amt.toFixed(2), "tab") : fmtN(amt, 2) + " mL");
+const cUnitTxt = (c, v) => (c.kind === "oral" ? plural(+num(v).toFixed(1), "tab") : fmtN(num(v), 2) + " mL");
+const cTaken = (id, date) => S.cy.days[date]?.taken?.[id];
+function cDue(c, date) {
+  if (c.start && date < c.start) return false;
+  if (c.end && date > c.end) return false;
+  if (c.freq === "every") { const e = num(c.every, 7); if (e <= 0) return false; const diff = dDiff(c.start || date, date); const k = Math.ceil(diff / e - 1e-9); return k * e < diff + 1 - 1e-9; }
+  return (c.days || []).includes(parseD(date).getDay());
+}
+const cPerWeek = (c) => (c.freq === "every" ? 7 / Math.max(0.1, num(c.every, 7)) : (c.days || []).length);
+const cRemain = (c) => num(c.open) + num(c.spare) * num(c.container);
+const cDosesLeft = (c) => { const a = cAmt(c); return a > 0 ? Math.floor(cRemain(c) / a + 1e-6) : Infinity; };
+const cEnded = (c) => c.end && c.end < today();
+function cForecast(c) {
+  let left = cDosesLeft(c), outOn = null, need = 0; const t = today();
+  for (let i = 0; i < 730; i++) {
+    const d = addDays(t, i); if (c.end && d > c.end) break;
+    if (!cDue(c, d) || cTaken(c.id, d)) continue;
+    need++; if (left <= 0 && !outOn) outOn = d; left--;
+    if (!c.end && outOn) break;
+  }
+  return { outOn, need, short: c.end ? Math.max(0, need - cDosesLeft(c)) : 0 };
+}
+const cLow = (c) => !cEnded(c) && cAmt(c) > 0 && cDosesLeft(c) <= num(c.lowDoses, 4);
+const schedTxt = (c) => (c.freq === "every" ? `every ${fmtN(num(c.every, 7), 1)} days` : (c.days || []).length === 7 ? "every day" : [1, 2, 3, 4, 5, 6, 0].filter((d) => (c.days || []).includes(d)).map((d) => DOW[d]).join(", ") || "no days set");
+function curCycle(date = today()) { const cs = (S.cy.settings.cycles || []).slice().sort((a, b) => b.start.localeCompare(a.start)); return cs.find((c) => c.start <= date && (!c.end || date <= c.end)) || null; }
+function cycWeek(cy, date) { const w = Math.floor(dDiff(cy.start, date) / 7) + 1; const tot = cy.end ? Math.ceil((dDiff(cy.start, cy.end) + 1) / 7) : null; return { w, tot }; }
+const shortD = (d, o = { weekday: "short", day: "numeric", month: "short" }) => parseD(d).toLocaleDateString(undefined, o);
+
+async function ctoggle(cid, date) {
+  const c = S.cy.compounds.find((x) => x.id === cid); if (!c) return;
+  const day = S.cy.days[date] || (S.cy.days[date] = { date, taken: {} }); day.taken = day.taken || {};
+  const t = day.taken[cid];
+  if (t) {
+    let open = num(c.open) + num(t.amt); const spare = num(c.spare) + num(t.opened); open -= num(t.opened) * num(c.container);
+    c.open = Math.max(0, +open.toFixed(4)); c.spare = spare; delete day.taken[cid];
+    toast(`Undid ${c.name}. Stock put back.`);
+  } else {
+    const amt = cAmt(c); let open = num(c.open) - amt, opened = 0, spare = num(c.spare);
+    while (open < -1e-6 && spare > 0 && num(c.container) > 0) { spare--; opened++; open += num(c.container); }
+    c.open = Math.max(0, +open.toFixed(4)); c.spare = spare;
+    day.taken[cid] = { at: new Date().toISOString(), mg: num(c.dose), amt, opened };
+    if (opened) toast(`Logged. Opened a new ${c.kind === "oral" ? "bottle" : "vial"} of ${c.name}.`);
+  }
+  render(); await Promise.all([csaveDay(date), csaveComp(c)]);
+}
+
+/* ---------- Views ---------- */
+function cycleView() {
+  if (S.ctab === "ccycle") return S.cform ? cCompForm() : S.cycForm ? cCycForm() : cCyclePage();
+  if (S.ctab === "cstock") return S.cform ? cCompForm() : cStock();
+  if (S.ctab === "cbloods") return S.bimp.form ? cPanelForm() : S.bopen ? cPanelView() : cBloods();
+  return cToday();
+}
+function cToday() {
+  const date = S.date, isToday = date === today(), d = parseD(date);
+  const due = S.cy.compounds.filter((c) => cDue(c, date) || cTaken(c.id, date));
+  const done = due.filter((c) => cTaken(c.id, date)).length;
+  const title = isToday ? "Today’s doses" : date === addDays(today(), -1) ? "Yesterday" : DOW[d.getDay()] + "’s doses";
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
+    <div class="grow"><div class="eyebrow">${esc(shortD(date))}</div><h2 class="ov-title">${title}</h2></div>
+    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  if (!S.cy.compounds.length) {
+    return html + `<div class="card empty"><h3>Set up your cycle</h3><p>Add each compound with its strength, dose and days. As you log doses, the app counts down what’s left in each vial and warns you before you run low.</p>
+      <div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="cnewcomp">Add a compound</button><button class="btn" data-act="ctab" data-tab="cbloods">Log bloodwork</button></div></div>`;
+  }
+  const cy = curCycle(date), low = S.cy.compounds.filter(cLow);
+  let next = "Nothing scheduled";
+  for (let i = 1; i <= 90; i++) { const nd = addDays(date, i), ps = S.cy.compounds.filter((c) => cDue(c, nd)); if (ps.length) { next = `${i === 1 ? "Tomorrow" : i < 7 ? DOW[parseD(nd).getDay()] : shortD(nd, { day: "numeric", month: "short" })} · ${ps.map((c) => c.name).join(", ")}`; break; } }
+  const C = 2 * Math.PI * 68, frac = due.length ? done / due.length : 0;
+  const cw = cy ? cycWeek(cy, date) : null;
+  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${done} of ${due.length} doses logged">
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
+      <div class="ov-ringtxt">${due.length ? `<span class="ov-big">${done}<span>/${due.length}</span></span><span class="small muted">doses logged</span>` : `<span class="ov-big" style="font-size:24px">None</span><span class="small muted">due today</span>`}</div></div>
+    <div class="ov-stats"><div><span class="small muted">${cy ? esc(cy.phase || "Cycle") : "Cycle"}</span><b>${cy ? `${esc(cy.name || "Current")} · week ${cw.w}${cw.tot ? ` of ${cw.tot}` : ""}` : `<button class="ov-low linkbtn" data-act="cnewcyc">Set cycle dates</button>`}</b></div>
+      <div><span class="small muted">Next</span><b>${esc(next)}</b></div>
+      <div><span class="small ${low.length ? "warntxt" : "muted"}">Stock</span>${low.length ? `<button class="ov-low" data-act="ctab" data-tab="cstock">${esc(low.map((c) => `${c.name} · ${plural(cDosesLeft(c), "dose")} left`).join(", "))}</button>` : "<b>All stocked</b>"}</div></div></div>`;
+  if (!due.length) html += `<div class="card"><div class="eyebrow">Nothing due</div><p class="small muted" style="margin:6px 0 0">Next up: ${esc(next)}.</p></div>`;
+  for (const c of due) {
+    const t = cTaken(c.id, date);
+    html += `<section class="card cdose ${t ? "is-done" : ""}"><div class="grow"><div class="row" style="gap:8px"><h3 class="ov-tlabel">${esc(c.name)}</h3>${cLow(c) ? '<span class="chip warn">Low</span>' : ""}</div>
+      <div class="small muted num">${fmtN(num(t ? t.mg : c.dose), 1)} mg · ${cAmtTxt(c, t ? num(t.amt) : cAmt(c))}${c.time ? " · " + esc(c.time) : ""}</div>
+      ${t ? `<div class="small" style="color:var(--accent)">Logged ${esc(new Date(t.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }))}</div>` : c.notes ? `<div class="small muted">${esc(c.notes)}</div>` : ""}</div>
+      <button class="wset ${t ? "done" : ""}" data-act="ctake" data-id="${c.id}" aria-pressed="${!!t}" aria-label="${t ? `${esc(c.name)} logged. Tap to undo` : `Log ${esc(c.name)}`}">${t ? `${I.check}<span>Done</span>` : "<span>Log dose</span>"}</button></section>`;
+  }
+  const week = weekDates(date);
+  html += `<div class="card"><div class="eyebrow" style="margin-bottom:8px">This week</div><div class="wweek">${week.map((wd) => {
+    const ds = S.cy.compounds.filter((c) => cDue(c, wd) || cTaken(c.id, wd)), tk = ds.filter((c) => cTaken(c.id, wd)).length;
+    const cls = !ds.length ? "rest" : tk === ds.length ? "on" : tk ? "part" : wd < today() ? "miss" : "due";
+    return `<button class="wwd ${cls} ${wd === today() ? "is-today" : ""}" data-act="cgoday" data-date="${wd}" aria-label="${esc(shortD(wd, { weekday: "long" }))}: ${ds.length ? `${tk} of ${ds.length} logged` : "nothing due"}"><span>${DOW[parseD(wd).getDay()].slice(0, 2)}</span><i>${cls === "on" ? I.check : ds.length ? `<b>${ds.length - tk || ""}</b>` : ""}</i></button>`;
+  }).join("")}</div><p class="hint" style="margin:8px 0 0">Tap a dose again to undo it. Vial stock updates as you log.</p></div>`;
+  return html;
+}
+function cCyclePage() {
+  const cy = curCycle();
+  let html = `<div class="row between"><h2 style="font-size:22px">My cycle</h2><button class="btn sm" data-act="cnewcomp">Add compound</button></div>`;
+  if (cy) {
+    const cw = cycWeek(cy, today()), totDays = cy.end ? dDiff(cy.start, cy.end) + 1 : 0, pct = totDays ? Math.min(100, ((dDiff(cy.start, today()) + 1) / totDays) * 100) : 0;
+    html += `<div class="card sitem"><div class="row between"><span class="eyebrow">${esc(cy.phase || "Cycle")} · now</span><button class="linkbtn" data-act="cedcyc" data-id="${cy.id}">Edit</button></div>
+      <h3>${esc(cy.name || "Current cycle")}</h3><div class="small muted">${esc(shortD(cy.start))} to ${cy.end ? esc(shortD(cy.end)) : "ongoing"}</div>
+      ${cy.end ? `<div class="mbar"><i style="width:${pct.toFixed(1)}%"></i></div>` : ""}
+      <div class="small"><b>Week ${cw.w}${cw.tot ? ` of ${cw.tot}` : ""}</b>${cy.end ? ` · ${plural(Math.max(0, dDiff(today(), cy.end)), "day")} left` : ""}</div></div>`;
+  } else html += `<div class="card"><p class="small muted" style="margin:0 0 10px">Add your cycle dates to see which week you’re on. They’re also shaded on your blood charts so you can see what changed on and off cycle.</p><button class="btn sm primary" data-act="cnewcyc">Set cycle dates</button></div>`;
+  html += `<div class="eyebrow">Compounds</div>`;
+  if (!S.cy.compounds.length) html += `<div class="card empty"><p>No compounds yet. Add one with its strength, dose and days.</p><button class="btn primary" data-act="cnewcomp">Add a compound</button></div>`;
+  html += S.cy.compounds.slice().sort((a, b) => !!cEnded(a) - !!cEnded(b) || a.name.localeCompare(b.name)).map((c) => `<div class="card sitem ${cEnded(c) ? "is-past" : ""}"><div class="row between"><h3>${esc(c.name)}</h3><span class="chip">${c.kind === "oral" ? "Oral" : "Injectable"}</span></div>
+    <div class="small"><b class="num">${fmtN(num(c.dose), 1)} mg</b> ${esc(schedTxt(c))}${c.time ? ` at ${esc(c.time)}` : ""} · <span class="num">${fmtN(num(c.dose) * cPerWeek(c), 0)} mg</span> a week</div>
+    <div class="small muted">${c.kind === "oral" ? `${fmtN(num(c.conc), 1)} mg per tab` : `${fmtN(num(c.conc), 1)} mg/mL`} · ${cAmtTxt(c)} per dose · ${c.start ? esc(shortD(c.start, { day: "numeric", month: "short" })) : "?"} to ${c.end ? esc(shortD(c.end, { day: "numeric", month: "short" })) : "ongoing"}</div>
+    <div class="actions"><button class="btn sm" data-act="ceditcomp" data-id="${c.id}">Edit</button></div></div>`).join("");
+  const past = (S.cy.settings.cycles || []).filter((x) => x !== cy).sort((a, b) => b.start.localeCompare(a.start));
+  html += `<div class="row between"><span class="eyebrow">Cycle history</span><button class="linkbtn" data-act="cnewcyc">Add cycle dates</button></div>`;
+  html += past.length ? `<div class="card plist" style="padding:2px 14px">${past.map((x) => `<button class="pi stackrow" data-act="cedcyc" data-id="${x.id}"><span class="grow"><b>${esc(x.name || x.phase || "Cycle")}</b>${x.example ? ' <span class="chip ex">Sample</span>' : ""}<br><span class="small muted">${esc(x.phase || "")}${x.phase ? " · " : ""}${esc(shortD(x.start, { day: "numeric", month: "short", year: "numeric" }))} to ${x.end ? esc(shortD(x.end, { day: "numeric", month: "short", year: "numeric" })) : "ongoing"}</span></span>${I.right}</button>`).join("")}</div>` : `<p class="hint" style="margin:0">Past cycles show here.</p>`;
+  return html;
+}
+function cCompForm() {
+  const f = S.cform, oral = f.kind === "oral", amt = num(f.conc) > 0 ? num(f.dose) / num(f.conc) : 0;
+  const tmp = { ...f, conc: num(f.conc), dose: num(f.dose) };
+  return `<div class="row between"><h2 style="font-size:22px">${f.isNew ? "Add compound" : "Edit compound"}</h2><button class="btn sm ghost" data-act="ccancel">Cancel</button></div>
+  <form class="f card" id="cfform" novalidate><fieldset><legend>Compound</legend>
+    <label class="fl">Name<input class="in" data-cf="name" value="${esc(f.name)}" placeholder="e.g. Testosterone enanthate"></label>
+    <div class="fgrid"><label class="fl">Type<select class="in" data-cf="kind"><option value="inj" ${oral ? "" : "selected"}>Injectable</option><option value="oral" ${oral ? "selected" : ""}>Oral</option></select></label>
+      <label class="fl">${oral ? "mg per tablet" : "Strength (mg/mL)"}<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cf="conc" value="${esc(f.conc)}" placeholder="${oral ? "10" : "250"}"></label>
+      <label class="fl">Dose (mg)<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cf="dose" value="${esc(f.dose)}"></label>
+      <label class="fl">Time<input class="in" type="time" data-cf="time" value="${esc(f.time)}"></label></div>
+    <div class="hint" id="cf-calc">${amt ? `${cAmtTxt(tmp, amt)} per dose` : "Enter strength and dose to see how much to draw."}</div></fieldset>
+  <fieldset><legend>Schedule</legend>
+    <label class="fl">How often<select class="in" data-cf="freq"><option value="days" ${f.freq === "every" ? "" : "selected"}>On set weekdays</option><option value="every" ${f.freq === "every" ? "selected" : ""}>Every few days</option></select></label>
+    ${f.freq === "every" ? `<label class="fl">Every how many days<input class="in num" type="number" inputmode="decimal" step="0.5" min="0.5" data-cf="every" value="${esc(f.every)}" placeholder="3.5"></label><div class="hint">3.5 works too: it alternates 3 and 4 days, counted from the start date.</div>`
+      : `<div class="fl">Days<div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((dd) => `<button type="button" data-act="cfdow" data-d="${dd}" aria-pressed="${f.days.includes(dd)}">${DOW[dd].slice(0, 2)}</button>`).join("")}</div></div>`}
+    <div class="fgrid"><label class="fl">Start<input class="in" type="date" data-cf="start" value="${esc(f.start)}"></label><label class="fl">End (optional)<input class="in" type="date" data-cf="end" value="${esc(f.end)}"></label></div></fieldset>
+  <fieldset><legend>Stock</legend>
+    <div class="fgrid"><label class="fl">${oral ? "Tabs per bottle" : "Vial size (mL)"}<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cf="container" value="${esc(f.container)}" placeholder="${oral ? "100" : "10"}"></label>
+      <label class="fl">${oral ? "Left in open bottle" : "Left in open vial (mL)"}<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cf="open" value="${esc(f.open)}"></label>
+      <label class="fl">${oral ? "Sealed bottles" : "Sealed vials"}<input class="in num" type="number" inputmode="numeric" step="1" min="0" data-cf="spare" value="${esc(f.spare)}"></label>
+      <label class="fl">Warn at doses left<input class="in num" type="number" inputmode="numeric" step="1" min="0" data-cf="lowDoses" value="${esc(f.lowDoses)}"></label></div>
+    <label class="fl">Notes<textarea class="in" data-cf="notes" placeholder="Brand, batch, injection sites…">${esc(f.notes)}</textarea></label></fieldset>
+  <div class="sticky-save">${f.isNew ? "" : `<button type="button" class="btn danger" data-act="cdelcomp">Delete</button>`}<button type="submit" class="btn primary">Save</button></div></form>`;
+}
+function cCycForm() {
+  const f = S.cycForm;
+  return `<div class="row between"><h2 style="font-size:22px">${f.isNew ? "Cycle dates" : "Edit cycle"}</h2><button class="btn sm ghost" data-act="ccancel">Cancel</button></div>
+  <form class="f card" id="cyform" novalidate><fieldset>
+    <label class="fl">Name<input class="in" data-cyf="name" value="${esc(f.name)}" placeholder="e.g. Summer 2026"></label>
+    <div class="fgrid"><label class="fl">Phase<select class="in" data-cyf="phase">${["Blast", "Cruise", "TRT", "PCT", "Off"].map((p) => `<option ${f.phase === p ? "selected" : ""}>${p}</option>`).join("")}</select></label>
+      <label class="fl">Length (weeks)<input class="in num" type="number" inputmode="numeric" min="1" data-cyf="weeks" value="${esc(f.weeks)}" placeholder="Ongoing"></label>
+      <label class="fl full">Start<input class="in" type="date" data-cyf="start" value="${esc(f.start)}"></label></div>
+    <label class="fl">Notes<textarea class="in" data-cyf="notes">${esc(f.notes)}</textarea></label></fieldset>
+  <div class="sticky-save">${f.isNew ? "" : `<button type="button" class="btn danger" data-act="cdelcyc">Delete</button>`}<button type="submit" class="btn primary">Save</button></div></form>`;
+}
+function cStock() {
+  let html = `<div class="row between"><h2 style="font-size:22px">Stock</h2><button class="btn sm" data-act="cnewcomp">Add compound</button></div>`;
+  if (!S.cy.compounds.length) return html + `<div class="card empty"><p>Add a compound with its vial size and how much is left, and it counts down here as you log doses.</p><button class="btn primary" data-act="cnewcomp">Add a compound</button></div>`;
+  const low = S.cy.compounds.filter(cLow);
+  if (low.length) html += `<div class="alerts">${low.map((c) => `<div class="alert ${cDosesLeft(c) <= 1 ? "crit" : ""}"><span class="pip"></span><div><b>${esc(c.name)}</b> has ${plural(cDosesLeft(c), "dose")} left.</div></div>`).join("")}</div>`;
+  html += S.cy.compounds.slice().sort((a, b) => !!cEnded(a) - !!cEnded(b) || cDosesLeft(a) - cDosesLeft(b)).map((c) => {
+    const oral = c.kind === "oral", cont = num(c.container), pct = cont ? Math.min(100, (num(c.open) / cont) * 100) : 0, left = cDosesLeft(c), fc = cForecast(c), pw = cPerWeek(c);
+    const lv = cLow(c) ? (left <= 1 ? "crit" : "warn") : "";
+    return `<div class="card sitem"><div class="row between"><h3>${esc(c.name)}</h3>${cEnded(c) ? '<span class="chip">Finished</span>' : lv ? `<span class="chip ${lv}">Low</span>` : ""}</div>
+      <div class="small muted">${oral ? "Open bottle" : "Open vial"}: <b class="num" style="color:var(--ink)">${cUnitTxt(c, c.open)}</b>${cont ? ` of ${cUnitTxt(c, cont)}` : ""}</div>
+      <div class="level ${lv}"><i style="width:${pct.toFixed(1)}%"></i></div>
+      <div class="small">${plural(num(c.spare), oral ? "sealed bottle" : "sealed vial")} · <b class="num">${Number.isFinite(left) ? plural(left, "dose") : "?"}</b> left${Number.isFinite(left) && pw ? ` (about ${left / pw < 2 ? plural(Math.round((left / pw) * 7), "day") : plural(Math.round(left / pw), "week")})` : ""}</div>
+      ${cEnded(c) ? "" : fc.outOn ? `<div class="small ${fc.short ? "warntxt" : "muted"}">${c.end ? `Short ${plural(fc.short, "dose")} to finish on ${esc(shortD(c.end, { day: "numeric", month: "short" }))}. ` : ""}Runs out around ${esc(shortD(fc.outOn))}.</div>` : c.end ? `<div class="small" style="color:var(--accent)">Enough to finish on ${esc(shortD(c.end, { day: "numeric", month: "short" }))} (${plural(fc.need, "more dose")}).</div>` : ""}
+      <div class="actions"><button class="btn sm" data-act="crestock" data-id="${c.id}">Add a sealed ${oral ? "bottle" : "vial"}</button><button class="btn sm ghost" data-act="ceditcomp" data-id="${c.id}">Edit stock</button></div></div>`;
+  }).join("");
+  return html;
+}
+
+/* ---------- Bloodwork ---------- */
+const BNAMES = ["Total testosterone", "Free testosterone", "Estradiol", "SHBG", "LH", "FSH", "Prolactin", "Progesterone", "DHEA-S", "Haemoglobin", "Haematocrit", "Red blood cells", "White blood cells", "Platelets", "ALT", "AST", "GGT", "ALP", "Bilirubin", "Albumin", "Creatinine", "eGFR", "Urea", "Total cholesterol", "LDL cholesterol", "HDL cholesterol", "Triglycerides", "Glucose", "HbA1c", "Insulin", "PSA", "TSH", "Free T4", "Free T3", "Ferritin", "Iron", "Vitamin D", "IGF-1", "CRP", "Sodium", "Potassium"];
+const bkey = (n) => String(n || "").trim().toLowerCase();
+const bflag = (m) => (m.value == null || m.value === "" ? "" : m.low != null && m.low !== "" && num(m.value) < num(m.low) ? "L" : m.high != null && m.high !== "" && num(m.value) > num(m.high) ? "H" : "");
+const bfmt = (v) => fmtN(num(v), Math.abs(num(v)) < 1 ? 3 : Math.abs(num(v)) < 20 ? 2 : 1);
+const brange = (m) => (m.low != null && m.low !== "" && m.high != null && m.high !== "" ? `${bfmt(m.low)}–${bfmt(m.high)}` : m.high != null && m.high !== "" ? `< ${bfmt(m.high)}` : m.low != null && m.low !== "" ? `> ${bfmt(m.low)}` : "no range");
+const panelsAsc = () => S.cy.panels.slice().sort((a, b) => a.date.localeCompare(b.date));
+function bMarkers() {
+  const map = new Map();
+  for (const p of panelsAsc()) for (const m of p.markers || []) { const k = bkey(m.name); if (!k) continue; const e = map.get(k) || { key: k, name: m.name, unit: m.unit, n: 0, last: null }; e.n++; e.last = m; e.name = m.name; e.unit = m.unit || e.unit; map.set(k, e); }
+  return [...map.values()].sort((a, b) => !!bflag(b.last) - !!bflag(a.last) || b.n - a.n || a.name.localeCompare(b.name));
+}
+function bChart(key) {
+  const pts = []; for (const p of panelsAsc()) { const m = (p.markers || []).find((x) => bkey(x.name) === key); if (m && m.value !== "" && m.value != null) pts.push({ date: p.date, m, v: num(m.value) }); }
+  if (!pts.length) return "";
+  const last = pts[pts.length - 1].m, W = 340, H = 200, L = 42, R = 14, T = 18, B = 30;
+  let t0 = parseD(pts[0].date).getTime(), t1 = parseD(pts[pts.length - 1].date).getTime();
+  if (t1 - t0 < 86400000 * 20) { t0 -= 86400000 * 15; t1 += 86400000 * 15; }
+  const lo = last.low != null && last.low !== "" ? num(last.low) : null, hi = last.high != null && last.high !== "" ? num(last.high) : null;
+  const vals = pts.map((p) => p.v).concat(lo != null ? [lo] : [], hi != null ? [hi] : []);
+  let y0 = Math.min(...vals), y1 = Math.max(...vals); const pad = (y1 - y0 || Math.abs(y1) || 1) * 0.08; y0 -= pad; y1 += pad; if (y0 < 0 && Math.min(...pts.map((p) => p.v)) >= 0) y0 = 0;
+  const ax = niceAxis(y0, y1); y0 = ax.y0; y1 = ax.y1;
+  const xs = (d) => L + ((parseD(d).getTime() - t0) / (t1 - t0)) * (W - L - R), ys = (v) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
+  let g = "";
+  for (const cy of S.cy.settings.cycles || []) {
+    const a = Math.max(t0, parseD(cy.start).getTime()), b = Math.min(t1, parseD(cy.end || today()).getTime()); if (b <= a) continue;
+    const xa = L + ((a - t0) / (t1 - t0)) * (W - L - R), xb = L + ((b - t0) / (t1 - t0)) * (W - L - R);
+    g += `<rect x="${xa.toFixed(1)}" y="${T - 14}" width="${(xb - xa).toFixed(1)}" height="${H - B - T + 14}" fill="var(--accent)" opacity=".1"/>${xb - xa > 34 ? `<text x="${(xa + 4).toFixed(1)}" y="${T - 4}" class="ctxt">${esc((cy.phase || cy.name || "Cycle").slice(0, 14))}</text>` : ""}`;
+  }
+  if (lo != null || hi != null) { const ya = ys(hi ?? y1), yb = ys(lo ?? y0); g += `<rect x="${L}" y="${ya.toFixed(1)}" width="${W - L - R}" height="${Math.max(0, yb - ya).toFixed(1)}" fill="var(--ok)" opacity=".12"/>`; for (const v of [lo, hi]) if (v != null) g += `<line x1="${L}" x2="${W - R}" y1="${ys(v).toFixed(1)}" y2="${ys(v).toFixed(1)}" stroke="var(--ok)" stroke-dasharray="3 3" opacity=".7"/>`; }
+  for (const v of ax.ticks) { const y = ys(v); g += `<line x1="${L}" x2="${W - R}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" opacity=".6"/><text x="${L - 6}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" class="ctxt">${esc(fmtN(v, 3))}</text>`; }
+  g += `<path d="${pts.map((p, i) => `${i ? "L" : "M"}${xs(p.date).toFixed(1)} ${ys(p.v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>`;
+  const showAll = pts.length <= 6;
+  pts.forEach((p, i) => { const x = xs(p.date), y = ys(p.v), out = bflag(p.m); g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="${out ? "var(--crit)" : "var(--accent)"}" stroke="var(--surface)" stroke-width="2"><title>${esc(shortD(p.date, { day: "numeric", month: "short", year: "numeric" }))}: ${esc(bfmt(p.v))} ${esc(p.m.unit || "")}</title></circle>`; if (showAll || i === pts.length - 1) g += `<text x="${x.toFixed(1)}" y="${(y - 9).toFixed(1)}" text-anchor="middle" class="ctxt ${out ? "out" : "val"}">${esc(bfmt(p.v))}</text>`; });
+  const xl = showAll ? pts : [pts[0], pts[pts.length - 1]];
+  xl.forEach((p, i) => { const x = xs(p.date); g += `<text x="${x.toFixed(1)}" y="${H - 10}" text-anchor="${xl.length > 1 && i === 0 && x < L + 20 ? "start" : xl.length > 1 && i === xl.length - 1 && x > W - R - 20 ? "end" : "middle"}" class="ctxt">${esc(shortD(p.date, { month: "short", year: "2-digit" }))}</text>`; });
+  const prev = pts.length > 1 ? pts[pts.length - 2] : null, f = bflag(last);
+  const diff = prev ? pts[pts.length - 1].v - prev.v : 0;
+  return `<div class="row between" style="align-items:baseline;margin-top:4px"><div><b style="font-size:17px">${esc(pts[pts.length - 1].m.name)}</b> <span class="muted small">${esc(last.unit || "")}</span></div><div class="num"><b>${esc(bfmt(last.value))}</b> ${f ? `<span class="chip crit">${f === "H" ? "High" : "Low"}</span>` : ""}</div></div>
+    <div class="small muted">Range ${esc(brange(last))}${prev ? ` · ${diff >= 0 ? "up" : "down"} ${esc(bfmt(Math.abs(diff)))} since ${esc(shortD(prev.date, { day: "numeric", month: "short" }))}` : " · one result so far"}</div>
+    <svg class="bchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(last.name)} over time">${g}</svg>
+    <div class="blegend small muted"><span><i class="sw ok"></i>Normal range</span><span><i class="sw cy"></i>On cycle</span><span><i class="sw out"></i>Out of range</span></div>`;
+}
+function cBloods() {
+  const B = S.bimp;
+  let html = `<h2 style="font-size:22px">Bloodwork</h2>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="small muted" style="margin:0">Upload a photo, screenshot or PDF of your results. Claude reads each marker, its value and the lab’s normal range, and you check it before it’s saved.</p>
+    <div class="row wrapflex"><label class="btn primary bupload">${I.upload}<span>${B.fileName ? "Upload another" : "Upload results"}</span><input type="file" accept="application/pdf,image/*" multiple data-bimport="1" aria-label="Upload blood test results"></label><button class="btn" data-act="bmanual">Enter by hand</button></div>
+    ${S.canPhoto === false || !S.sample ? `<div class="status">Reading results needs the Claude app or claude.ai, signed in. You can still enter them by hand.</div>` : ""}
+    ${B.busy ? `<div class="status"><span class="spin"></span> ${esc(B.msg || "Reading your results…")}</div>` : B.msg ? `<div class="status ${B.kind}">${esc(B.msg)}</div>` : ""}</div>`;
+  if (!S.cy.panels.length) return html + `<div class="card empty"><h3>No results yet</h3><p>Each upload is saved to a log, and you get charts of every marker over time with your cycles shaded in.</p><button class="btn" data-act="bsample">Try sample results</button></div>`;
+  const ms = bMarkers(); if (!S.bmarker || !ms.some((m) => m.key === S.bmarker)) S.bmarker = (ms.find((m) => m.n > 1 && bflag(m.last)) || ms.find((m) => m.n > 1) || ms[0])?.key;
+  html += `<section class="card"><div class="eyebrow">Trends</div><div class="bchips" role="tablist">${ms.map((m) => `<button class="bchip ${bflag(m.last) ? "out" : ""}" data-act="bpick" data-k="${esc(m.key)}" aria-pressed="${m.key === S.bmarker}">${esc(m.name)}${bflag(m.last) ? " ·" + bflag(m.last) : ""}</button>`).join("")}</div>${bChart(S.bmarker)}${(() => { const mm = ms.find((x) => x.key === S.bmarker); return mm ? `<details class="bmore"><summary>What is ${esc(mm.name)}?</summary>${binfoCard(mm.name, mm.last)}</details>` : ""; })()}</section>`;
+  const R = S.cy.settings.review, RB = S.breview;
+  html += `<section class="card breview"><div class="row between"><span class="eyebrow">Claude’s read</span>${R?.at ? `<span class="small muted">${esc(new Date(R.at).toLocaleDateString(undefined, { day: "numeric", month: "short" }))}</span>` : ""}</div>
+    ${R ? `<p style="margin:6px 0">${esc(R.summary)}</p>
+      ${R.flags?.length ? `<div class="small"><b>Worth a look</b><ul>${R.flags.map((x) => `<li><b>${esc(x.marker)}:</b> ${esc(x.note)}</li>`).join("")}</ul></div>` : ""}
+      ${R.trends?.length ? `<div class="small"><b>Trends</b><ul>${R.trends.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      ${R.askDoctor?.length ? `<div class="small"><b>To ask your doctor</b><ul>${R.askDoctor.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}` : `<p class="small muted" style="margin:6px 0">Claude looks across all your results and your cycle dates, points out what’s outside range and what’s changed, and lists questions to take to your doctor.</p>`}
+    ${RB.msg ? `<div class="status err">${esc(RB.msg)}</div>` : ""}
+    <div class="row"><button class="btn sm ${R ? "" : "primary"}" data-act="breview" ${RB.busy || !S.sample ? "disabled" : ""}>${RB.busy ? '<span class="spin"></span> Reading your results…' : R ? "Review again" : "Review my bloodwork"}</button></div>
+    <p class="hint" style="margin:8px 0 0">General information, not medical advice. Go through your results with your doctor.</p></section>`;
+  html += `<div class="eyebrow">Log</div><div class="card plist" style="padding:2px 14px">${S.cy.panels.slice().sort((a, b) => b.date.localeCompare(a.date)).map((p) => { const out = (p.markers || []).filter(bflag).length; return `<button class="pi stackrow" data-act="bopen" data-id="${p.id}"><span class="grow"><b>${esc(shortD(p.date, { day: "numeric", month: "short", year: "numeric" }))}</b>${p.example ? ' <span class="chip ex">Sample</span>' : ""}<br><span class="small muted">${esc(p.lab || "Blood test")} · ${plural((p.markers || []).length, "marker")}${out ? ` · <span class="warntxt">${out} out of range</span>` : ""}</span></span>${I.right}</button>`; }).join("")}</div>`;
+  if (S.cy.panels.some((p) => p.example)) html += `<div><button class="btn sm ghost danger" data-act="bclearex">Remove sample results</button></div>`;
+  return html;
+}
+function cPanelView() {
+  const p = S.cy.panels.find((x) => x.id === S.bopen); if (!p) { S.bopen = null; return cBloods(); }
+  return `<div class="row between"><button class="btn sm ghost" data-act="bback">${I.left}<span>Bloodwork</span></button><button class="btn sm" data-act="bedit">Edit</button></div>
+    <div><h2 style="font-size:22px">${esc(shortD(p.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" }))}</h2><div class="small muted">${esc(p.lab || "Blood test")}</div></div>
+    <div class="card" style="padding:4px 14px">${(p.markers || []).map((m) => { const f = bflag(m); return `<details class="bdet"><summary class="brow"><span class="grow">${esc(m.name)}</span><span class="num ${f ? "warntxt" : ""}"><b>${esc(bfmt(m.value))}</b> <span class="small muted">${esc(m.unit || "")}</span></span><span class="small muted num brng">${esc(brange(m))}<span class="bwhat"> · what is this?</span></span><span class="bf">${f ? `<span class="chip crit">${f}</span>` : ""}</span></summary>${binfoCard(m.name, m)}</details>`; }).join("") || '<p class="small muted">No markers.</p>'}</div>
+    ${(p.photos || []).length ? `<div class="photos">${p.photos.map((r) => `<a class="photo" href="${esc(storedSrc(r))}" target="_blank" rel="noopener"><img src="${esc(storedSrc(r))}" alt="Blood test page"></a>`).join("")}</div>` : ""}
+    ${p.notes ? `<div class="card small">${esc(p.notes)}</div>` : ""}
+    ${S.bdel ? `<div class="inline-confirm">Delete this result? <button class="btn sm danger" data-act="bdelyes">Delete</button><button class="btn sm" data-act="bdelno">Keep</button></div>` : `<div><button class="btn sm ghost danger" data-act="bdelask">Delete result</button></div>`}`;
+}
+function cPanelForm() {
+  const f = S.bimp.form;
+  return `<div class="row between"><h2 style="font-size:22px">${f.id ? "Edit result" : "Check results"}</h2><button class="btn sm ghost" data-act="bdiscard">Cancel</button></div>
+  ${S.bimp.msg && !f.id ? `<div class="status ${S.bimp.kind}">${esc(S.bimp.msg)}</div>` : ""}
+  <form class="f card" id="bpform" novalidate><fieldset>
+    <div class="fgrid"><label class="fl">Test date<input class="in" type="date" data-bf="date" value="${esc(f.date)}"></label><label class="fl">Lab<input class="in" data-bf="lab" value="${esc(f.lab)}" placeholder="e.g. QML"></label></div></fieldset>
+  <fieldset><legend>Markers</legend>
+    ${f.markers.map((m, i) => `<div class="wexform ${bflag(m) ? "is-out" : ""}"><label class="fl wexname"><span>Marker</span><input class="in" list="bnames" data-bm="${i}" data-bk="name" value="${esc(m.name)}"></label>
+      <label class="fl"><span>Value</span><input class="in num" type="number" inputmode="decimal" step="any" data-bm="${i}" data-bk="value" value="${esc(m.value)}"></label>
+      <label class="fl"><span>Unit</span><input class="in" data-bm="${i}" data-bk="unit" value="${esc(m.unit)}"></label>
+      <label class="fl"><span>Low</span><input class="in num" type="number" inputmode="decimal" step="any" data-bm="${i}" data-bk="low" value="${esc(m.low)}"></label>
+      <label class="fl"><span>High</span><input class="in num" type="number" inputmode="decimal" step="any" data-bm="${i}" data-bk="high" value="${esc(m.high)}"></label>
+      <button type="button" class="iconbtn" data-act="brmm" data-i="${i}" aria-label="Remove marker">${I.x}</button></div>`).join("")}
+    <datalist id="bnames">${BNAMES.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+    <div><button type="button" class="btn sm" data-act="baddm">Add marker</button></div>
+    <label class="fl">Notes<textarea class="in" data-bf="notes" placeholder="Fasted? Days since last dose?">${esc(f.notes)}</textarea></label></fieldset>
+  <div class="sticky-save"><button type="submit" class="btn primary">Save result</button></div></form>`;
+}
+/* Plain-language guide to common blood markers: what it is, and what high or low results can point to */
+const BINFO = {
+  "total testosterone": { what: "The main male sex hormone, mostly made in the testes. It drives muscle, bone density, red blood cell production, libido and mood. “Total” counts both bound and free testosterone.", high: "Usually from taking testosterone or other androgens. Can come with acne, oily skin, raised haematocrit, fluid retention and suppression of your own production.", low: "Can mean low energy, low libido, loss of muscle, low mood and poorer recovery. After a cycle, natural production can stay low for a while." },
+  "free testosterone": { what: "The small share of testosterone (around 2%) that isn’t bound to SHBG or albumin, so it’s available for tissues to use. It often tracks symptoms better than total testosterone.", high: "Usually from testosterone use or low SHBG. Same effects as high total testosterone.", low: "Low energy, libido and mood, even when total testosterone looks fine, often because SHBG is high." },
+  "estradiol": { what: "The main form of oestrogen. Men make it from testosterone through the aromatase enzyme. It matters for libido, joint health, bone strength, mood and cholesterol.", high: "Often rises with higher testosterone. Can cause water retention, bloating, sore or puffy nipples (gynaecomastia), mood swings and erection problems.", low: "Often from over-using aromatase inhibitors. Can cause dry or aching joints, low libido, low mood, fatigue and worse cholesterol." },
+  "shbg": { what: "Sex hormone binding globulin. A protein from the liver that binds testosterone and oestradiol in the blood, controlling how much is free to act.", high: "Less free testosterone available. Seen with ageing, high thyroid, liver issues and low-calorie diets.", low: "More free hormone, but often linked to insulin resistance, obesity, high insulin and some oral steroids." },
+  "lh": { what: "Luteinising hormone. Sent from the pituitary gland to tell the testes to make testosterone.", high: "The pituitary pushing harder, as the testes aren’t keeping up (primary hypogonadism).", low: "Near zero on a cycle, because outside testosterone shuts it down. Recovery of LH is a key sign the body is restarting its own production." },
+  "fsh": { what: "Follicle stimulating hormone. A pituitary hormone that drives sperm production.", high: "Can point to the testes not working well.", low: "Suppressed on a cycle, which can reduce sperm count and fertility until it recovers." },
+  "prolactin": { what: "A pituitary hormone best known for milk production. In men it affects libido and sexual function.", high: "Can lower libido, cause erection problems and lactation. Some compounds (like nandrolone and trenbolone) and some medicines raise it. Very high levels need checking.", low: "Rarely a problem on its own." },
+  "progesterone": { what: "A steroid hormone made in small amounts in men, mainly by the adrenal glands. It's mostly relevant with progestin compounds like nandrolone and trenbolone.", high: "Can add to side effects like low libido and water retention.", low: "Usually not significant in men." },
+  "dhea-s": { what: "An adrenal hormone that the body converts into testosterone and oestrogen. A marker of adrenal function.", high: "Can come from supplements, stress or adrenal conditions.", low: "Common with ageing, and can mean low adrenal output." },
+  "haemoglobin": { what: "The protein in red blood cells that carries oxygen.", high: "Thicker blood. Common with testosterone and other androgens, dehydration, smoking or high altitude. Raises the load on the heart and the risk of clots.", low: "Anaemia. Tiredness, shortness of breath, pale skin. Often from low iron or blood loss." },
+  "haematocrit": { what: "The share of your blood made up of red blood cells, shown as a fraction (like 0.45) or a percentage (45%). One of the most watched markers on testosterone.", high: "Thicker, stickier blood, which raises the risk of clots, high blood pressure and stroke. Often rises with androgens. Usually managed with a doctor, for example through blood donation, a dose change or more fluids.", low: "Anaemia. Fatigue and poor exercise tolerance." },
+  "red blood cells": { what: "A count of the cells that carry oxygen around the body.", high: "Same story as high haematocrit: thicker blood. Common with androgens.", low: "Anaemia, from things like low iron, B12 or folate, or blood loss." },
+  "white blood cells": { what: "Immune cells that fight infection.", high: "Often an active infection or inflammation. Hard training and steroids can push it up a little.", low: "Can mean weaker immunity. Seen after viral illness or with some medicines." },
+  "platelets": { what: "Small cell fragments that help blood clot.", high: "Can come with inflammation, iron deficiency or bone marrow conditions, and may raise clot risk.", low: "Easier bruising and bleeding." },
+  "alt": { what: "Alanine aminotransferase. An enzyme that is mostly in the liver. It's the main marker of liver cell stress.", high: "Liver strain. Common with oral steroids, alcohol, fatty liver and some medicines. Hard training can bump it up for a few days, so mention recent workouts.", low: "Not a concern." },
+  "ast": { what: "Aspartate aminotransferase. An enzyme found in the liver, and also in muscle and the heart.", high: "Liver strain, or simply muscle damage from a hard workout in the days before the test. Read it alongside ALT and CK.", low: "Not a concern." },
+  "ggt": { what: "Gamma-glutamyl transferase. A liver and bile duct enzyme. It’s a good check on whether the liver is the cause, because training doesn’t raise it.", high: "Points to the liver: alcohol, fatty liver, oral steroids, some medicines or bile flow problems.", low: "Not a concern." },
+  "alp": { what: "Alkaline phosphatase. An enzyme from the liver, bile ducts and bone.", high: "Bile flow problems, or bone growth and turnover.", low: "Rarely meaningful. Sometimes low zinc or magnesium." },
+  "bilirubin": { what: "A yellow by-product of old red blood cells breaking down, which the liver clears.", high: "The liver or bile ducts not clearing it well, or more red cells breaking down. Mildly high on its own is often Gilbert’s syndrome, which is harmless.", low: "Not a concern." },
+  "albumin": { what: "The main protein in blood, made by the liver. It holds fluid in the blood vessels and carries hormones and drugs.", high: "Usually dehydration.", low: "Liver or kidney issues, poor nutrition or inflammation." },
+  "creatinine": { what: "A waste product from muscle that the kidneys filter out. It's used to estimate kidney function.", high: "Can mean the kidneys are under strain, but it's also naturally higher with more muscle, creatine supplements, high protein intake or dehydration.", low: "Usually just lower muscle mass." },
+  "egfr": { what: "Estimated glomerular filtration rate. A calculated estimate of how well your kidneys filter blood, worked out from creatinine.", high: "Higher is better, though it can read high in very lean people.", low: "Reduced kidney function. Big muscle mass and creatine can make it read falsely low, so a cystatin C test can help." },
+  "urea": { what: "A waste product from breaking down protein, cleared by the kidneys.", high: "High protein intake, dehydration or kidney strain.", low: "Low protein intake or liver issues." },
+  "total cholesterol": { what: "All the cholesterol in your blood. On its own it says little. HDL, LDL and triglycerides tell the real story.", high: "Usually driven by high LDL. Raises heart disease risk over time.", low: "Generally fine, though very low can affect hormone production." },
+  "ldl cholesterol": { what: "Low-density lipoprotein, the “bad” cholesterol. It can build up in artery walls.", high: "Higher long-term risk of heart attack and stroke. Androgens (especially orals), saturated fat and genetics push it up.", low: "Generally good for the heart." },
+  "hdl cholesterol": { what: "High-density lipoprotein, the “good” cholesterol. It carries cholesterol away from the arteries back to the liver.", high: "Generally protective.", low: "Higher heart risk. Androgens, especially oral steroids, often drop HDL sharply. Cardio, omega-3s and losing fat help." },
+  "triglycerides": { what: "Fat in the blood, mostly from food (especially sugar, refined carbs and alcohol).", high: "Higher heart risk. Linked to insulin resistance, a high-sugar diet, alcohol or not fasting before the test.", low: "Usually fine." },
+  "glucose": { what: "Blood sugar. Your body’s main fuel.", high: "Fasting values that stay high point to insulin resistance or diabetes. GH, insulin use and some steroids affect it.", low: "Shakiness, sweating and dizziness. Can follow insulin use or long fasting." },
+  "hba1c": { what: "Your average blood sugar over about the last 3 months, measured as sugar stuck to haemoglobin.", high: "Prediabetes or diabetes. Long-term damage to blood vessels and nerves. High red cell counts can also shift the reading.", low: "Usually fine." },
+  "insulin": { what: "The hormone that moves sugar from the blood into cells.", high: "Fasting values that stay high are an early sign of insulin resistance, even when glucose looks normal.", low: "Normal when fasting, unless glucose is high too." },
+  "psa": { what: "Prostate-specific antigen. A protein made by the prostate. It's used to keep an eye on prostate health.", high: "Can mean an enlarged or inflamed prostate, or (less often) prostate cancer. Testosterone can nudge it up, and so can cycling or sex before the test. A steady rise matters more than a single number.", low: "Normal." },
+  "tsh": { what: "Thyroid stimulating hormone. The pituitary’s signal to the thyroid, which sets your metabolic rate.", high: "Often an underactive thyroid: tiredness, weight gain, feeling cold.", low: "Often an overactive thyroid, or taking thyroid hormone (T3 or T4)." },
+  "free t4": { what: "The main thyroid hormone in its free, active-ready form.", high: "Overactive thyroid or taking T4. Racing heart, weight loss, anxiety.", low: "Underactive thyroid. Fatigue, weight gain, low mood." },
+  "free t3": { what: "The most active thyroid hormone, mostly converted from T4.", high: "Overactive thyroid or taking T3.", low: "Underactive thyroid, or poor conversion from T4 during long dieting." },
+  "ferritin": { what: "Your stored iron. It's the best single marker of iron reserves.", high: "Iron overload or inflammation, since ferritin also rises when the body is inflamed.", low: "Low iron stores, often after regular blood donation. Fatigue and poor endurance." },
+  "iron": { what: "The iron circulating in your blood right now. It moves a lot through the day, so read it with ferritin.", high: "Recent supplements or iron overload.", low: "Low intake or blood loss. Check ferritin." },
+  "vitamin d": { what: "A hormone-like vitamin made from sunlight, needed for bones, immunity, muscle and mood.", high: "Usually from too much supplementation. Can raise calcium levels.", low: "Very common. Linked to weaker bones, low mood, poorer immunity and lower testosterone." },
+  "igf-1": { what: "Insulin-like growth factor 1, made mainly by the liver in response to growth hormone. It's the usual way to check GH levels.", high: "Growth hormone or peptide use, or (rarely) a pituitary condition. Long term it can affect blood sugar and joints.", low: "Low growth hormone, poor sleep, low calories or ageing." },
+  "crp": { what: "C-reactive protein. A general marker of inflammation in the body.", high: "Infection, injury, recent hard training, or chronic inflammation, which is linked to heart risk.", low: "Good: little inflammation." },
+  "sodium": { what: "A key electrolyte for fluid balance, nerves and muscles.", high: "Usually dehydration.", low: "Too much water or some medicines. Can cause headaches, confusion and cramps." },
+  "potassium": { what: "An electrolyte essential for heart rhythm and muscle function.", high: "Kidney issues, some medicines, or a blood sample that broke down before testing. Very high is serious for the heart.", low: "Cramps, weakness and heart rhythm changes. Diuretics are a common cause." },
+};
+const BALIAS = { "testosterone": "total testosterone", "oestradiol": "estradiol", "e2": "estradiol", "hemoglobin": "haemoglobin", "hb": "haemoglobin", "hematocrit": "haematocrit", "hct": "haematocrit", "rbc": "red blood cells", "wbc": "white blood cells", "ldl": "ldl cholesterol", "hdl": "hdl cholesterol", "cholesterol": "total cholesterol", "a1c": "hba1c", "vitamin d3": "vitamin d", "25-oh vitamin d": "vitamin d", "c-reactive protein": "crp", "hs-crp": "crp", "gamma gt": "ggt", "dheas": "dhea-s", "sex hormone binding globulin": "shbg", "luteinising hormone": "lh", "luteinizing hormone": "lh", "follicle stimulating hormone": "fsh" };
+const binfo = (name) => { const k = bkey(name); return BINFO[k] || BINFO[BALIAS[k]] || null; };
+function binfoCard(name, m) {
+  const g = binfo(name), f = m ? bflag(m) : "";
+  if (!g) return `<div class="binfo"><p class="small muted" style="margin:0">No guide for this marker yet. Ask your doctor what it measures.</p></div>`;
+  return `<div class="binfo"><p style="margin:0">${esc(g.what)}</p>
+    <div class="bhl ${f === "H" ? "on" : ""}"><b>${I.up} If high</b><span>${esc(g.high)}</span></div>
+    <div class="bhl ${f === "L" ? "on" : ""}"><b>${I.down} If low</b><span>${esc(g.low)}</span></div>
+    <p class="hint" style="margin:0">General information only. Normal ranges differ between labs, so go through your results with your doctor.</p></div>`;
+}
+const BPROMPT = `You are reading a blood test report. Extract every numeric result. Answer with ONLY a JSON object:
+{"date": the collection date (or report date) as "YYYY-MM-DD", or null, "lab": the lab's name or "", "markers": [{"name": marker name, "value": number, "unit": unit as printed, "low": lower reference limit as a number or null, "high": upper reference limit as a number or null}]}
+Rules: when a marker matches one of these, use exactly this name so results line up over time: ${BNAMES.join(", ")}. Otherwise use the name as printed. For a range like "<5.2" set low to null and high to 5.2. Keep the units the lab printed. Skip comments and results with no number. Never guess a value that isn't printed.`;
+async function brunImport(files) {
+  const B = S.bimp;
+  if (!S.sample) { B.msg = "Reading results needs the Claude app or claude.ai, signed in."; B.kind = "err"; render(); return; }
+  B.busy = true; B.fileName = files.map((f) => f.name).join(", "); B.msg = "Reading your file…"; render();
+  try {
+    const maxImg = S.imgLimits?.maxCount || 5; let text = "", images = [];
+    for (const f of files) {
+      if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) { const r = await pdfToInputs(f, maxImg - images.length); text += r.text; images.push(...r.images); }
+      else if (f.type.startsWith("image/") && images.length < maxImg) images.push(await shrink(f));
+    }
+    if (!text && !images.length) throw new Error("empty");
+    B.msg = "Claude is reading the markers…"; render();
+    const opts = { modelTier: "default" }; if (images.length) opts.images = images.slice(0, maxImg);
+    const out = await S.sample.json(BPROMPT + (text ? `\n\nThe report's text:\n${text}` : "\n\nThe report is in the images."), opts);
+    const n = (v) => (v == null || v === "" || !Number.isFinite(Number(v)) ? "" : Number(v));
+    const markers = (out?.markers || []).filter((m) => m && m.name && n(m.value) !== "").map((m) => ({ name: String(m.name), value: n(m.value), unit: String(m.unit || ""), low: n(m.low), high: n(m.high) }));
+    if (!markers.length) throw new Error("none");
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(out?.date || "") ? out.date : today();
+    B.form = { date, lab: String(out?.lab || ""), notes: "", markers }; B.blobs = images.slice(0, 4);
+    B.msg = `Found ${plural(markers.length, "marker")}. Check them, then save.`; B.kind = "ok";
+  } catch (e) {
+    B.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : e?.code === "not_granted" ? "Reading files is turned off for this page." : e?.message === "none" ? "Couldn't find results in that file. Try a clearer photo or the PDF from the lab." : "Couldn't read that file. Try a different PDF, or a photo of the page.";
+    B.kind = "err";
+  }
+  B.busy = false; render(); window.scrollTo(0, 0);
+}
+const RPROMPT = `You are helping someone keep track of their own blood tests while they run a hormone cycle, which they log in a planner. Look at their results over time alongside their cycle dates and compounds. Write for them in plain, calm language. Answer with ONLY a JSON object:
+{"summary": a 2 to 4 sentence overview, "flags": [{"marker": marker name, "note": one sentence on the latest value against the lab's range and its trend}], "trends": [one sentence each on notable changes between tests and how they line up with cycle dates], "askDoctor": [short questions worth raising with their doctor]}
+Rules: use only the numbers given. Point out values outside the lab's range and large changes between tests. Do not diagnose and do not give dosing advice. Keep each list to the 6 most useful items, and leave a list empty if there is nothing to say.`;
+async function breview() {
+  const RB = S.breview; RB.busy = true; RB.msg = ""; render();
+  try {
+    const data = { today: today(), panels: panelsAsc().map((p) => ({ date: p.date, lab: p.lab, markers: (p.markers || []).map((m) => ({ name: m.name, value: m.value, unit: m.unit, low: m.low, high: m.high })) })),
+      cycles: (S.cy.settings.cycles || []).map((c) => ({ name: c.name, phase: c.phase, start: c.start, end: c.end || "ongoing" })),
+      compounds: S.cy.compounds.map((c) => ({ name: c.name, doseMg: num(c.dose), schedule: schedTxt(c), mgPerWeek: Math.round(num(c.dose) * cPerWeek(c)), start: c.start, end: c.end || "ongoing" })) };
+    const out = await S.sample.json(RPROMPT + "\n\nTheir data:\n" + JSON.stringify(data), { modelTier: "default" });
+    const arr = (x) => (Array.isArray(x) ? x : []);
+    S.cy.settings.review = { at: new Date().toISOString(), summary: String(out?.summary || ""), flags: arr(out?.flags).filter((x) => x && x.marker).map((x) => ({ marker: String(x.marker), note: String(x.note || "") })), trends: arr(out?.trends).map(String), askDoctor: arr(out?.askDoctor).map(String) };
+    RB.busy = false; render(); await csaveSettings();
+  } catch (e) { RB.busy = false; RB.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : "Couldn't get a review just now. Try again in a moment."; render(); }
+}
+async function bsample() {
+  const t = today(), d1 = addDays(t, -200), d2 = addDays(t, -110), d3 = addDays(t, -20);
+  const rows = [["Total testosterone", "nmol/L", 8.6, 29, [17.8, 41.5, 36.2]], ["Estradiol", "pmol/L", 40, 160, [96, 205, 168]], ["Haematocrit", "L/L", 0.4, 0.52, [0.45, 0.51, 0.535]], ["Haemoglobin", "g/L", 130, 180, [149, 168, 176]], ["HDL cholesterol", "mmol/L", 1.0, 2.2, [1.32, 0.94, 0.98]], ["LDL cholesterol", "mmol/L", 0, 3.4, [2.7, 3.7, 3.4]], ["ALT", "U/L", 0, 40, [24, 46, 37]], ["Creatinine", "µmol/L", 60, 110, [88, 104, 101]], ["PSA", "µg/L", 0, 4, [0.6, 0.7, 0.7]]];
+  const mk = (date, i) => ({ id: "ex_" + uid(), date, lab: "Sample lab", example: true, notes: "", markers: rows.map(([name, unit, low, high, v]) => ({ name, unit, low, high, value: v[i] })) });
+  for (const [i, d] of [d1, d2, d3].entries()) await csavePanel(mk(d, i));
+  if (!(S.cy.settings.cycles || []).length) { S.cy.settings.cycles = [{ id: "ex_" + uid(), name: "Sample cycle", phase: "Blast", start: addDays(t, -170), end: addDays(t, -50), example: true, notes: "" }]; await csaveSettings(); }
+  render(); toast("Sample results added. Remove them any time.");
+}
+
+/* ---------- Cycle events ---------- */
+function blankComp() { return { isNew: true, id: uid(), name: "", kind: "inj", conc: "", dose: "", time: "", freq: "days", days: [], every: "3.5", start: today(), end: "", container: "10", open: "10", spare: "0", lowDoses: "4", notes: "" }; }
+async function cycleClick(a, b) {
+  switch (a) {
+    case "ctab": S.ctab = b.dataset.tab; S.cform = null; S.cycForm = null; S.bopen = null; S.bdel = false; if (S.ctab !== "cbloods" && !S.bimp.busy) S.bimp.form = null; try { localStorage.setItem("planner.ctab", S.ctab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "ctake": ctoggle(b.dataset.id, S.date); return true;
+    case "cgoday": S.date = b.dataset.date; render(); return true;
+    case "cnewcomp": S.cform = blankComp(); if (S.ctab === "ctoday") S.ctab = "ccycle"; render(); window.scrollTo(0, 0); return true;
+    case "ceditcomp": { const c = S.cy.compounds.find((x) => x.id === b.dataset.id); if (!c) return true; S.cform = { ...blankComp(), ...cjson(c), isNew: false }; for (const k of ["conc", "dose", "every", "container", "open", "spare", "lowDoses"]) S.cform[k] = c[k] ?? ""; render(); window.scrollTo(0, 0); return true; }
+    case "ccancel": S.cform = null; S.cycForm = null; render(); return true;
+    case "cfdow": { const d = Number(b.dataset.d), f = S.cform; f.days = f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d]; b.setAttribute("aria-pressed", f.days.includes(d)); return true; }
+    case "cdelcomp": { const f = S.cform; S.cform = null; await cdelComp(f.id); render(); toast(`Deleted ${f.name || "compound"}`); return true; }
+    case "crestock": { const c = S.cy.compounds.find((x) => x.id === b.dataset.id); if (!c) return true; c.spare = num(c.spare) + 1; render(); toast(`Added a sealed ${c.kind === "oral" ? "bottle" : "vial"} of ${c.name}`); await csaveComp(c); return true; }
+    case "cnewcyc": S.ctab = "ccycle"; S.cform = null; S.cycForm = { isNew: true, id: uid(), name: "", phase: "Blast", start: today(), weeks: "12", notes: "" }; render(); window.scrollTo(0, 0); return true;
+    case "cedcyc": { const c = (S.cy.settings.cycles || []).find((x) => x.id === b.dataset.id); if (!c) return true; S.cycForm = { ...c, isNew: false, weeks: c.end ? String(Math.round((dDiff(c.start, c.end) + 1) / 7)) : "", notes: c.notes || "" }; render(); window.scrollTo(0, 0); return true; }
+    case "cdelcyc": { const id = S.cycForm.id; S.cycForm = null; S.cy.settings.cycles = (S.cy.settings.cycles || []).filter((x) => x.id !== id); render(); toast("Cycle dates deleted"); await csaveSettings(); return true; }
+    case "bmanual": S.bimp.form = { date: today(), lab: "", notes: "", markers: [{ name: "", value: "", unit: "", low: "", high: "" }] }; S.bimp.blobs = []; S.bimp.msg = ""; render(); window.scrollTo(0, 0); return true;
+    case "bdiscard": S.bimp = blankBimp(); render(); return true;
+    case "baddm": S.bimp.form.markers.push({ name: "", value: "", unit: "", low: "", high: "" }); render(); return true;
+    case "brmm": S.bimp.form.markers.splice(Number(b.dataset.i), 1); render(); return true;
+    case "bpick": S.bmarker = b.dataset.k; render(); return true;
+    case "bopen": S.bopen = b.dataset.id; S.bdel = false; render(); window.scrollTo(0, 0); return true;
+    case "bback": S.bopen = null; render(); return true;
+    case "bedit": { const p = S.cy.panels.find((x) => x.id === S.bopen); if (!p) return true; S.bimp = { ...blankBimp(), form: { ...cjson(p) } }; S.bimp.form.markers = S.bimp.form.markers || []; render(); window.scrollTo(0, 0); return true; }
+    case "bdelask": S.bdel = true; render(); return true;
+    case "bdelno": S.bdel = false; render(); return true;
+    case "bdelyes": { const p = S.cy.panels.find((x) => x.id === S.bopen); S.bopen = null; S.bdel = false; if (p) { await cdelPanel(p.id); const refs = (p.photos || []).filter((r) => r && !/^data:/.test(r)); if (refs.length && store.kind === "db") { try { const as = await window.claude.use("assets"); for (const r of refs) as?.delete(r).catch(() => {}); } catch {} } } render(); toast("Result deleted"); return true; }
+    case "breview": breview(); return true;
+    case "bsample": bsample(); return true;
+    case "bclearex": { for (const p of S.cy.panels.filter((x) => x.example)) await cdelPanel(p.id); const n = (S.cy.settings.cycles || []).length; S.cy.settings.cycles = (S.cy.settings.cycles || []).filter((x) => !x.example); if (S.cy.settings.cycles.length !== n) await csaveSettings(); render(); toast("Sample results removed"); return true; }
+  }
+  return false;
+}
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.cf && S.cform) {
+    S.cform[t.dataset.cf] = t.value;
+    const f = S.cform, el = document.getElementById("cf-calc"), amt = num(f.conc) > 0 ? num(f.dose) / num(f.conc) : 0;
+    if (el) el.textContent = amt ? `${cAmtTxt(f, amt)} per dose` : "Enter strength and dose to see how much to draw.";
+  } else if (t.dataset.cyf && S.cycForm) S.cycForm[t.dataset.cyf] = t.value;
+  else if (t.dataset.bf && S.bimp.form) S.bimp.form[t.dataset.bf] = t.value;
+  else if (t.dataset.bm != null && t.dataset.bm !== "" && S.bimp.form) { const m = S.bimp.form.markers[Number(t.dataset.bm)]; const k = t.dataset.bk; m[k] = ["value", "low", "high"].includes(k) ? (t.value === "" ? "" : num(t.value)) : t.value; t.closest(".wexform")?.classList.toggle("is-out", !!bflag(m)); }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (S.cform && (t.dataset.cf === "kind" || t.dataset.cf === "freq")) render();
+  else if (t.dataset.bimport && t.files?.length) { const fs = [...t.files]; t.value = ""; brunImport(fs); }
+});
+document.addEventListener("submit", async (e) => {
+  const id = e.target.id;
+  if (id === "cfform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.cform; if (!f.name.trim()) { toast("Give the compound a name."); return; }
+    if (!(num(f.conc) > 0) || !(num(f.dose) > 0)) { toast("Add the strength and the dose."); return; }
+    if (f.freq !== "every" && !f.days.length) { toast("Pick at least one day."); return; }
+    if (f.end && f.start && f.end < f.start) { toast("The end date is before the start."); return; }
+    const c = { id: f.id, name: f.name.trim(), kind: f.kind, conc: num(f.conc), dose: num(f.dose), time: f.time || "", freq: f.freq, days: [...f.days].sort(), every: num(f.every, 7) || 7, start: f.start || today(), end: f.end || "", container: num(f.container), open: num(f.open), spare: Math.max(0, Math.round(num(f.spare))), lowDoses: Math.max(0, Math.round(num(f.lowDoses, 4))), notes: f.notes || "" };
+    S.cform = null; render(); toast(`Saved ${c.name}`); await csaveComp(c);
+  } else if (id === "cyform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.cycForm; if (!f.start) { toast("Pick a start date."); return; }
+    const wk = Math.round(num(f.weeks)); const c = { id: f.id, name: (f.name || "").trim(), phase: f.phase || "Blast", start: f.start, end: wk > 0 ? addDays(f.start, wk * 7 - 1) : "", notes: f.notes || "", ...(f.example ? { example: true } : {}) };
+    const list = (S.cy.settings.cycles || []).filter((x) => x.id !== c.id); list.push(c); S.cy.settings.cycles = list;
+    S.cycForm = null; render(); toast("Cycle dates saved"); await csaveSettings();
+  } else if (id === "bpform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const B = S.bimp, f = B.form; if (!f.date) { toast("Add the test date."); return; }
+    const markers = f.markers.filter((m) => m.name && String(m.name).trim() && m.value !== "" && m.value != null).map((m) => ({ name: String(m.name).trim(), value: num(m.value), unit: String(m.unit || ""), low: m.low === "" || m.low == null ? "" : num(m.low), high: m.high === "" || m.high == null ? "" : num(m.high) }));
+    if (!markers.length) { toast("Add at least one marker with a value."); return; }
+    const p = { id: f.id || uid(), date: f.date, lab: (f.lab || "").trim(), notes: f.notes || "", markers, photos: f.photos || [], ...(f.example ? { example: true } : {}), addedAt: f.addedAt || new Date().toISOString() };
+    const blobs = B.blobs || []; S.bimp = blankBimp(); S.bopen = p.id; render(); window.scrollTo(0, 0);
+    for (const bl of blobs) { try { p.photos.push(await storePhoto(bl)); } catch {} }
+    toast("Result saved"); await csavePanel(p); render();
+  }
+}, true);
+
+/* ====================== PROGRESS MODULE ====================== */
+S.ptab = "ptoday";
+try { const t = localStorage.getItem("planner.ptab"); if (["ptoday", "plog", "pmeasure", "pgoals", "phealth"].includes(t)) S.ptab = t; } catch {}
+const PDEFAULT = { cadence: "weekly", weighDay: 1, goals: { weight: "", bodyFat: "", waist: "", by: "" } };
+S.pg = { entries: {}, settings: cjson(PDEFAULT) };
+S.pmetric = "weight"; S.prange = "3m"; S.pform = null; S.pgoalForm = null; S.phealth = { text: "", parsed: null, msg: "", kind: "" };
+const pstore = {};
+const PLS = "planner.progress.v1";
+function plsLoad() { try { const d = JSON.parse(localStorage.getItem(PLS) || "{}"); if (d.entries) S.pg.entries = d.entries; if (d.settings) S.pg.settings = { ...cjson(PDEFAULT), ...d.settings, goals: { ...PDEFAULT.goals, ...(d.settings.goals || {}) } }; } catch {} }
+function plsSave() { try { localStorage.setItem(PLS, JSON.stringify(S.pg)); } catch {} }
+function pinitDb(db, id) {
+  const base = `data/users/${id}/progress`;
+  pstore.entries = db.collection(base + "/entries");
+  pstore.settings = db.collection(base + "/settings").doc("main");
+  pstore.entries.orderBy("date", "desc").limit(400).onSnapshot((snap) => { const ee = {}; snap.docs.forEach((d) => { ee[d.id] = { ...d.data(), date: d.id }; }); S.pg.entries = ee; psoft(); }, () => {});
+  pstore.settings.onSnapshot((snap) => { if (snap.exists) { const d = snap.data(); S.pg.settings = { ...cjson(PDEFAULT), ...d, goals: { ...PDEFAULT.goals, ...(d.goals || {}) } }; psoft(); } }, () => {});
+}
+function psoft() { if (S.module !== "progress") return; const a = document.activeElement; if (S.pform || S.pgoalForm || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+async function psaveEntry(e) { S.pg.entries[e.date] = e; if (store.kind === "db" && pstore.entries) return queued("pe/" + e.date, () => pstore.entries.doc(e.date).set(cjson(e))); plsSave(); }
+async function pdelEntry(date) { delete S.pg.entries[date]; if (store.kind === "db" && pstore.entries) return queued("pe/" + date, () => pstore.entries.doc(date).delete()); plsSave(); }
+async function psaveSettings() { if (store.kind === "db" && pstore.settings) return queued("ps", () => pstore.settings.set(cjson(S.pg.settings))); plsSave(); }
+
+const PMETRICS = { weight: { label: "Weight", unit: "kg", dp: 1 }, bodyFat: { label: "Body fat", unit: "%", dp: 1 }, lean: { label: "Lean mass", unit: "kg", dp: 1 }, waist: { label: "Waist", unit: "cm", dp: 1 }, steps: { label: "Steps", unit: "", dp: 0 }, restingHr: { label: "Resting HR", unit: "bpm", dp: 0 } };
+const MKEYS = [["neck", "Neck"], ["shoulders", "Shoulders"], ["chest", "Chest"], ["waist", "Waist"], ["hips", "Hips"], ["armL", "Left arm"], ["armR", "Right arm"], ["forearm", "Forearm"], ["thighL", "Left thigh"], ["thighR", "Right thigh"], ["calf", "Calf"]];
+for (const [k, l] of MKEYS) PMETRICS[k] ||= { label: l, unit: "cm", dp: 1 };
+const PCORE = ["weight", "bodyFat", "lean", "waist", "steps", "restingHr"];
+S.pmkey = null; S.pmform = null;
+const has = (v) => v !== "" && v != null && Number.isFinite(Number(v));
+function pval(e, k) { if (k === "lean") return has(e.weight) && has(e.bodyFat) ? num(e.weight) * (1 - num(e.bodyFat) / 100) : null; return has(e[k]) ? num(e[k]) : null; }
+const pentries = () => Object.values(S.pg.entries).sort((a, b) => a.date.localeCompare(b.date));
+function pseries(k) { return pentries().map((e) => ({ date: e.date, v: pval(e, k) })).filter((p) => p.v != null); }
+const pfmt = (k, v) => fmtN(v, PMETRICS[k].dp) + (PMETRICS[k].unit ? (PMETRICS[k].unit === "%" ? "%" : " " + PMETRICS[k].unit) : "");
+function pWeighDue(date = today()) { const s = S.pg.settings; if (S.pg.entries[date] && has(S.pg.entries[date].weight)) return false; return s.cadence === "daily" || parseD(date).getDay() === num(s.weighDay, 1); }
+function pNextWeigh() { const s = S.pg.settings; if (s.cadence === "daily") return addDays(today(), 1); for (let i = 1; i <= 7; i++) { const d = addDays(today(), i); if (parseD(d).getDay() === num(s.weighDay, 1)) return d; } return addDays(today(), 7); }
+function pAvg(series, date, days) { const from = addDays(date, -(days - 1)); const xs = series.filter((p) => p.date >= from && p.date <= date); return xs.length ? xs.reduce((a, p) => a + p.v, 0) / xs.length : null; }
+
+function pChart(k) {
+  let pts = pseries(k);
+  const rangeDays = { "1m": 31, "3m": 92, "6m": 183, all: 100000 }[S.prange] || 92, from = addDays(today(), -rangeDays);
+  pts = pts.filter((p) => p.date >= from);
+  if (!pts.length) return `<p class="small muted" style="margin:10px 0">No ${PMETRICS[k].label.toLowerCase()} logged in this range yet.</p>`;
+  const G = S.pg.settings.goals || {}, goal = k === "weight" && has(G.weight) ? num(G.weight) : k === "bodyFat" && has(G.bodyFat) ? num(G.bodyFat) : k === "waist" && has(G.waist) ? num(G.waist) : null;
+  const W = 340, H = 190, L = 42, R = 14, T = 14, B = 28;
+  let t0 = parseD(pts[0].date).getTime(), t1 = parseD(pts[pts.length - 1].date).getTime(); if (t1 - t0 < 86400000 * 6) { t0 -= 86400000 * 3; t1 += 86400000 * 3; }
+  const vals = pts.map((p) => p.v).concat(goal != null ? [goal] : []);
+  let y0 = Math.min(...vals), y1 = Math.max(...vals); const pad = (y1 - y0 || Math.abs(y1) * 0.05 || 1) * 0.1; y0 -= pad; y1 += pad; if (k === "steps") y0 = 0;
+  const ax = niceAxis(y0, y1); y0 = ax.y0; y1 = ax.y1;
+  const xs = (d) => L + ((parseD(d).getTime() - t0) / (t1 - t0)) * (W - L - R), ys = (v) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
+  let g = "";
+  for (const v of ax.ticks) { const y = ys(v); g += `<line x1="${L}" x2="${W - R}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" opacity=".6"/><text x="${L - 6}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" class="ctxt">${esc(fmtN(v, k === "steps" ? 0 : 1))}</text>`; }
+  if (goal != null) g += `<line x1="${L}" x2="${W - R}" y1="${ys(goal).toFixed(1)}" y2="${ys(goal).toFixed(1)}" stroke="var(--warn)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${W - R}" y="${(ys(goal) - 5).toFixed(1)}" text-anchor="end" class="ctxt" style="fill:var(--warn)">Goal ${esc(fmtN(goal, 1))}</text>`;
+  if (k === "steps") { const bw = Math.max(2, Math.min(14, ((W - L - R) / Math.max(1, (t1 - t0) / 86400000)) * 0.7)); pts.forEach((p) => { g += `<rect x="${(xs(p.date) - bw / 2).toFixed(1)}" y="${ys(p.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(ys(0) - ys(p.v)).toFixed(1)}" rx="2" fill="var(--accent)" opacity=".85"><title>${esc(shortD(p.date))}: ${esc(fmtN(p.v, 0))}</title></rect>`; }); }
+  else {
+    const dense = pts.length > 14;
+    if (dense) { const all = pseries(k); const avg = pts.map((p) => ({ date: p.date, v: pAvg(all, p.date, 7) })); g += pts.map((p) => `<circle cx="${xs(p.date).toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="2.2" fill="var(--muted)" opacity=".55"/>`).join(""); g += `<path d="${avg.map((p, i) => `${i ? "L" : "M"}${xs(p.date).toFixed(1)} ${ys(p.v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round"/>`; }
+    else { g += `<path d="${pts.map((p, i) => `${i ? "L" : "M"}${xs(p.date).toFixed(1)} ${ys(p.v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>`; g += pts.map((p) => `<circle cx="${xs(p.date).toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"><title>${esc(shortD(p.date))}: ${esc(pfmt(k, p.v))}</title></circle>`).join(""); }
+    const lp = pts[pts.length - 1]; g += `<text x="${Math.min(W - R - 2, xs(lp.date)).toFixed(1)}" y="${(ys(lp.v) - 9).toFixed(1)}" text-anchor="end" class="ctxt val">${esc(fmtN(lp.v, PMETRICS[k].dp))}</text>`;
+  }
+  const xl = [pts[0], pts[pts.length - 1]].filter((p, i, a) => i === 0 || p.date !== a[0].date);
+  xl.forEach((p, i) => { g += `<text x="${xs(p.date).toFixed(1)}" y="${H - 9}" text-anchor="${xl.length > 1 ? (i === 0 ? "start" : "end") : "middle"}" class="ctxt">${esc(shortD(p.date, { day: "numeric", month: "short" }))}</text>`; });
+  const first = pts[0], last = pts[pts.length - 1], ch = last.v - first.v;
+  return `<div class="small muted" style="margin-top:6px">${pts.length > 1 ? `${ch > 0 ? "Up" : ch < 0 ? "Down" : "No change,"} ${ch ? esc(pfmt(k, Math.abs(ch))) : ""} since ${esc(shortD(first.date, { day: "numeric", month: "short" }))}${pts.length > 14 && k !== "steps" ? " · line is the 7-day average" : ""}` : "One entry so far"}</div>
+    <svg class="bchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(PMETRICS[k].label)} over time">${g}</svg>`;
+}
+function progressView() {
+  if (S.ptab === "plog") return S.pform ? pEntryForm() : pLog();
+  if (S.ptab === "pgoals") return pGoals();
+  if (S.ptab === "pmeasure") return pMeasure();
+  if (S.ptab === "phealth") return pHealth();
+  return pToday();
+}
+function pWeighCard() {
+  const t = today(), e = S.pg.entries[t], due = pWeighDue(t);
+  if (e && has(e.weight)) return `<div class="card row between"><div><div class="eyebrow">Today’s weigh-in</div><b class="num" style="font-size:18px">${esc(pfmt("weight", num(e.weight)))}</b>${has(e.bodyFat) ? ` <span class="muted num">· ${esc(pfmt("bodyFat", num(e.bodyFat)))}</span>` : ""}</div><button class="btn sm" data-act="pedit" data-date="${t}">Edit</button></div>`;
+  return `<section class="card pweigh ${due ? "is-due" : ""}"><div class="row between"><span class="eyebrow">${due ? "Weigh-in due today" : `Next weigh-in ${esc(shortD(pNextWeigh(), { weekday: "short", day: "numeric", month: "short" }))}`}</span><button class="linkbtn" data-act="pedit" data-date="${t}">More fields</button></div>
+    <form id="pqform" class="pq" novalidate><label class="fl"><span>Weight (kg)</span><input class="in num" id="pq-w" type="number" inputmode="decimal" step="0.1" min="0" value="${esc(e?.weight ?? "")}"></label>
+      <label class="fl"><span>Body fat %</span><input class="in num" id="pq-bf" type="number" inputmode="decimal" step="0.1" min="0" max="80" value="${esc(e?.bodyFat ?? "")}" placeholder="optional"></label>
+      <button class="btn primary" type="submit" style="height:40px">Log</button></form>
+    <p class="hint" style="margin:6px 0 0">Same time, same conditions each time, like first thing in the morning.</p></section>`;
+}
+function pToday() {
+  const ws = pseries("weight"), G = S.pg.settings.goals || {}, cur = ws.length ? ws[ws.length - 1] : null, start = ws.length ? ws[0] : null;
+  let html = `<div class="ov-head"><div class="grow"><div class="eyebrow">${esc(shortD(today()))}</div><h2 class="ov-title">Progress</h2></div><button class="btn sm" data-act="ptab" data-tab="pgoals">Goals</button></div>`;
+  const goal = has(G.weight) ? num(G.weight) : null;
+  const frac = cur && goal != null && start && start.v !== goal ? Math.max(0, Math.min(1, (start.v - cur.v) / (start.v - goal))) : 0;
+  const C = 2 * Math.PI * 68, bf = pseries("bodyFat"), bfl = bf.length ? bf[bf.length - 1] : null;
+  const wk = cur ? pAvg(ws, cur.date, 7) : null, wkPrev = cur ? pAvg(ws, addDays(cur.date, -7), 7) : null;
+  const rate = wk != null && wkPrev != null && ws.some((p) => p.date <= addDays(cur.date, -7)) ? wk - wkPrev : null;
+  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${goal != null ? `${Math.round(frac * 100)}% of the way to your goal weight` : "Current weight"}">
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
+      <div class="ov-ringtxt">${cur ? `<span class="ov-big" style="font-size:34px">${esc(fmtN(cur.v, 1))}<span>kg</span></span><span class="small muted">${goal != null ? `${Math.round(frac * 100)}% to goal` : "latest"}</span>` : `<span class="ov-big" style="font-size:22px">No data</span><span class="small muted">log a weigh-in</span>`}</div></div>
+    <div class="ov-stats"><div><span class="small muted">Goal</span><b>${goal != null ? `${esc(fmtN(goal, 1))} kg${G.by ? " by " + esc(shortD(G.by, { day: "numeric", month: "short" })) : ""}` : `<button class="ov-low linkbtn" data-act="ptab" data-tab="pgoals">Set a goal</button>`}</b></div>
+      <div><span class="small muted">This week</span><b>${rate != null ? `${rate > 0 ? "+" : rate < 0 ? "−" : "±"}${esc(fmtN(Math.abs(rate), 2))} kg` : cur && start && cur !== start ? `${cur.v - start.v > 0 ? "+" : "−"}${esc(fmtN(Math.abs(cur.v - start.v), 1))} kg total` : "Not enough data"}</b></div>
+      <div><span class="small muted">Body fat</span><b>${bfl ? esc(pfmt("bodyFat", bfl.v)) : "Not logged"}</b></div></div></div>`;
+  html += pWeighCard();
+  const avail = PCORE.filter((k) => pseries(k).length);
+  if (!avail.length) return html + `<div class="card empty"><h3>Start tracking</h3><p>Log your weight above, or bring in data from Apple Health. Charts show up once you have a couple of entries.</p><div class="row wrapflex" style="justify-content:center"><button class="btn" data-act="ptab" data-tab="phealth">Import from Apple Health</button><button class="btn" data-act="psample">Try sample data</button></div></div>`;
+  if (!avail.includes(S.pmetric)) S.pmetric = avail[0];
+  html += `<section class="card"><div class="row between"><div class="bchips" style="margin:0">${avail.map((k) => `<button class="bchip" data-act="pmetric" data-k="${k}" aria-pressed="${S.pmetric === k}">${PMETRICS[k].label}</button>`).join("")}</div></div>
+    <div class="seg" role="group" aria-label="Time range" style="margin-top:8px">${[["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["all", "All"]].map(([id, l]) => `<button data-act="prange" data-r="${id}" aria-pressed="${S.prange === id}">${l}</button>`).join("")}</div>
+    ${pChart(S.pmetric)}</section>`;
+  if (goal != null && cur && G.by && G.by > today()) {
+    const wksLeft = dDiff(today(), G.by) / 7, need = (goal - (wk ?? cur.v)) / Math.max(0.5, wksLeft);
+    html += `<div class="card small"><b>To reach ${esc(fmtN(goal, 1))} kg by ${esc(shortD(G.by, { day: "numeric", month: "short" }))}</b><br><span class="muted">That’s ${need > 0 ? "+" : "−"}${esc(fmtN(Math.abs(need), 2))} kg a week for ${plural(Math.ceil(wksLeft), "week")}${rate != null ? `. You’re at ${rate > 0 ? "+" : rate < 0 ? "−" : "±"}${esc(fmtN(Math.abs(rate), 2))} kg a week now.` : "."}</span></div>`;
+  }
+  if (Object.values(S.pg.entries).some((e) => e.example)) html += `<div><button class="btn sm ghost danger" data-act="pclearex">Remove sample data</button></div>`;
+  return html;
+}
+function pLog() {
+  const es = pentries().reverse();
+  let html = `<div class="row between"><h2 style="font-size:22px">Log</h2><button class="btn sm" data-act="pedit" data-date="${today()}">Add entry</button></div>`;
+  if (!es.length) return html + `<div class="card empty"><p>Every weigh-in and measurement shows up here.</p></div>`;
+  return html + `<div class="card plist" style="padding:2px 14px">${es.slice(0, 200).map((e) => { const bits = ["weight", "bodyFat", "steps", "restingHr"].filter((k) => has(e[k])).map((k) => `${PMETRICS[k].label.toLowerCase()} ${pfmt(k, num(e[k]))}`); const nm = MKEYS.filter(([k]) => has(e[k])).length; if (nm) bits.push(plural(nm, "measurement")); return `<button class="pi stackrow" data-act="pedit" data-date="${e.date}"><span class="grow"><b>${esc(shortD(e.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" }))}</b>${e.src === "health" ? ' <span class="chip">Health</span>' : ""}${e.example ? ' <span class="chip ex">Sample</span>' : ""}<br><span class="small muted">${esc(bits.join(" · ") || "No numbers")}${e.notes ? " · " + esc(e.notes) : ""}</span></span>${I.right}</button>`; }).join("")}</div>`;
+}
+function pEntryForm() {
+  const f = S.pform;
+  const fld = (k, label, step, ph = "") => `<label class="fl">${label}<input class="in num" type="number" inputmode="decimal" step="${step}" min="0" data-pf="${k}" value="${esc(f[k] ?? "")}" placeholder="${ph}"></label>`;
+  return `<div class="row between"><h2 style="font-size:22px">${f.isNew ? "Add entry" : "Edit entry"}</h2><button class="btn sm ghost" data-act="pcancel">Cancel</button></div>
+  <form class="f card" id="pfform" novalidate><fieldset>
+    <label class="fl">Date<input class="in" type="date" data-pf="date" value="${esc(f.date)}" max="${today()}"></label>
+    <div class="fgrid">${fld("weight", "Weight (kg)", "0.1")}${fld("bodyFat", "Body fat %", "0.1", "optional")}${fld("waist", "Waist (cm)", "0.5", "optional")}${fld("restingHr", "Resting HR (bpm)", "1", "optional")}${fld("steps", "Steps", "1", "optional")}</div>
+    <label class="fl">Notes<textarea class="in" data-pf="notes" placeholder="How you felt, sleep, anything different">${esc(f.notes || "")}</textarea></label></fieldset>
+  <div class="sticky-save">${f.isNew ? "" : `<button type="button" class="btn danger" data-act="pdel">Delete</button>`}<button type="submit" class="btn primary">Save</button></div></form>`;
+}
+function pMeasure() {
+  const es = pentries(), last = {}; for (const e of es) for (const [k] of MKEYS) if (has(e[k])) last[k] = { v: num(e[k]), date: e.date };
+  const f = S.pmform || (S.pmform = { date: today(), ...Object.fromEntries(MKEYS.map(([k]) => [k, S.pg.entries[today()]?.[k] ?? ""])) });
+  const withData = MKEYS.filter(([k]) => last[k]);
+  if (!S.pmkey || !last[S.pmkey]) S.pmkey = withData[0]?.[0] || null;
+  const lastDate = withData.length ? withData.map(([k]) => last[k].date).sort().pop() : null;
+  let html = `<div class="row between"><h2 style="font-size:22px">Measurements</h2>${lastDate ? `<span class="small muted">Last ${esc(shortD(lastDate, { day: "numeric", month: "short" }))}</span>` : ""}</div>`;
+  if (withData.length) {
+    html += `<section class="card"><div class="bchips" style="margin:0">${withData.map(([k, l]) => `<button class="bchip" data-act="pmkey" data-k="${k}" aria-pressed="${S.pmkey === k}">${esc(l)}</button>`).join("")}</div>
+      <div class="seg" role="group" aria-label="Time range" style="margin-top:8px">${[["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["all", "All"]].map(([id, l]) => `<button data-act="prange" data-r="${id}" aria-pressed="${S.prange === id}">${l}</button>`).join("")}</div>${pChart(S.pmkey)}</section>`;
+    html += `<div class="card" style="padding:4px 14px">${withData.map(([k, l]) => { const ser = pseries(k), first = ser[0], cur = ser[ser.length - 1], ch = cur.v - first.v; return `<button class="brow pmrow" data-act="pmkey" data-k="${k}"><span class="grow">${esc(l)}</span><b class="num">${esc(fmtN(cur.v, 1))} cm</b><span class="small muted">${ser.length > 1 ? `${ch > 0 ? "+" : ch < 0 ? "−" : "±"}${esc(fmtN(Math.abs(ch), 1))} cm since ${esc(shortD(first.date, { day: "numeric", month: "short" }))}` : "First measurement"}</span></button>`; }).join("")}</div>`;
+  }
+  html += `<form class="f card" id="pmform" novalidate><fieldset><legend>${withData.length ? "New measurements" : "Take your measurements"}</legend>
+    <p class="hint" style="margin:0">Use a soft tape, measure relaxed, and keep the same spots each time. Leave any you don’t track blank.</p>
+    <label class="fl">Date<input class="in" type="date" data-pm="date" value="${esc(f.date)}" max="${today()}"></label>
+    <div class="fgrid">${MKEYS.map(([k, l]) => `<label class="fl">${esc(l)} (cm)<input class="in num" type="number" inputmode="decimal" step="0.1" min="0" data-pm="${k}" value="${esc(f[k])}" placeholder="${last[k] ? esc(fmtN(last[k].v, 1)) : ""}"></label>`).join("")}</div></fieldset>
+    <div class="sticky-save"><button type="submit" class="btn primary">Save measurements</button></div></form>`;
+  return html;
+}
+function pGoals() {
+  const s = S.pg.settings, f = S.pgoalForm || (S.pgoalForm = { ...s.goals, cadence: s.cadence, weighDay: String(s.weighDay) });
+  return `<h2 style="font-size:22px">Goals</h2>
+  <form class="f card" id="pgform" novalidate><fieldset><legend>Targets</legend>
+    <div class="fgrid"><label class="fl">Goal weight (kg)<input class="in num" type="number" inputmode="decimal" step="0.1" min="0" data-pg="weight" value="${esc(f.weight)}"></label>
+      <label class="fl">Goal body fat %<input class="in num" type="number" inputmode="decimal" step="0.1" min="0" data-pg="bodyFat" value="${esc(f.bodyFat)}" placeholder="optional"></label>
+      <label class="fl">Goal waist (cm)<input class="in num" type="number" inputmode="decimal" step="0.5" min="0" data-pg="waist" value="${esc(f.waist)}" placeholder="optional"></label>
+      <label class="fl">By (optional)<input class="in" type="date" data-pg="by" value="${esc(f.by)}" min="${today()}"></label></div></fieldset>
+  <fieldset><legend>Weigh-ins</legend>
+    <div class="seg" role="group" aria-label="How often"><button type="button" data-act="pcad" data-v="daily" aria-pressed="${f.cadence === "daily"}">Every day</button><button type="button" data-act="pcad" data-v="weekly" aria-pressed="${f.cadence !== "daily"}">Once a week</button></div>
+    ${f.cadence === "daily" ? `<p class="hint" style="margin:0">Daily weights bounce around with water and food, so the chart shows a 7-day average once you have a couple of weeks.</p>` : `<label class="fl">Weigh-in day<select class="in" data-pg="weighDay">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<option value="${d}" ${String(f.weighDay) === String(d) ? "selected" : ""}>${parseD(addDays(today(), (d - parseD(today()).getDay() + 7) % 7)).toLocaleDateString(undefined, { weekday: "long" })}</option>`).join("")}</select></label>`}</fieldset>
+  <div class="sticky-save"><button type="submit" class="btn primary">Save goals</button></div></form>`;
+}
+function pHealth() {
+  const H = S.phealth;
+  let html = `<h2 style="font-size:22px">Apple Health</h2>
+  <div class="card small" style="display:flex;flex-direction:column;gap:8px"><p style="margin:0">Web pages can’t read Apple Health directly. A Shortcut on your iPhone can copy your Watch and scale data, and you paste it here. Set it up once:</p>
+    <ol class="steps"><li>Open <b>Shortcuts</b>, tap <b>+</b> and name it “Planner export”.</li>
+      <li>Add <b>Find Health Samples</b>: Type <b>Weight</b>, Start Date <b>is in the last 30 days</b>, Sort by Start Date.</li>
+      <li>Add <b>Repeat with Each</b>, and inside it a <b>Text</b> action: <code>[Start Date as yyyy-MM-dd],weight,[Value]</code>. Tap Start Date to set Custom format <code>yyyy-MM-dd</code>.</li>
+      <li>Repeat steps 2 and 3 for <b>Body Fat Percentage</b> (<code>bodyfat</code>), <b>Resting Heart Rate</b> (<code>restinghr</code>) and <b>Steps</b> (<code>steps</code>, with Group By <b>Day</b>).</li>
+      <li>End with <b>Combine Text</b> (New Lines) and <b>Copy to Clipboard</b>.</li></ol>
+    <p style="margin:0" class="muted">Run it, come back here and paste. Days you already logged by hand keep your numbers, and Health fills the gaps.</p></div>
+  <form class="card f" id="phform" novalidate><label class="fl">Paste here<textarea class="in num" data-ph="text" rows="6" placeholder="2026-11-17,weight,84.2&#10;2026-11-17,bodyfat,15.1&#10;2026-11-16,steps,10432">${esc(H.text)}</textarea></label>
+    <div class="row"><button type="submit" class="btn">Check data</button></div>
+    ${H.msg ? `<div class="status ${H.kind}">${esc(H.msg)}</div>` : ""}</form>`;
+  if (H.parsed?.length) {
+    const byDate = {}; for (const r of H.parsed) (byDate[r.date] ||= {})[r.k] = r.v;
+    const dates = Object.keys(byDate).sort().reverse();
+    html += `<div class="card plist" style="padding:2px 14px">${dates.slice(0, 40).map((d) => `<div class="pi" style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${esc(shortD(d))}</b><br><span class="small muted">${esc(Object.entries(byDate[d]).map(([k, v]) => `${PMETRICS[k].label.toLowerCase()} ${pfmt(k, v)}`).join(" · "))}</span></div>`).join("")}${dates.length > 40 ? `<p class="small muted">and ${dates.length - 40} more days</p>` : ""}</div>
+      <div class="sticky-save"><button class="btn" data-act="phclear">Discard</button><button class="btn primary" data-act="phsave">Add ${plural(dates.length, "day")}</button></div>`;
+  }
+  return html;
+}
+function parseHealth(text) {
+  const out = [], KEYS = [[/body\s*fat|bodyfat|fat\s*%|fat percentage/i, "bodyFat"], [/resting/i, "restingHr"], [/step/i, "steps"], [/waist/i, "waist"], [/weight|body\s*mass|mass/i, "weight"]];
+  for (const raw of String(text).split(/\r?\n/)) {
+    const line = raw.trim(); if (!line) continue;
+    let date = null, m = line.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) date = `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+    else if ((m = line.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))) { const y = m[3].length === 2 ? "20" + m[3] : m[3]; date = `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
+    if (!date || isNaN(parseD(date))) continue;
+    const kk = KEYS.find(([re]) => re.test(line)); if (!kk) continue;
+    const rest = line.replace(m[0], " ").replace(/\d{1,2}:\d{2}(:\d{2})?/g, " ");
+    const nums = [...rest.matchAll(/-?\d[\d,]*\.?\d*/g)].map((x) => Number(x[0].replace(/,(?=\d{3}\b)/g, "").replace(",", "."))).filter(Number.isFinite);
+    if (!nums.length) continue;
+    let v = nums[nums.length - 1]; const k = kk[1];
+    if (k === "bodyFat" && v > 0 && v < 1) v = v * 100;
+    if (k === "weight" && /lb/i.test(line)) v = v * 0.45359237;
+    out.push({ date, k, v: +v.toFixed(k === "steps" || k === "restingHr" ? 0 : 2) });
+  }
+  // Several samples on one day: keep the last weight/body fat, add up steps
+  const merged = new Map();
+  for (const r of out) { const id = r.date + "|" + r.k, prev = merged.get(id); merged.set(id, prev && r.k === "steps" && !/group/i.test(text) ? { ...r, v: prev.v + r.v } : r); }
+  return [...merged.values()];
+}
+async function psample() {
+  const t = today(); let w = 88.4, bf = 19.5;
+  for (let i = 84; i >= 0; i -= 7) { const d = addDays(t, -i); w += -0.45 + Math.sin(i) * 0.25; bf -= 0.3 + Math.cos(i) * 0.1; await psaveEntry({ date: d, weight: +w.toFixed(1), bodyFat: +bf.toFixed(1), waist: +(92 - (84 - i) * 0.05).toFixed(1), example: true, src: "manual" }); }
+  if (!has(S.pg.settings.goals.weight)) { S.pg.settings.goals = { ...S.pg.settings.goals, weight: 80 }; S.pgoalForm = null; await psaveSettings(); }
+  render(); toast("Sample data added. Remove it any time.");
+}
+async function progressClick(a, b) {
+  switch (a) {
+    case "pmkey": S.pmkey = b.dataset.k; render(); window.scrollTo({ top: 0, behavior: "smooth" }); return true;
+    case "ptab": S.ptab = b.dataset.tab; S.pform = null; S.pgoalForm = null; S.pmform = null; try { localStorage.setItem("planner.ptab", S.ptab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "pmetric": S.pmetric = b.dataset.k; render(); return true;
+    case "prange": S.prange = b.dataset.r; render(); return true;
+    case "pedit": { const d = b.dataset.date, e = S.pg.entries[d]; S.pform = e ? { ...cjson(e), isNew: false, orig: d } : { isNew: true, date: d, weight: "", bodyFat: "", waist: "", steps: "", restingHr: "", notes: "" }; S.ptab = "plog"; render(); window.scrollTo(0, 0); return true; }
+    case "pcancel": S.pform = null; render(); return true;
+    case "pdel": { const d = S.pform.orig; S.pform = null; await pdelEntry(d); render(); toast("Entry deleted"); return true; }
+    case "pcad": S.pgoalForm.cadence = b.dataset.v; render(); return true;
+    case "psample": psample(); return true;
+    case "pclearex": for (const e of Object.values(S.pg.entries).filter((x) => x.example)) await pdelEntry(e.date); render(); toast("Sample data removed"); return true;
+    case "phclear": S.phealth = { text: "", parsed: null, msg: "", kind: "" }; render(); return true;
+    case "phsave": {
+      const rows = S.phealth.parsed || [], byDate = {}; for (const r of rows) (byDate[r.date] ||= {})[r.k] = r.v;
+      let n = 0;
+      for (const [d, vals] of Object.entries(byDate)) { const cur = S.pg.entries[d] || { date: d, src: "health" }; const next = { ...cur }; let changed = false; for (const [k, v] of Object.entries(vals)) if (!has(cur[k])) { next[k] = v; changed = true; } if (changed) { n++; await psaveEntry(next); } }
+      S.phealth = { text: "", parsed: null, msg: n ? `Added Health data to ${plural(n, "day")}.` : "Nothing new: those days already had numbers.", kind: "ok" }; render(); return true;
+    }
+  }
+  return false;
+}
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.pf && S.pform) S.pform[t.dataset.pf] = t.value;
+  else if (t.dataset.pg && S.pgoalForm) S.pgoalForm[t.dataset.pg] = t.value;
+  else if (t.dataset.ph) S.phealth.text = t.value;
+  else if (t.dataset.pm && S.pmform) { S.pmform[t.dataset.pm] = t.value; if (t.dataset.pm === "date") { const e = S.pg.entries[t.value] || {}; for (const [k] of MKEYS) S.pmform[k] = e[k] ?? ""; render(); } }
+});
+document.addEventListener("submit", async (e) => {
+  const id = e.target.id;
+  if (id === "pqform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const w = $("#pq-w").value, bf = $("#pq-bf").value; if (!has(w)) { toast("Enter your weight."); return; }
+    const d = today(), cur = S.pg.entries[d] || { date: d, src: "manual" }; const ent = { ...cur, weight: num(w), ...(has(bf) ? { bodyFat: num(bf) } : {}) }; delete ent.example;
+    render(); await psaveEntry(ent); render(); toast(`Logged ${fmtN(num(w), 1)} kg`);
+  } else if (id === "pfform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.pform; if (!f.date) { toast("Pick a date."); return; }
+    const ent = { ...(S.pg.entries[f.orig || f.date] || {}), date: f.date, src: f.src || "manual", notes: (f.notes || "").trim() }; delete ent.isNew; delete ent.orig; for (const k of ["weight", "bodyFat", "waist", "steps", "restingHr"]) { if (has(f[k])) ent[k] = num(f[k]); else delete ent[k]; }
+    if (!Object.keys(PMETRICS).some((k) => has(ent[k])) && !ent.notes) { toast("Add at least one number."); return; }
+    const orig = f.orig; S.pform = null; render(); if (orig && orig !== ent.date) await pdelEntry(orig); await psaveEntry(ent); render(); toast("Saved");
+  } else if (id === "pmform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.pmform; if (!f.date) { toast("Pick a date."); return; }
+    const ent = { ...(S.pg.entries[f.date] || { date: f.date, src: "manual" }) }; let n = 0;
+    for (const [k] of MKEYS) { if (has(f[k])) { ent[k] = num(f[k]); n++; } else delete ent[k]; }
+    if (!n && !Object.keys(PMETRICS).some((k) => has(ent[k]))) { toast("Enter at least one measurement."); return; }
+    S.pmform = null; await psaveEntry(ent); render(); window.scrollTo(0, 0); toast(`Saved ${plural(n, "measurement")}`);
+  } else if (id === "pgform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.pgoalForm; S.pg.settings = { ...S.pg.settings, cadence: f.cadence === "daily" ? "daily" : "weekly", weighDay: Number(f.weighDay ?? 1), goals: { weight: has(f.weight) ? num(f.weight) : "", bodyFat: has(f.bodyFat) ? num(f.bodyFat) : "", waist: has(f.waist) ? num(f.waist) : "", by: f.by || "" } };
+    S.pgoalForm = null; S.ptab = "ptoday"; render(); toast("Goals saved"); await psaveSettings();
+  } else if (id === "phform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const rows = parseHealth(S.phealth.text);
+    S.phealth.parsed = rows; S.phealth.msg = rows.length ? `Found ${plural(rows.length, "reading")}. Check them, then add.` : "Couldn't find any readings. Each line needs a date, a name like weight or steps, and a number."; S.phealth.kind = rows.length ? "ok" : "err"; render();
+  }
+}, true);
+
+/* ====================== SKINCARE MODULE ====================== */
+S.ktab = "ktoday";
+try { const t = localStorage.getItem("planner.ktab"); if (["ktoday", "kweek", "kproducts", "kadd"].includes(t)) S.ktab = t; } catch {}
+S.sk = { products: [], days: {} };
+S.kform = null; S.kphotos = { front: null, back: null }; S.kai = { busy: false, msg: "", kind: "" }; S.kview = null;
+const kstore = {};
+const KLS = "planner.skincare.v1";
+function klsLoad() { try { const d = JSON.parse(localStorage.getItem(KLS) || "{}"); if (d.products) S.sk.products = d.products; if (d.days) S.sk.days = d.days; } catch {} }
+function klsSave() { try { localStorage.setItem(KLS, JSON.stringify(S.sk)); } catch {} }
+function kinitDb(db, id) {
+  const base = `data/users/${id}/skincare`;
+  kstore.products = db.collection(base + "/products");
+  kstore.days = db.collection(base + "/days");
+  kstore.products.onSnapshot((snap) => { S.sk.products = snap.docs.map((d) => ({ ...d.data(), id: d.id })); ksoft(); }, () => {});
+  kstore.days.orderBy("date", "desc").limit(120).onSnapshot((snap) => { const dd = {}; snap.docs.forEach((d) => { dd[d.id] = { done: {}, ...d.data(), date: d.id }; }); S.sk.days = dd; ksoft(); }, () => {});
+}
+function ksoft() { if (S.module !== "skincare") return; const a = document.activeElement; if (S.kform || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+async function ksaveProd(x) { const i = S.sk.products.findIndex((y) => y.id === x.id); if (i >= 0) S.sk.products[i] = x; else S.sk.products.push(x); if (store.kind === "db" && kstore.products) return queued("kp/" + x.id, () => kstore.products.doc(x.id).set(cjson(x))); klsSave(); }
+async function kdelProd(id) { S.sk.products = S.sk.products.filter((x) => x.id !== id); if (store.kind === "db" && kstore.products) return queued("kp/" + id, () => kstore.products.doc(id).delete()); klsSave(); }
+async function ksaveDay(date) { const d = S.sk.days[date] || { date, done: {} }; if (store.kind === "db" && kstore.days) return queued("kd/" + date, () => kstore.days.doc(date).set(cjson({ date, done: d.done }))); klsSave(); }
+
+/* Step order follows the usual thin-to-thick layering */
+const KTYPES = [["cleanser", "Cleanser"], ["exfoliant", "Exfoliant"], ["toner", "Toner"], ["essence", "Essence"], ["serum", "Serum"], ["retinoid", "Retinoid"], ["treatment", "Treatment"], ["eye", "Eye cream"], ["moisturiser", "Moisturiser"], ["oil", "Face oil"], ["sunscreen", "Sunscreen"], ["mask", "Mask"], ["lip", "Lip care"], ["body", "Body"], ["other", "Other"]];
+const KTYPE = Object.fromEntries(KTYPES); const KORD = Object.fromEntries(KTYPES.map(([k], i) => [k, i]));
+const ALLD = [0, 1, 2, 3, 4, 5, 6];
+const kActive = () => S.sk.products.filter((x) => x.status !== "shelf");
+const kSlots = (x) => (x.when === "both" ? ["am", "pm"] : [x.when === "pm" ? "pm" : "am"]);
+const kDue = (x, date, slot) => x.status !== "shelf" && !(x.addedAt && date < dstr(new Date(x.addedAt))) && kSlots(x).includes(slot) && (x.days?.length ? x.days : ALLD).includes(parseD(date).getDay());
+const kDone = (date, id, slot) => S.sk.days[date]?.done?.[`${id}|${slot}`];
+const kRoutine = (date, slot) => S.sk.products.filter((x) => kDue(x, date, slot) || kDone(date, x.id, slot)).sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99) || a.name.localeCompare(b.name));
+const kFreqTxt = (x) => { const d = x.days?.length ? x.days : ALLD; return d.length === 7 ? "Every day" : d.length === 1 ? `Once a week · ${DOW[d[0]]}` : `${d.length}× a week · ${[1, 2, 3, 4, 5, 6, 0].filter((v) => d.includes(v)).map((v) => DOW[v]).join(", ")}`; };
+const kWhenTxt = (x) => (x.when === "both" ? "Morning and night" : x.when === "pm" ? "Night" : "Morning");
+const kPerWeek = (x) => (x.days?.length ? x.days.length : 7) * kSlots(x).length;
+const kLeft = (x) => (x.usesLeft === "" || x.usesLeft == null ? null : num(x.usesLeft));
+const kLow = (x) => x.status !== "shelf" && kLeft(x) != null && kLeft(x) <= num(x.lowAt, 10);
+const kWeeksLeft = (x) => { const l = kLeft(x), pw = kPerWeek(x); return l == null || !pw ? null : l / pw; };
+function kConflicts(date) {
+  const pm = kRoutine(date, "pm"), has = (t) => pm.filter((x) => x.type === t);
+  const out = []; if (has("retinoid").length && has("exfoliant").length) out.push(`${has("retinoid")[0].name} and ${has("exfoliant")[0].name} are both on tonight. Many people split these onto different nights.`);
+  const am = kRoutine(date, "am"); if (am.length && !am.some((x) => x.type === "sunscreen") && S.sk.products.some((x) => x.type === "sunscreen")) out.push("Your sunscreen isn't on this morning's routine.");
+  return out;
+}
+async function ktoggle(id, slot, date) {
+  const x = S.sk.products.find((y) => y.id === id); if (!x) return;
+  const day = S.sk.days[date] || (S.sk.days[date] = { date, done: {} }); day.done ||= {};
+  const k = `${id}|${slot}`, was = day.done[k];
+  if (was) { delete day.done[k]; if (kLeft(x) != null && was.used) x.usesLeft = kLeft(x) + 1; }
+  else { const used = kLeft(x) != null && kLeft(x) > 0; day.done[k] = { at: new Date().toISOString(), used }; if (used) x.usesLeft = kLeft(x) - 1; }
+  render(); await Promise.all([ksaveDay(date), kLeft(x) != null ? ksaveProd(x) : null]);
+}
+
+/* ---------- Views ---------- */
+function skinView() {
+  if (S.kview) return kDetail();
+  if (S.ktab === "kweek") return kWeek();
+  if (S.ktab === "kproducts") return kProducts();
+  if (S.ktab === "kadd") return kAdd();
+  return kToday();
+}
+function kSlotCard(date, slot) {
+  const list = kRoutine(date, slot); if (!list.length) return "";
+  const done = list.filter((x) => kDone(date, x.id, slot)).length, hr = new Date().getHours();
+  const now = date === today() && ((slot === "am" && hr < 12) || (slot === "pm" && hr >= 17));
+  return `<section class="card kslot ${now ? "is-now" : ""}"><div class="row between"><div class="row" style="gap:8px">${slot === "am" ? SUN : MOON}<h3 class="ov-tlabel">${slot === "am" ? "Morning" : "Night"}</h3></div><span class="ov-state ${done === list.length ? "done" : ""}">${done === list.length ? "DONE" : `${done}/${list.length}`}</span></div>
+    <ol class="ksteps">${list.map((x, i) => { const tk = kDone(date, x.id, slot); return `<li class="kstep ${tk ? "taken" : ""}"><button class="kck" data-act="ktick" data-id="${x.id}" data-slot="${slot}" aria-pressed="${!!tk}" aria-label="${tk ? "Done. Tap to undo" : "Mark done"}: ${esc(x.name)}">${tk ? I.check : `<span>${i + 1}</span>`}</button>
+      <button class="kname" data-act="kopen" data-id="${x.id}"><b>${esc(x.name)}</b><span class="small muted">${esc(KTYPE[x.type] || "Product")}${x.howTo ? " · " + esc(x.howTo) : ""}</span></button>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}</li>`; }).join("")}</ol>
+    ${done < list.length ? `<button class="btn sm" data-act="kall" data-slot="${slot}">Mark all done</button>` : ""}</section>`;
+}
+function kToday() {
+  const date = S.date, d = parseD(date), isToday = date === today();
+  const title = isToday ? "Today’s routine" : date === addDays(today(), -1) ? "Yesterday" : DOW[d.getDay()] + "’s routine";
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
+    <div class="grow"><div class="eyebrow">${esc(shortD(date))}</div><h2 class="ov-title">${title}</h2></div>
+    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  if (!S.sk.products.length) return html + `<div class="card empty"><h3>Build your routine</h3><p>Snap a photo of each product. Claude reads it, suggests morning or night and how often, and slots it into your routine in the right order.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="ktab" data-tab="kadd">Add a product</button><button class="btn" data-act="kexample">Try a sample routine</button></div></div>`;
+  const am = kRoutine(date, "am"), pm = kRoutine(date, "pm"), all = am.length + pm.length;
+  const done = am.filter((x) => kDone(date, x.id, "am")).length + pm.filter((x) => kDone(date, x.id, "pm")).length;
+  const low = kActive().filter(kLow), C = 2 * Math.PI * 68, frac = all ? done / all : 0;
+  let streak = 0; for (let i = isToday && done < all ? 1 : 0; i < 365; i++) { const dd = addDays(today(), -i), a = kRoutine(dd, "am"), p = kRoutine(dd, "pm"), n = a.length + p.length; if (!n) continue; const k = a.filter((x) => kDone(dd, x.id, "am")).length + p.filter((x) => kDone(dd, x.id, "pm")).length; if (k < n) break; streak++; }
+  const tonight = pm.filter((x) => (x.days?.length ? x.days : ALLD).length < 7).map((x) => x.name);
+  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${done} of ${all} steps done">
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
+      <div class="ov-ringtxt"><span class="ov-big">${done}<span>/${all}</span></span><span class="small muted">steps done</span></div></div>
+    <div class="ov-stats"><div><span class="small muted">Streak</span><b>${streak ? plural(streak, "full day") : "Starts today"}</b></div>
+      <div><span class="small muted">Tonight’s extras</span><b>${tonight.length ? esc(tonight.join(", ")) : "Just the basics"}</b></div>
+      <div><span class="small ${low.length ? "warntxt" : "muted"}">Running low</span>${low.length ? `<button class="ov-low" data-act="ktab" data-tab="kproducts">${esc(low.map((x) => `${x.name} · ${plural(kLeft(x), "use")}`).join(", "))}</button>` : "<b>All good</b>"}</div></div></div>`;
+  const cf = kConflicts(date); if (cf.length) html += `<div class="alerts">${cf.map((t) => `<div class="alert"><span class="pip"></span><div>${esc(t)}</div></div>`).join("")}</div>`;
+  html += kSlotCard(date, "am") + kSlotCard(date, "pm");
+  if (!all) html += `<div class="card"><p class="small muted" style="margin:0">Nothing scheduled for this day.</p></div>`;
+  return html;
+}
+function kWeek() {
+  const week = weekDates(S.date), td = today();
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-7" aria-label="Previous week">${I.left}</button><div class="grow"><h2 class="ov-title" style="font-size:22px">This week</h2><div class="small muted">${esc(shortD(week[0], { day: "numeric", month: "short" }))} – ${esc(shortD(week[6], { day: "numeric", month: "short" }))}</div></div><button class="iconbtn" data-act="day" data-n="7" aria-label="Next week">${I.right}</button></div>`;
+  if (!S.sk.products.length) return html + `<div class="card empty"><p>Add products to see your week.</p></div>`;
+  for (const slot of ["am", "pm"]) {
+    const prods = kActive().filter((x) => kSlots(x).includes(slot)).sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99));
+    if (!prods.length) continue;
+    html += `<section class="card kweek"><div class="row" style="gap:8px;margin-bottom:6px">${slot === "am" ? SUN : MOON}<b>${slot === "am" ? "Morning" : "Night"}</b></div>
+      <div class="kgrid"><span></span>${week.map((d) => `<button class="kday ${d === td ? "is-today" : ""}" data-act="kgoday" data-date="${d}"><span>${DOW[parseD(d).getDay()].slice(0, 2)}</span><b>${parseD(d).getDate()}</b></button>`).join("")}
+      ${prods.map((x) => `<button class="kpname" data-act="kopen" data-id="${x.id}">${esc(x.name)}</button>${week.map((d) => { const due = kDue(x, d, slot), dn = kDone(d, x.id, slot); const st = dn ? "taken" : !due ? "off" : d < td ? "missed" : "todo"; return st === "off" ? `<span class="kcell off" aria-hidden="true"></span>` : `<button class="kcell ${st}" data-act="kweektick" data-id="${x.id}" data-slot="${slot}" data-date="${d}" aria-pressed="${!!dn}" aria-label="${esc(x.name)} ${DOW[parseD(d).getDay()]}: ${st}">${dn ? I.check : ""}</button>`; }).join("")}`).join("")}</div></section>`;
+  }
+  html += `<div class="blegend small muted"><span><i class="sw" style="background:var(--accent)"></i>Done</span><span><i class="sw" style="border:1.5px solid var(--warn)"></i>Missed</span><span><i class="sw" style="border:1.5px dashed var(--line)"></i>Coming up</span></div><p class="hint">Tap a square to tick or undo that day.</p>`;
+  return html;
+}
+function kProducts() {
+  let html = `<div class="row between"><h2 style="font-size:22px">Products</h2><button class="btn sm" data-act="ktab" data-tab="kadd">Add product</button></div>`;
+  if (!S.sk.products.length) return html + `<div class="card empty"><p>No products yet.</p><button class="btn primary" data-act="ktab" data-tab="kadd">Add a product</button></div>`;
+  const low = kActive().filter(kLow);
+  if (low.length) html += `<div class="alerts">${low.map((x) => `<div class="alert ${kLeft(x) <= 2 ? "crit" : ""}"><span class="pip"></span><div><b>${esc(x.name)}</b> has ${plural(kLeft(x), "use")} left${kWeeksLeft(x) != null ? `, about ${kWeeksLeft(x) < 2 ? plural(Math.round(kWeeksLeft(x) * 7), "day") : plural(Math.round(kWeeksLeft(x)), "week")}` : ""}.</div></div>`).join("")}</div>`;
+  const group = (list, label) => list.length ? `<div class="eyebrow">${label}</div>` + list.sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99)).map((x) => { const l = kLeft(x), tot = num(x.uses), pct = l != null && tot ? Math.min(100, (l / tot) * 100) : null, wl = kWeeksLeft(x); return `<div class="card sitem"><div class="top">${x.photos?.front ? `<img class="kthumb" src="${esc(storedSrc(x.photos.front))}" alt="">` : ""}<div class="grow"><div class="row between"><h3>${esc(x.name)}</h3>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}${x.example ? '<span class="chip ex">Example</span>' : ""}</div><div class="small muted">${esc([x.brand, KTYPE[x.type]].filter(Boolean).join(" · "))}</div><div class="small">${esc(kWhenTxt(x))} · ${esc(kFreqTxt(x))}</div></div></div>
+    ${pct != null ? `<div class="level ${kLow(x) ? "warn" : ""}"><i style="width:${pct.toFixed(1)}%"></i></div>` : ""}
+    <div class="small muted">${l != null ? `${plural(l, "use")} left${tot ? ` of ${fmtN(tot, 0)}` : ""}${wl != null && x.status !== "shelf" ? ` · about ${wl < 2 ? plural(Math.round(wl * 7), "day") : plural(Math.round(wl), "week")}` : ""}` : "Uses not tracked"}</div>
+    <div class="actions"><button class="btn sm" data-act="kopen" data-id="${x.id}">Details</button><button class="btn sm" data-act="kedit" data-id="${x.id}">Edit</button>${l != null ? `<button class="btn sm ghost" data-act="krestock" data-id="${x.id}">New bottle</button>` : ""}</div></div>`; }).join("") : "";
+  html += group(kActive(), "In my routine") + group(S.sk.products.filter((x) => x.status === "shelf"), "On the shelf");
+  if (S.sk.products.some((x) => x.example)) html += `<div><button class="btn sm ghost danger" data-act="kclearex">Remove sample products</button></div>`;
+  return html;
+}
+function kDetail() {
+  const x = S.sk.products.find((y) => y.id === S.kview); if (!x) { S.kview = null; return kToday(); }
+  const ph = ["front", "back"].filter((s) => x.photos?.[s]);
+  return `<div class="row between"><button class="btn sm ghost" data-act="kback">${I.left}<span>Back</span></button><button class="btn sm" data-act="kedit" data-id="${x.id}">Edit</button></div>
+    <div><h2 style="font-size:22px">${esc(x.name)}</h2><div class="small muted">${esc([x.brand, KTYPE[x.type]].filter(Boolean).join(" · "))}</div></div>
+    ${ph.length ? `<div class="photos">${ph.map((s) => `<a class="photo" href="${esc(storedSrc(x.photos[s]))}" target="_blank" rel="noopener"><span class="tag">${s === "front" ? "Front" : "Back"}</span><img src="${esc(storedSrc(x.photos[s]))}" alt="${s} of ${esc(x.name)}"></a>`).join("")}</div>` : ""}
+    <div class="card"><div class="ingrid"><span class="muted">When</span><span></span><b>${esc(kWhenTxt(x))}</b></div><div class="ingrid"><span class="muted">How often</span><span></span><b>${esc(kFreqTxt(x))}</b></div>${kLeft(x) != null ? `<div class="ingrid"><span class="muted">Uses left</span><span></span><b class="num">${fmtN(kLeft(x), 0)}${num(x.uses) ? ` of ${fmtN(num(x.uses), 0)}` : ""}</b></div>` : ""}${x.price ? `<div class="ingrid"><span class="muted">Price</span><span></span><b class="num">${esc(fmtN(num(x.price), 2))}</b></div>` : ""}</div>
+    ${x.howTo ? `<div class="card"><div class="eyebrow">How to use</div><p style="margin:6px 0 0">${esc(x.howTo)}</p></div>` : ""}
+    ${x.ingredients ? `<div class="card"><div class="eyebrow">Key ingredients</div><p class="small" style="margin:6px 0 0">${esc(x.ingredients)}</p></div>` : ""}
+    ${x.notes ? `<div class="card small">${esc(x.notes)}</div>` : ""}`;
+}
+function kBlank() { return { id: "", name: "", brand: "", type: "serum", when: "pm", days: [...ALLD], howTo: "", ingredients: "", uses: "", usesLeft: "", lowAt: "10", price: "", status: "active", notes: "", photos: {} }; }
+function kAdd() {
+  const f = S.kform || (S.kform = kBlank()), A = S.kai, editing = !!f.id;
+  const ph = (side) => { const p = S.kphotos[side], src = p?.url || (f.photos?.[side] ? storedSrc(f.photos[side]) : null); return `<label class="photo" for="kph-${side}"><span class="tag">${side === "front" ? "Front" : "Back"}</span>${src ? `<img src="${esc(src)}" alt="${side} of product">` : `<span class="ph">${I.cam}<span>Take or choose<br>a photo</span></span>`}<input id="kph-${side}" type="file" accept="image/*" data-kphoto="${side}"></label>`; };
+  const fd = f.days || [];
+  return `<div class="row between"><h2 style="font-size:22px">${editing ? "Edit " + esc(f.name || "product") : "Add a product"}</h2>${editing || f.name ? `<button class="btn sm ghost" data-act="kdiscard">${editing ? "Cancel" : "Clear"}</button>` : ""}</div>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">${editing ? "Photos" : "Step 1 · Photograph the product"}</div><p class="small muted" style="margin:0">Front for the name, back for the directions and ingredients. Claude fills in the form and suggests when and how often to use it.</p>
+    <div class="photos">${ph("front")}${ph("back")}</div>
+    ${S.canPhoto === false || !S.sample ? `<div class="status">Photo reading needs the Claude app or claude.ai, signed in. You can fill the form in by hand.</div>` : `<button class="btn ${editing ? "" : "primary"}" data-act="kautofill" ${A.busy || !(S.kphotos.front || S.kphotos.back) ? "disabled" : ""}>${A.busy ? '<span class="spin"></span> Reading the label…' : "Fill in from photos"}</button>`}
+    ${A.msg ? `<div class="status ${A.kind}">${esc(A.msg)}</div>` : ""}</div>
+  <form class="f card" id="kform" novalidate><fieldset><legend>${editing ? "Details" : "Step 2 · Check the details"}</legend>
+    <label class="fl">Name<input class="in" data-kf="name" value="${esc(f.name)}" placeholder="e.g. Retinol 0.5% serum"></label>
+    <div class="fgrid"><label class="fl">Brand<input class="in" data-kf="brand" value="${esc(f.brand)}"></label>
+      <label class="fl">Type<select class="in" data-kf="type">${KTYPES.map(([k, l]) => `<option value="${k}" ${f.type === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
+    <div class="fl">When<div class="seg" role="group" aria-label="When">${[["am", "Morning"], ["pm", "Night"], ["both", "Both"]].map(([v, l]) => `<button type="button" data-act="kwhen" data-v="${v}" aria-pressed="${f.when === v}">${l}</button>`).join("")}</div></div>
+    <div class="fl">How often<div class="row wrapflex" style="gap:6px">${[["Every day", ALLD], ["3× a week", [1, 3, 5]], ["2× a week", [2, 5]], ["Once a week", [0]]].map(([l, d]) => `<button type="button" class="btn sm ${fd.length === d.length && d.every((v) => fd.includes(v)) ? "primary" : ""}" data-act="kpreset" data-d="${d.join(",")}">${l}</button>`).join("")}</div>
+      <div class="daypick" style="margin-top:6px">${[1, 2, 3, 4, 5, 6, 0].map((dd) => `<button type="button" data-act="kdow" data-d="${dd}" aria-pressed="${fd.includes(dd)}">${DOW[dd].slice(0, 2)}</button>`).join("")}</div></div>
+    <label class="fl">How to use<textarea class="in" data-kf="howTo" placeholder="e.g. Pea-sized amount on dry skin, avoid eyes">${esc(f.howTo)}</textarea></label>
+    <label class="fl">Key ingredients<input class="in" data-kf="ingredients" value="${esc(f.ingredients)}" placeholder="e.g. Retinol, squalane"></label></fieldset>
+  <fieldset><legend>Bottle</legend>
+    <div class="fgrid"><label class="fl">Uses in a full bottle<input class="in num" type="number" inputmode="numeric" min="0" data-kf="uses" value="${esc(f.uses)}" placeholder="e.g. 60"></label>
+      <label class="fl">Uses left now<input class="in num" type="number" inputmode="numeric" min="0" data-kf="usesLeft" value="${esc(f.usesLeft)}" placeholder="Same as full"></label>
+      <label class="fl">Warn at uses left<input class="in num" type="number" inputmode="numeric" min="0" data-kf="lowAt" value="${esc(f.lowAt)}"></label>
+      <label class="fl">Price<input class="in num" type="number" inputmode="decimal" step="0.01" min="0" data-kf="price" value="${esc(f.price)}"></label></div>
+    <p class="hint" style="margin:0">Each tick takes one use off. Not sure? A 30 mL serum is roughly 100 to 150 uses, and a 50 mL moisturiser about 80.</p>
+    <label class="fl">Status<select class="in" data-kf="status"><option value="active" ${f.status !== "shelf" ? "selected" : ""}>In my routine</option><option value="shelf" ${f.status === "shelf" ? "selected" : ""}>On the shelf (not using now)</option></select></label>
+    <label class="fl">Notes<textarea class="in" data-kf="notes">${esc(f.notes)}</textarea></label></fieldset>
+  <div class="sticky-save">${editing ? `<button type="button" class="btn danger" data-act="kdelete">Delete</button>` : ""}<button type="submit" class="btn primary">${editing ? "Save" : "Add to routine"}</button></div></form>`;
+}
+const KPROMPT = `You are reading photos of a skincare product. The first image is the front, the second (if present) is the back with directions and ingredients. Answer with ONLY a JSON object:
+{"name": product name as a person would say it, "brand": brand, "type": one of ${KTYPES.map(([k]) => `"${k}"`).join(",")}, "when": "am", "pm" or "both" based on the directions and actives (retinoids and most exfoliating acids are "pm", sunscreen is "am"), "timesPerWeek": a number from 1 to 7 based on the directions (7 if daily or not stated), "howTo": one short sentence on how to apply it, "ingredients": up to 5 key active ingredients as a comma-separated string, "sizeMl": the size in mL or g as a number or null, "usesEstimate": a rough number of uses in a full container or null}
+Don't guess anything that isn't on the label, except when, timesPerWeek and usesEstimate, which should be sensible suggestions.`;
+async function kautofill() {
+  const A = S.kai, f = S.kform; if (!S.sample) return;
+  A.busy = true; A.msg = ""; render();
+  try {
+    const images = ["front", "back"].map((s) => S.kphotos[s]?.blob).filter(Boolean).slice(0, S.imgLimits?.maxCount || 2);
+    const o = await S.sample.json(KPROMPT, { images, modelTier: "default" });
+    if (o?.name) f.name = String(o.name); if (o?.brand) f.brand = String(o.brand);
+    if (KTYPE[o?.type]) f.type = o.type; if (["am", "pm", "both"].includes(o?.when)) f.when = o.when;
+    const tpw = Math.round(num(o?.timesPerWeek, 7)); f.days = tpw >= 7 ? [...ALLD] : tpw >= 3 ? [1, 3, 5].slice(0, tpw) : tpw === 2 ? [2, 5] : [0];
+    if (o?.howTo) f.howTo = String(o.howTo); if (o?.ingredients) f.ingredients = String(o.ingredients);
+    if (num(o?.usesEstimate) > 0) { f.uses = String(Math.round(num(o.usesEstimate))); if (f.usesLeft === "") f.usesLeft = f.uses; }
+    A.msg = "Filled in from the photos. Check it, especially when and how often."; A.kind = "ok";
+  } catch (e) { A.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : "Couldn't read the label. Try a clearer photo, or fill it in by hand."; A.kind = "err"; }
+  A.busy = false; render();
+}
+async function kexample() {
+  const mk = (name, type, when, days, howTo, uses, left) => ({ id: "ex_" + uid(), name, brand: "Example", type, when, days, howTo, ingredients: "", uses, usesLeft: left, lowAt: 10, price: "", status: "active", notes: "", photos: {}, example: true, addedAt: new Date().toISOString() });
+  for (const x of [mk("Gentle cleanser", "cleanser", "both", [...ALLD], "Massage onto damp skin, rinse", 200, 140), mk("Vitamin C serum", "serum", "am", [...ALLD], "3 drops after cleansing", 120, 18), mk("Moisturiser", "moisturiser", "both", [...ALLD], "Pea-sized amount over serum", 160, 95), mk("SPF 50 sunscreen", "sunscreen", "am", [...ALLD], "Two finger lengths, last step", 60, 9), mk("Retinol 0.5%", "retinoid", "pm", [1, 3, 5], "Pea-sized on dry skin, avoid eyes", 90, 70), mk("BHA exfoliant", "exfoliant", "pm", [2, 6], "Swipe over face after cleansing", 100, 64), mk("Clay mask", "mask", "pm", [0], "10 minutes, then rinse", 25, 20)]) await ksaveProd(x);
+  render(); toast("Sample routine added. Remove it any time from Products.");
+}
+async function skinClick(a, b) {
+  switch (a) {
+    case "ktab": S.ktab = b.dataset.tab; S.kview = null; if (S.ktab === "kadd" && !S.kform) S.kform = kBlank(); try { localStorage.setItem("planner.ktab", S.ktab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "ktick": ktoggle(b.dataset.id, b.dataset.slot, S.date); return true;
+    case "kweektick": ktoggle(b.dataset.id, b.dataset.slot, b.dataset.date); return true;
+    case "kall": { const slot = b.dataset.slot; for (const x of kRoutine(S.date, slot)) if (!kDone(S.date, x.id, slot)) await ktoggle(x.id, slot, S.date); return true; }
+    case "kgoday": S.date = b.dataset.date; S.ktab = "ktoday"; render(); window.scrollTo(0, 0); return true;
+    case "kopen": S.kview = b.dataset.id; render(); window.scrollTo(0, 0); return true;
+    case "kback": S.kview = null; render(); return true;
+    case "kedit": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; S.kform = { ...kBlank(), ...cjson(x) }; for (const k of ["uses", "usesLeft", "lowAt", "price"]) S.kform[k] = x[k] ?? ""; S.kphotos = { front: null, back: null }; S.kai = { busy: false, msg: "", kind: "" }; S.kview = null; S.ktab = "kadd"; render(); window.scrollTo(0, 0); return true; }
+    case "kdiscard": S.kform = kBlank(); S.kphotos = { front: null, back: null }; S.kai = { busy: false, msg: "", kind: "" }; if (b.textContent.trim() === "Cancel") S.ktab = "kproducts"; render(); return true;
+    case "kwhen": S.kform.when = b.dataset.v; render(); return true;
+    case "kpreset": S.kform.days = b.dataset.d.split(",").map(Number); render(); return true;
+    case "kdow": { const d = Number(b.dataset.d), f = S.kform; f.days = f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d]; render(); return true; }
+    case "kautofill": kautofill(); return true;
+    case "kdelete": { const f = S.kform; S.kform = kBlank(); S.ktab = "kproducts"; await kdelProd(f.id); render(); toast(`Deleted ${f.name || "product"}`); return true; }
+    case "krestock": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; x.usesLeft = num(x.uses) || kLeft(x) || 0; render(); toast(`New bottle of ${x.name}: ${plural(x.usesLeft, "use")}`); await ksaveProd(x); return true; }
+    case "kexample": kexample(); return true;
+    case "kclearex": for (const x of S.sk.products.filter((y) => y.example)) await kdelProd(x.id); render(); toast("Sample products removed"); return true;
+  }
+  return false;
+}
+document.addEventListener("input", (e) => { const t = e.target; if (t.dataset.kf && S.kform) S.kform[t.dataset.kf] = t.value; });
+document.addEventListener("change", async (e) => {
+  const t = e.target;
+  if (t.dataset.kphoto && t.files?.[0]) { const blob = await shrink(t.files[0]); const old = S.kphotos[t.dataset.kphoto]; if (old) URL.revokeObjectURL(old.url); S.kphotos[t.dataset.kphoto] = { blob, url: URL.createObjectURL(blob) }; render(); }
+});
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "kform") return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const f = S.kform; if (!f.name.trim()) { toast("Give the product a name."); return; }
+  if (!f.days.length) { toast("Pick at least one day."); return; }
+  const photos = { ...(f.photos || {}) }; let fail = false;
+  for (const side of ["front", "back"]) if (S.kphotos[side]) { try { photos[side] = await storePhoto(S.kphotos[side].blob); } catch { fail = true; } }
+  const uses = f.uses === "" ? "" : num(f.uses), left = f.usesLeft === "" ? uses : num(f.usesLeft);
+  const x = { id: f.id || uid(), name: f.name.trim(), brand: (f.brand || "").trim(), type: f.type, when: f.when, days: [...f.days].sort(), howTo: (f.howTo || "").trim(), ingredients: (f.ingredients || "").trim(), uses, usesLeft: left, lowAt: num(f.lowAt, 10), price: f.price === "" ? "" : num(f.price), status: f.status === "shelf" ? "shelf" : "active", notes: f.notes || "", photos, ...(f.example ? { example: true } : {}), addedAt: f.addedAt || new Date().toISOString() };
+  const isNew = !f.id; S.kform = kBlank(); S.kphotos = { front: null, back: null }; S.kai = { busy: false, msg: "", kind: "" }; S.ktab = isNew ? "ktoday" : "kproducts";
+  render(); window.scrollTo(0, 0); toast(fail ? `Saved ${x.name}, but the photos couldn't be stored` : isNew ? `Added ${x.name}` : `Saved ${x.name}`); await ksaveProd(x);
+}, true);
+
+/* ---------- Cardio ---------- */
+const CTYPES = ["Run", "Walk", "Cycle", "Row", "Swim", "Stairs", "HIIT", "Elliptical", "Hike", "Sport", "Other"];
+S.cdForm = { type: "Run", date: today(), mins: "", km: "", kcal: "", hr: "", notes: "" }; S.cdImp = { busy: false, msg: "", kind: "", list: null };
+function cardioAll() { const out = []; for (const [date, s] of Object.entries(S.wo.sessions)) for (const x of s.extra || []) out.push({ ...x, date }); return out.sort((a, b) => b.date.localeCompare(a.date) || String(b.at || "").localeCompare(String(a.at || ""))); }
+const cdGoal = () => num(S.wo.settings.cardioGoal, 150) || 150;
+const paceTxt = (x) => { const km = num(x.km), m = num(x.mins); if (!km || !m) return ""; if (/cycle/i.test(x.type || x.name)) return `${fmtN(km / (m / 60), 1)} km/h`; const p = m / km; return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")} /km`; };
+function cardioSum(dates) { const set = new Set(dates); let mins = 0, km = 0, kcal = 0, n = 0; for (const x of cardioAll()) if (set.has(x.date)) { mins += num(x.mins); km += num(x.km); kcal += num(x.kcal); n++; } return { mins, km, kcal, n }; }
+function wCardio() {
+  const week = weekDates(today()), sum = cardioSum(week), goal = cdGoal(), frac = Math.min(1, sum.mins / goal), C = 2 * Math.PI * 68, f = S.cdForm, I2 = S.cdImp;
+  let html = `<div class="row between"><h2 style="font-size:22px">Cardio</h2><label class="small muted row" style="gap:6px">Weekly goal<input class="in num" type="number" inputmode="numeric" min="0" step="10" data-cdgoal="1" value="${goal}" style="width:70px;padding:5px 8px" aria-label="Weekly cardio goal in minutes"> min</label></div>
+  <div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${fmtN(sum.mins, 0)} of ${goal} minutes this week">
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
+      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
+      <div class="ov-ringtxt"><span class="ov-big" style="font-size:34px">${fmtN(sum.mins, 0)}<span>/${fmtN(goal, 0)}</span></span><span class="small muted">min this week</span></div></div>
+    <div class="ov-stats"><div><span class="small muted">Sessions</span><b>${sum.n}</b></div><div><span class="small muted">Distance</span><b class="num">${fmtN(sum.km, 1)} km</b></div><div><span class="small muted">Calories</span><b class="num">${fmtN(sum.kcal, 0)} kcal</b></div></div></div>` + cdPlanHtml() + cdProgressHtml();
+  // last 8 weeks bars
+  const weeks = Array.from({ length: 8 }, (_, i) => weekDates(addDays(today(), -7 * (7 - i)))), vals = weeks.map((w) => cardioSum(w).mins), mx = Math.max(goal, ...vals) || 1;
+  html += `<section class="card"><div class="eyebrow">Last 8 weeks</div><div class="cdbars">${weeks.map((w, i) => `<div class="cdbar ${vals[i] >= goal ? "hit" : ""}" title="${fmtN(vals[i], 0)} min"><span class="num">${vals[i] ? fmtN(vals[i], 0) : ""}</span><i style="height:${((vals[i] / mx) * 100).toFixed(1)}%"></i><em>${esc(shortD(w[0], { day: "numeric", month: "short" }))}</em></div>`).join("")}</div><p class="hint" style="margin:6px 0 0">Bright bars hit your weekly goal.</p></section>`;
+  html += `<form class="f card" id="cdform" novalidate><fieldset><legend>Log a session</legend>
+    <div class="cchips">${CTYPES.map((t) => `<button type="button" class="bchip" data-act="cdtype" data-t="${t}" aria-pressed="${f.type === t}">${t}</button>`).join("")}</div>
+    <div class="fgrid"><label class="fl">Date<input class="in" type="date" data-cd="date" value="${esc(f.date)}" max="${today()}"></label><label class="fl">Minutes<input class="in num" type="number" inputmode="decimal" min="0" step="any" data-cd="mins" value="${esc(f.mins)}"></label>
+      <label class="fl">Distance (km)<input class="in num" type="number" inputmode="decimal" min="0" step="any" data-cd="km" value="${esc(f.km)}" placeholder="optional"></label><label class="fl">Calories<input class="in num" type="number" inputmode="numeric" min="0" data-cd="kcal" value="${esc(f.kcal)}" placeholder="optional"></label>
+      <label class="fl">Avg heart rate<input class="in num" type="number" inputmode="numeric" min="0" data-cd="hr" value="${esc(f.hr)}" placeholder="optional"></label><label class="fl">Notes<input class="in" data-cd="notes" value="${esc(f.notes)}" placeholder="e.g. Zone 2"></label></div></fieldset>
+    <div class="row"><button type="submit" class="btn primary">Log session</button></div></form>
+  <section class="card" style="display:flex;flex-direction:column;gap:8px"><div class="eyebrow">From your Apple Watch</div>
+    <p class="small muted" style="margin:0">Open the <b>Fitness</b> app on your iPhone, tap a workout and take a screenshot of the summary. Upload it here and Claude reads the type, time, distance, calories and heart rate. You can add several at once.</p>
+    <label class="btn bupload" style="align-self:flex-start">${I.upload}<span>Upload screenshots</span><input type="file" accept="image/*" multiple data-cdimport="1" aria-label="Upload workout screenshots"></label>
+    ${S.canPhoto === false || !S.sample ? `<div class="status">Reading screenshots needs the Claude app or claude.ai, signed in.</div>` : ""}
+    ${I2.busy ? `<div class="status"><span class="spin"></span> ${esc(I2.msg)}</div>` : I2.msg ? `<div class="status ${I2.kind}">${esc(I2.msg)}</div>` : ""}
+    ${I2.list?.length ? `${I2.list.map((x, i) => `<label class="row cdimp"><input type="checkbox" data-cdkeep="${i}" ${x.keep ? "checked" : ""}><span class="grow"><b>${esc(x.type)}</b> · ${esc(shortD(x.date, { day: "numeric", month: "short" }))}<br><span class="small muted num">${[x.mins && fmtN(x.mins, 0) + " min", x.km && fmtN(x.km, 2) + " km", x.kcal && fmtN(x.kcal, 0) + " kcal", x.hr && fmtN(x.hr, 0) + " bpm"].filter(Boolean).join(" · ")}</span></span></label>`).join("")}<div class="row" style="gap:8px"><button type="button" class="btn sm" data-act="cdimpclear">Discard</button><button type="button" class="btn sm primary" data-act="cdimpsave">Add ${plural(I2.list.filter((x) => x.keep).length, "session")}</button></div>` : ""}</section>`;
+  const all = cardioAll().slice(0, 40);
+  html += `<div class="eyebrow">Recent</div>` + (all.length ? `<div class="card plist" style="padding:2px 14px">${all.map((x) => `<div class="pi cdrow"><span class="grow"><b>${esc(x.type || x.name)}</b> <span class="small muted">${esc(shortD(x.date, { weekday: "short", day: "numeric", month: "short" }))}</span>${x.src === "watch" ? ' <span class="chip">Watch</span>' : ""}<br><span class="small muted num">${[num(x.mins) && fmtN(num(x.mins), 0) + " min", num(x.km) && fmtN(num(x.km), 2) + " km", paceTxt(x), num(x.kcal) && fmtN(num(x.kcal), 0) + " kcal", num(x.hr) && fmtN(num(x.hr), 0) + " bpm"].filter(Boolean).join(" · ")}${x.notes ? " · " + esc(x.notes) : ""}</span></span><button class="iconbtn" data-act="cddel" data-date="${x.date}" data-id="${x.id}" aria-label="Delete">${I.x}</button></div>`).join("")}</div>` : `<div class="card empty"><p>No cardio logged yet.</p></div>`);
+  return html;
+}
+const CDPROMPT = `These are screenshots of workout summaries, most likely from the Apple Fitness or Apple Watch Workout app. Answer with ONLY a JSON object:
+{"workouts": [{"type": one of ${CTYPES.map((t) => `"${t}"`).join(",")}, "date": "YYYY-MM-DD" or null, "minutes": total workout time in minutes as a number, "km": distance in km as a number or null (convert miles), "kcal": active calories as a number or null, "avgHr": average heart rate as a number or null}]}
+One entry per distinct workout shown. Don't guess numbers that aren't shown.`;
+async function cdImport(files) {
+  const I2 = S.cdImp; if (!S.sample) { I2.msg = "Reading screenshots needs the Claude app or claude.ai, signed in."; I2.kind = "err"; render(); return; }
+  I2.busy = true; I2.msg = "Reading your screenshots…"; I2.list = null; render();
+  try {
+    const images = []; for (const f of files.slice(0, S.imgLimits?.maxCount || 5)) images.push(await shrink(f));
+    const out = await S.sample.json(CDPROMPT, { images, modelTier: "default" });
+    const list = (out?.workouts || []).filter((w) => w && num(w.minutes) > 0).map((w) => ({ keep: true, type: CTYPES.includes(w.type) ? w.type : "Other", date: /^\d{4}-\d{2}-\d{2}$/.test(w.date || "") && w.date <= today() ? w.date : today(), mins: Math.round(num(w.minutes)), km: num(w.km) || "", kcal: Math.round(num(w.kcal)) || "", hr: Math.round(num(w.avgHr)) || "" }));
+    if (!list.length) throw new Error("none");
+    I2.list = list; I2.msg = "Check these, untick any you don't want, then add them."; I2.kind = "ok";
+  } catch (e) { I2.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : "Couldn't find a workout in those screenshots. Try the summary screen from the Fitness app."; I2.kind = "err"; }
+  I2.busy = false; render();
+}
+async function cdAdd(date, x) { const s = wsess(date); s.extra.push({ id: uid(), name: x.type, at: new Date().toISOString(), ...x }); await wsaveSess(date); }
+/* Cardio plan, reminders and progress */
+S.cdPlanForm = null; S.cdType = null; S.cdMetric = "pace";
+const cdPlans = () => S.wo.settings.cardioPlan || [];
+const cdPlannedFor = (date) => cdPlans().filter((p) => (p.days || []).includes(parseD(date).getDay()));
+function cdCalLink(p) {
+  const first = (() => { for (let i = 0; i < 8; i++) { const d = addDays(today(), i); if (p.days.includes(parseD(d).getDay())) return d; } return today(); })();
+  const t = p.time || "07:00", [h, m] = t.split(":").map(Number), endM = Math.min(1439, h * 60 + m + (num(p.mins) || 30));
+  const st = first.replace(/-/g, "") + "T" + t.replace(":", "") + "00", en = first.replace(/-/g, "") + "T" + pad(Math.floor(endM / 60)) + pad(endM % 60) + "00";
+  const q = new URLSearchParams({ action: "TEMPLATE", text: `Cardio: ${p.type}${p.mins ? " " + p.mins + " min" : ""}`, dates: `${st}/${en}`, details: `${p.notes || ""}\n\nFrom your Planner. Log it in Workouts → Cardio when you’re done.`.trim(), recur: p.days.length === 7 ? "RRULE:FREQ=DAILY" : "RRULE:FREQ=WEEKLY;BYDAY=" + p.days.map((d) => BYDAY[d]).join(",") });
+  try { const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; if (tz) q.set("ctz", tz); } catch {}
+  return "https://calendar.google.com/calendar/render?" + q.toString();
+}
+function cdPlanHtml() {
+  const f = S.cdPlanForm;
+  let html = `<section class="card"><div class="row between"><span class="eyebrow">Weekly cardio plan</span>${f ? "" : `<button class="linkbtn" data-act="cdplannew">Add</button>`}</div>`;
+  const ps = cdPlans();
+  if (!ps.length && !f) html += `<p class="small muted" style="margin:6px 0 0">Plan your cardio days, like a Zone 2 run on Tuesday and Saturday. They show on your Today screen, and you can add them to your calendar as reminders.</p>`;
+  html += ps.map((p) => `<div class="cdplan"><span class="grow"><b>${esc(p.type)}</b>${p.mins ? ` <span class="num">${fmtN(num(p.mins), 0)} min</span>` : ""}${p.km ? ` <span class="num">${fmtN(num(p.km), 1)} km</span>` : ""}<br><span class="small muted">${esc([1, 2, 3, 4, 5, 6, 0].filter((d) => p.days.includes(d)).map((d) => DOW[d]).join(", "))}${p.time ? " · " + esc(fmtTime(p.time)) : ""}${p.notes ? " · " + esc(p.notes) : ""}</span></span><a class="btn sm" href="${esc(cdCalLink(p))}" target="_blank" rel="noopener">${I.calendar}<span>Remind me</span></a><button class="iconbtn" data-act="cdplandel" data-id="${p.id}" aria-label="Remove">${I.x}</button></div>`).join("");
+  if (f) html += `<form id="cdpform" class="f" novalidate style="margin-top:8px"><div class="cchips">${CTYPES.map((t) => `<button type="button" class="bchip" data-act="cdptype" data-t="${t}" aria-pressed="${f.type === t}">${t}</button>`).join("")}</div>
+    <div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" data-act="cdpdow" data-d="${d}" aria-pressed="${f.days.includes(d)}">${DOW[d].slice(0, 2)}</button>`).join("")}</div>
+    <div class="fgrid"><label class="fl">Minutes<input class="in num" type="number" inputmode="numeric" min="0" data-cdp="mins" value="${esc(f.mins)}"></label><label class="fl">Distance (km)<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cdp="km" value="${esc(f.km)}" placeholder="optional"></label>
+      <label class="fl">Time<input class="in" type="time" data-cdp="time" value="${esc(f.time)}"></label><label class="fl">Notes<input class="in" data-cdp="notes" value="${esc(f.notes)}" placeholder="e.g. Zone 2, easy"></label></div>
+    <div class="row" style="gap:8px"><button type="button" class="btn sm" data-act="cdplancancel">Cancel</button><button type="submit" class="btn sm primary">Save</button></div></form>`;
+  return html + `</section>`;
+}
+function cdProgressHtml() {
+  const all = cardioAll(); if (!all.length) return "";
+  const types = [...new Set(all.map((x) => x.type || x.name))]; if (!types.includes(S.cdType)) S.cdType = types[0];
+  const list = all.filter((x) => (x.type || x.name) === S.cdType).slice().reverse();
+  const M = { pace: ["Pace", (x) => (num(x.km) && num(x.mins) ? (/cycle/i.test(S.cdType) ? num(x.km) / (num(x.mins) / 60) : num(x.mins) / num(x.km)) : null)], km: ["Distance", (x) => num(x.km) || null], mins: ["Time", (x) => num(x.mins) || null], hr: ["Avg HR", (x) => num(x.hr) || null] };
+  const avail = Object.keys(M).filter((k) => list.some((x) => M[k][1](x) != null)); if (!avail.includes(S.cdMetric)) S.cdMetric = avail[0];
+  const isCyc = /cycle/i.test(S.cdType), unit = { pace: isCyc ? "km/h" : "min/km", km: "km", mins: "min", hr: "bpm" }[S.cdMetric];
+  const pts = list.map((x) => ({ date: x.date, v: M[S.cdMetric][1](x) })).filter((p) => p.v != null);
+  const fmtV = (v) => (S.cdMetric === "pace" && !isCyc ? `${Math.floor(v)}:${String(Math.round((v % 1) * 60)).padStart(2, "0")}` : fmtN(v, S.cdMetric === "km" || S.cdMetric === "pace" ? 1 : 0));
+  let chart = "";
+  if (pts.length > 1) {
+    const W = 340, H = 170, L = 40, R = 14, T = 16, B = 24, t0 = parseD(pts[0].date).getTime(), t1 = Math.max(t0 + 86400000, parseD(pts[pts.length - 1].date).getTime());
+    const ax = niceAxis(Math.min(...pts.map((p) => p.v)) * 0.95, Math.max(...pts.map((p) => p.v)) * 1.05);
+    const xs = (d) => L + ((parseD(d).getTime() - t0) / (t1 - t0)) * (W - L - R), ys = (v) => T + (1 - (v - ax.y0) / (ax.y1 - ax.y0)) * (H - T - B);
+    let g = ax.ticks.map((v) => `<line x1="${L}" x2="${W - R}" y1="${ys(v).toFixed(1)}" y2="${ys(v).toFixed(1)}" stroke="var(--line)" opacity=".6"/><text x="${L - 6}" y="${(ys(v) + 3.5).toFixed(1)}" text-anchor="end" class="ctxt">${esc(fmtV(v))}</text>`).join("");
+    g += `<path d="${pts.map((p, i) => `${i ? "L" : "M"}${xs(p.date).toFixed(1)} ${ys(p.v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2.2"/>` + pts.map((p) => `<circle cx="${xs(p.date).toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="3.5" fill="var(--accent)"><title>${esc(shortD(p.date))}: ${esc(fmtV(p.v))} ${unit}</title></circle>`).join("");
+    const lp = pts[pts.length - 1]; g += `<text x="${Math.min(W - R, xs(lp.date)).toFixed(1)}" y="${(ys(lp.v) - 8).toFixed(1)}" text-anchor="end" class="ctxt val">${esc(fmtV(lp.v))}</text>`;
+    g += `<text x="${L}" y="${H - 6}" class="ctxt">${esc(shortD(pts[0].date, { day: "numeric", month: "short" }))}</text><text x="${W - R}" y="${H - 6}" text-anchor="end" class="ctxt">${esc(shortD(lp.date, { day: "numeric", month: "short" }))}</text>`;
+    chart = `<svg class="bchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(S.cdType)} ${M[S.cdMetric][0]} over time">${g}</svg>`;
+    const better = S.cdMetric === "pace" ? (isCyc ? lp.v > pts[0].v : lp.v < pts[0].v) : S.cdMetric === "hr" ? lp.v < pts[0].v : lp.v > pts[0].v;
+    chart = `<div class="small ${better ? "" : "muted"}" style="margin-top:6px;${better ? "color:var(--accent)" : ""}">${M[S.cdMetric][0]}: ${esc(fmtV(pts[0].v))} → ${esc(fmtV(lp.v))} ${unit} since ${esc(shortD(pts[0].date, { day: "numeric", month: "short" }))}</div>` + chart;
+  } else chart = `<p class="small muted" style="margin:8px 0 0">Log a couple of ${esc(S.cdType.toLowerCase())} sessions to see a trend.</p>`;
+  const withPace = list.filter((x) => num(x.km) >= 1 && num(x.mins));
+  const pb = [["Longest", list.reduce((a, x) => (num(x.km) > num(a?.km) ? x : a), null), (x) => `${fmtN(num(x.km), 2)} km`], ["Longest time", list.reduce((a, x) => (num(x.mins) > num(a?.mins) ? x : a), null), (x) => `${fmtN(num(x.mins), 0)} min`], [isCyc ? "Fastest" : "Best pace", withPace.reduce((a, x) => (!a || num(x.mins) / num(x.km) < num(a.mins) / num(a.km) ? x : a), null), (x) => paceTxt(x)]].filter(([, x]) => x && num(x.km || x.mins));
+  return `<section class="card"><div class="eyebrow">Progress</div><div class="bchips">${types.map((t) => `<button class="bchip" data-act="cdtypeprog" data-t="${esc(t)}" aria-pressed="${S.cdType === t}">${esc(t)}</button>`).join("")}</div>
+    <div class="seg" role="group" aria-label="Measure">${avail.map((k) => `<button data-act="cdmetric" data-m="${k}" aria-pressed="${S.cdMetric === k}">${M[k][0]}</button>`).join("")}</div>${chart}
+    ${pb.length ? `<div class="wpct" style="margin-top:10px">${pb.map(([l, x, f]) => `<div><span class="muted small">${l}</span><b class="num">${esc(f(x))}</b><span class="small muted">${esc(shortD(x.date, { day: "numeric", month: "short" }))}</span></div>`).join("")}</div>` : ""}</section>`;
+}
+
+function wtick() {
+  document.querySelectorAll("[data-wclock]").forEach((el) => { el.textContent = mmss((Date.now() - new Date(el.dataset.wclock)) / 1000); });
+  const r = document.querySelector("[data-wrest]");
+  if (r && S.wrest) { const left = (S.wrest.end - Date.now()) / 1000; r.textContent = mmss(Math.max(0, Math.ceil(left))); if (left <= 0 && !S.wrest.buzzed) { S.wrest.buzzed = true; r.closest(".wrestbar")?.classList.add("over"); try { navigator.vibrate?.([200, 100, 200]); } catch {} } }
+}
+setInterval(() => { if (S.module === "workouts") wtick(); }, 1000);
+/* ---------- Events ---------- */
+function setTab(t) { S.tab = t; S.confirm = null; try { localStorage.setItem("planner.tab", t); } catch {} render(); window.scrollTo(0, 0); if (t === "today") scrollToNow(); }
+function scrollToNow() {
+  requestAnimationFrame(() => {
+    const el = document.querySelector(".hour.now") || [...document.querySelectorAll(".hour:not(.idle)")].find((h) => Number(h.dataset.h) >= new Date().getHours());
+    if (el && S.date === today()) { const y = el.getBoundingClientRect().top + window.scrollY - 140; if (y > 200) window.scrollTo({ top: y }); }
+  });
+}
+let toastT;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2600); }
+
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  const a = b.dataset.act, id = b.dataset.id;
+  if (b.classList.contains("sheet-bg") && e.target.closest("[data-stop]")) return;
+  if (await mealClick(a, b)) return;
+  if (await workoutClick(a, b)) return;
+  if (await cycleClick(a, b)) return;
+  if (await progressClick(a, b)) return;
+  if (await skinClick(a, b)) return;
+  const sp = (x) => S.supps.find((s) => s.id === x);
+  switch (a) {
+    case "tab": if (b.dataset.tab === "add" && S.tab !== "add" && !S.form) S.form = blankForm(); setTab(b.dataset.tab); break;
+    case "day": S.date = b.dataset.n === "0" ? today() : addDays(S.date, Number(b.dataset.n)); render(); if (S.date === today()) scrollToNow(); break;
+    case "dose": toggleDose(b.dataset.key, S.date); break;
+    case "takeall": takeAllAt(b.dataset.h, S.date); break;
+    case "wkdose": toggleDose(b.dataset.key, b.dataset.date); break;
+    case "goday": S.date = b.dataset.date; S.todayView = "full"; try { localStorage.setItem("planner.todayView", "full"); } catch {} render(); if (S.date === today()) scrollToNow(); break;
+    case "theme": S.theme = S.theme === "dark" ? "light" : "dark"; try { localStorage.setItem("planner.theme", S.theme); } catch {} applyTheme(); renderChrome(); break;
+    case "tview": S.todayView = b.dataset.v; try { localStorage.setItem("planner.todayView", S.todayView); } catch {} render(); break;
+    case "tmode": S.totalsMode = b.dataset.m; render(); break;
+    case "new": S.form = blankForm(); S.photos = { front: null, back: null }; S.ai = { busy: false, msg: "", kind: "" }; setTab("add"); break;
+    case "new-cup": S.form = blankForm("cupboard"); S.photos = { front: null, back: null }; S.ai = { busy: false, msg: "", kind: "" }; setTab("add"); break;
+    case "examples": loadExamples(); break;
+    case "rm-examples": removeExamples(); break;
+    case "edit": S.detail = null; S.zoom = null; openEdit(id); break;
+    case "detail": S.detail = id; S.zoom = null; renderOverlay(); break;
+    case "close-detail": S.detail = null; S.zoom = null; S.reminders = false; renderOverlay(); break;
+    case "reminders": S.reminders = true; renderOverlay(); break;
+    case "zoom": S.zoom = { side: b.dataset.side, z: 1 }; renderOverlay(); break;
+    case "zin": setZoom(S.zoom.z * 1.5); break;
+    case "zout": setZoom(S.zoom.z / 1.5); break;
+    case "zswap": S.zoom = { side: S.zoom.side === "front" ? "back" : "front", z: 1 }; renderOverlay(); break;
+    case "zclose": S.zoom = null; renderOverlay(); break;
+    case "smonth": S.spendMonth = b.dataset.m; render(); break;
+    case "ask": S.confirm = { id, kind: b.dataset.kind }; render(); if (b.dataset.kind === "count") $("#count-" + id)?.focus(); break;
+    case "cancel": S.confirm = null; render(); break;
+    case "do-delete": S.confirm = null; { const n = sp(id)?.name; const refs = Object.values(sp(id)?.photos || {}).filter((r) => r && !/^data:/.test(r)); await deleteSupp(id); if (refs.length && store.kind === "db") { const as = await window.claude.use("assets"); for (const r of refs) as?.delete(r).catch(() => {}); } render(); toast(`Deleted ${n}`); } break;
+    case "do-refill": { const s = { ...sp(id) }; const price = num($("#price-" + id)?.value); s.remaining = num(s.remaining) + num(s.containerAmount); if (price > 0) s.purchases = [...(s.purchases || []), { id: uid(), date: today(), price, amount: num(s.containerAmount) }]; S.confirm = null; render(); toast(`Restocked ${s.name}`); await saveSupp(s); render(); } break;
+    case "do-count": { const s = { ...sp(id) }; s.remaining = Math.max(0, num($("#count-" + id)?.value)); S.confirm = null; await saveSupp(s); render(); toast("Count updated"); } break;
+    case "shelve": { const s = { ...sp(id), status: "cupboard" }; await saveSupp(s); render(); toast(`${s.name} moved to the cupboard`); } break;
+    case "activate": { const s = sp(id); if (!s.schedule?.length) { openEdit(id); S.form.status = "active"; S.form.schedule = [{ time: "08:00", servings: 1, note: "" }]; render(); toast("Pick a time, then save"); } else { await saveSupp({ ...s, status: "active" }); render(); toast(`${s.name} is back in your stack`); } } break;
+    case "autofill": runAutofill(); break;
+    case "discard": S.form = blankForm(); S.photos = { front: null, back: null }; S.ai = { busy: false, msg: "", kind: "" }; render(); break;
+    case "add-ing": S.form.ingredients.push({ name: "", amount: "", unit: "mg" }); render(); $(`#g-n-${S.form.ingredients.length - 1}`)?.focus(); break;
+    case "rm-ing": S.form.ingredients.splice(Number(b.dataset.i), 1); render(); break;
+    case "add-time": S.form.schedule.push({ time: "20:00", servings: 1, note: "" }); render(); break;
+    case "rm-time": S.form.schedule.splice(Number(b.dataset.i), 1); render(); break;
+    case "dow": { const d = Number(b.dataset.d), set = new Set(S.form.days || ALL_DAYS); set.has(d) ? set.delete(d) : set.add(d); S.form.days = [...set]; b.setAttribute("aria-pressed", set.has(d)); } break;
+  }
+});
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (!S.form) return;
+  if (t.dataset.f) S.form[t.dataset.f] = t.value;
+  else if (t.dataset.g) S.form.ingredients[Number(t.dataset.g)][t.dataset.k] = t.value;
+  else if (t.dataset.s) S.form.schedule[Number(t.dataset.s)][t.dataset.k] = t.value;
+});
+document.addEventListener("change", async (e) => {
+  const t = e.target;
+  if (t.dataset.setting) { S.settings[t.dataset.setting] = t.value; render(); saveSettings(); return; }
+  if (!S.form) return;
+  if (t.dataset.f === "status") { S.form.status = t.value; if (t.value === "active" && !S.form.schedule.length) S.form.schedule = [{ time: "08:00", servings: 1, note: "" }]; render(); return; }
+  if (t.dataset.f === "form") { const m = { powder: "g", liquid: "ml", capsule: "capsule", tablet: "tablet", softgel: "softgel", gummy: "gummy" }; if (m[t.value]) { S.form.unit = m[t.value]; render(); } return; }
+  if (t.dataset.photo) {
+    const file = t.files && t.files[0];
+    if (!file) return;
+    const blob = await shrink(file);
+    const old = S.photos[t.dataset.photo];
+    if (old) URL.revokeObjectURL(old.url);
+    S.photos[t.dataset.photo] = { blob, url: URL.createObjectURL(blob) };
+    render();
+  }
+});
+document.addEventListener("submit", (e) => { e.preventDefault(); submitForm(); });
+
+/* Keep the now-line moving and the day rolling over */
+setInterval(() => { if (S.module === "supplements" && S.tab === "today" && !S.confirm && !S.detail && !S.reminders) { const t = today(); if (S.date !== t && S.dateWasToday) S.date = t; render(); } S.dateWasToday = S.date === today(); }, 60000);
+S.dateWasToday = true;
+
+renderChrome();
+initStore().then(() => { if (S.tab === "today") scrollToNow(); });
+initSample();
+})();
