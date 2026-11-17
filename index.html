@@ -74,7 +74,8 @@ button { cursor: pointer; }
 h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
 /* Headings in Instrument Serif: light and elegant. Sized up so they match the body text visually. */
 :root { --font-head: "Instrument Serif", Georgia, "Times New Roman", serif; }
-h1, h2, h3, .brand { font-family: var(--font-head) !important; font-weight: 400 !important; letter-spacing: 0; font-size-adjust: 0.5; }
+h1, h2, h3, .brand { font-family: var(--font-head) !important; font-weight: 400 !important; letter-spacing: 0.012em; font-size-adjust: 0.5; -webkit-text-stroke: 0.018em currentColor; }
+/* Instrument Serif only comes in one weight, so a hairline outline in the text colour makes it a touch thicker. */
 
 .wrap { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 72%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-bottom: 1px solid var(--line); }
