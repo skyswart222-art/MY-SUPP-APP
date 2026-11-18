@@ -125,6 +125,9 @@ function renderSettings() {
     <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Colour</span>
       <div class="setgrid">${ACCENTS.map((x) => `<button type="button" class="swatch" data-act="setaccent" data-v="${x.id}" aria-pressed="${S.accent === x.id}"><i style="background:${S.theme === "dark" ? x.d : x.l};color:${S.theme === "dark" ? x.d : x.l}"></i>${x.name}</button>`).join("")}</div>
       <p class="small muted" style="margin:0">Used for buttons, progress rings and the selected tab.</p></div>
+    <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Notifications</span>
+      <div class="ntog">${modOrdered().filter((m) => NMODS.includes(m.id)).map((m) => { const on = nModOn(m.id); return `<button type="button" data-act="nmodtog" data-mod="${m.id}" aria-pressed="${on}"><span class="tk">${on ? I.check : ""}</span>${MODICON[m.id] || ""}<span class="grow">${esc(m.name)}</span></button>`; }).join("")}</div>
+      <p class="small muted" style="margin:0">Pick which tabs can add notifications to the bell at the top.</p></div>
     <div class="col setbtns"><span class="eyebrow">Tabs and account</span>
       <button type="button" class="btn" data-act="modorder"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg><span class="grow">Arrange tabs</span>${I.right}</button>
       ${acct ? `<button type="button" class="btn" data-act="set-profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span class="grow">Your profile and log out</span>${I.right}</button>` : ""}
@@ -664,7 +667,9 @@ function paintHdrTog() {
   const m = MODULES.find((x) => x.id === S.module);
   t.setAttribute("aria-expanded", String(!S.hdrMin));
   t.setAttribute("aria-label", S.hdrMin ? `Show sections (now in ${m?.name || ""})` : "Hide sections");
-  t.innerHTML = S.hdrMin ? `<span class="ic">${MODICON[S.module] || ""}</span><span>${esc(m?.name || "")}</span>${CHDN}` : CHUP;
+  const nu = S.hdrMin && S.mode !== "loading" ? nUnread().length : 0;
+  t.innerHTML = S.hdrMin ? `<span class="ic">${MODICON[S.module] || ""}</span><span>${esc(m?.name || "")}</span>${nu ? `<i class="nbdot"></i>` : ""}${CHDN}` : CHUP;
+  if (nu) t.setAttribute("aria-label", `Show sections (now in ${m?.name || ""}). ${plural(nu, "new notification")}`);
 }
 const MODICON = { supplements: I.stock, workouts: I.dumbbell, meals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 7v3H17"/></svg>', progress: I.scale, skincare: I.drop, cycle: I.vial, budget: I.wallet, todo: I.list };
 function renderChrome() {
@@ -675,11 +680,11 @@ function renderChrome() {
   const mods = modOrdered(), cols = Math.max(4, Math.ceil(mods.length / 2));
   const tile = (m) => `<button class="mt" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" aria-label="${esc(m.name)}">${MODICON[m.id] || I.list}<span>${esc(MODSHORT[m.id] || m.name)}</span></button>`;
   paintHdrTog();
-  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - 18px) / 4), 1fr))">${mods.map(tile).join("")}</div><button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button>`;
+  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - 18px) / 4), 1fr))">${mods.map(tile).join("")}</div><div class="mside">${nBellBtn()}<button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button></div>`;
   if (S.module === "todo") {
     const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar]];
     $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
-    $("#tabs").innerHTML = tt.map(([id, label, ic]) => `<button class="tab" data-act="ttab" data-tab="${id}" ${S.ttab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+    $("#tabs").innerHTML = tt.map(([id, label, ic]) => `<button class="tab" data-act="ttab" data-tab="${id}" ${S.ttab === id || (id === "tlist" && S.ttab === "timport") ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
     return;
   }
   if (S.module === "budget") {
@@ -726,7 +731,7 @@ function renderChrome() {
   $("#tabs").innerHTML = tabs.map(([id, label, ic]) => `<button class="tab" data-act="tab" data-tab="${id}" ${S.tab === id || (id === "add" && S.tab === "simport") ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "stock" && low ? `<span class="dot">${low}</span>` : ""}</button>`).join("");
 }
 function render() {
-  renderChrome();
+  renderChrome(); if (S.notifOpen) renderNotif();
   const v = $("#view");
   if (S.mode === "loading") return;
   if (S.mode === "error") { v.innerHTML = `<div class="card empty"><h3>Your saved data didn't load</h3><p>Reload the page to try again.</p></div>`; return; }
@@ -1242,7 +1247,7 @@ function bindPinch() {
   area.addEventListener("wheel", (e) => { if (!e.ctrlKey) return; e.preventDefault(); const r = area.getBoundingClientRect(); setZoom(S.zoom.z * (e.deltaY < 0 ? 1.1 : 0.9), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
   area.style.touchAction = "pan-x pan-y";
 }
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (S.mealAdd) { S.mealAdd = null; renderOverlay(); } else if (S.zoom) { S.zoom = null; renderOverlay(); } else if (S.detail) { S.detail = null; renderOverlay(); } } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.notifOpen) { S.notifOpen = false; renderNotif(); renderChrome(); return; } if (e.key === "Escape") { if (S.mealAdd) { S.mealAdd = null; renderOverlay(); } else if (S.zoom) { S.zoom = null; renderOverlay(); } else if (S.detail) { S.detail = null; renderOverlay(); } } });
 
 /* ====================== MEALS MODULE ====================== */
 const MDEFAULT = {
@@ -3349,7 +3354,7 @@ document.addEventListener("submit", async (e) => {
 S.btab = "btoday";
 try { const t = localStorage.getItem("planner.btab"); if (["btoday", "bplan", "blog", "bgoals", "btrends"].includes(t)) S.btab = t; } catch {}
 S.bg = { plan: { income: "", freq: "fortnightly", method: "503020" }, cats: [], tx: {}, goals: [] };
-S.bmonth = null; S.btx = null; S.bgoalForm = null; S.bconfirm = null; S.btrend = null;
+S.bexp = null; S.bedit = null; S.bmonth = null; S.btx = null; S.bgoalForm = null; S.bconfirm = null; S.btrend = null;
 const bstore = {};
 const BLS = "planner.budget.v1";
 function blsLoad() { try { const d = JSON.parse(localStorage.getItem(BLS) || "{}"); if (d.plan) S.bg.plan = { ...S.bg.plan, ...d.plan }; if (d.cats) S.bg.cats = d.cats; if (d.tx) S.bg.tx = d.tx; if (d.goals) S.bg.goals = d.goals; } catch {} }
@@ -3365,7 +3370,7 @@ function binitDb(db, id) {
   bstore.tx.onSnapshot((snap) => { const t = {}; snap.docs.forEach((d) => { t[d.id] = { ...d.data(), id: d.id }; }); S.bg.tx = t; bsoft(); }, () => {});
   bstore.goals.onSnapshot((snap) => { S.bg.goals = snap.docs.map((d) => ({ ...d.data(), id: d.id })); bsoft(); }, () => {});
 }
-function bsoft() { if (S.module !== "budget") return; const a = document.activeElement; if (S.btx?.dirty || S.bgoalForm || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+function bsoft() { if (S.module !== "budget") return; const a = document.activeElement; if (S.btx?.dirty || S.bgoalForm || S.bedit || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
 async function bsavePlan() { if (store.kind === "db" && bstore.plan) return queued("bplan", () => bstore.plan.set(cjson(S.bg.plan))); blsSave(); }
 async function bsaveCat(x) { const i = S.bg.cats.findIndex((y) => y.id === x.id); if (i >= 0) S.bg.cats[i] = x; else S.bg.cats.push(x); if (store.kind === "db" && bstore.cats) return queued("bc/" + x.id, () => bstore.cats.doc(x.id).set(cjson(x))); blsSave(); }
 async function bdelCat(id) { S.bg.cats = S.bg.cats.filter((x) => x.id !== id); if (store.kind === "db" && bstore.cats) return queued("bc/" + id, () => bstore.cats.doc(id).delete()); blsSave(); }
@@ -3386,7 +3391,7 @@ const BMETHODS = {
 };
 const BGMAP = { needs: { buckets: "daily" }, daily: { "503020": "needs", zero: "needs" }, wants: { buckets: "splurge" }, splurge: { "503020": "wants", zero: "wants" }, save: { buckets: "fire" }, fire: { "503020": "save", zero: "save" }, smile: { "503020": "save", zero: "save" } };
 const bMethod = () => BMETHODS[S.bg.plan.method] || BMETHODS["503020"];
-const bGroups = () => bMethod().groups.map(([k, name, pct, c]) => ({ k, name, pct, c }));
+const bGroups = () => bMethod().groups.map(([k, name, pct, c]) => ({ k, name: (S.bg.plan.gnames?.[k] || "").trim() || name, def: name, pct, c }));
 const bGroupOf = (cat) => { const m = S.bg.plan.method, keys = bGroups().map((g) => g.k); if (keys.includes(cat.group)) return cat.group; return BGMAP[cat.group]?.[m] || keys[0]; };
 const bIsSave = (k) => ["save", "fire", "smile"].includes(k);
 const BSTARTER = [
@@ -3466,45 +3471,73 @@ function bMonthHead(title) {
     ${cur ? "" : `<button class="btn sm" data-act="bmonth" data-n="0">This month</button>`}
     <button class="iconbtn" data-act="bmonth" data-n="1" aria-label="Next month" ${cur ? "disabled" : ""}>${I.right}</button></div>`;
 }
+/* ---------- Bills: how often each thing is paid, due dates and details ---------- */
+const BFREQ = [["weekly", "Weekly", 52 / 12], ["fortnightly", "Fortnightly", 26 / 12], ["monthly", "Monthly", 1], ["quarterly", "Quarterly", 1 / 3], ["yearly", "Yearly", 1 / 12]];
+const BFX = Object.fromEntries(BFREQ.map(([k, , f]) => [k, f])), BFN = Object.fromEntries(BFREQ.map(([k, n]) => [k, n]));
+const bBillFreq = (c) => (BFX[c.billFreq] ? c.billFreq : "monthly");
+const bBillAmt = (c) => (c.billAmt !== undefined && c.billAmt !== "" && BFX[c.billFreq] ? num(c.billAmt) : num(c.amount) / BFX[bBillFreq(c)]);
+function bStep(d, f, n) { const x = parseD(d); if (f === "weekly") x.setDate(x.getDate() + 7 * n); else if (f === "fortnightly") x.setDate(x.getDate() + 14 * n); else { const day = x.getDate(); x.setDate(1); x.setMonth(x.getMonth() + n * (f === "quarterly" ? 3 : f === "yearly" ? 12 : 1)); x.setDate(Math.min(day, new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate())); } return dstr(x); }
+function bNextDues(c, k = 3) {
+  if (!c.due) return []; const f = bBillFreq(c), t = today(); let i = 0, d = c.due;
+  while (d < t && i < 600) d = bStep(c.due, f, ++i);
+  const out = []; for (let j = 0; j < k; j++) out.push(bStep(c.due, f, i + j)); return out;
+}
+const bDueTxt = (d) => { const n = Math.round((parseD(d) - parseD(today())) / 864e5); return n === 0 ? "today" : n === 1 ? "tomorrow" : n < 7 ? `in ${n} days` : shortD(d, { weekday: "short", day: "numeric", month: "short" }); };
+function bBillRow(c) {
+  const open = S.bexp === c.id, f = bBillFreq(c), nx = bNextDues(c, 1)[0];
+  const head = `<button class="khead" data-act="bexp" data-id="${c.id}" aria-expanded="${open}"><span class="grow" style="min-width:0"><span class="kt" style="display:block">${esc(c.name)}</span><span class="small muted">${BFN[f]}${f !== "monthly" ? ` · ${money(bBillAmt(c))} each` : ""}${nx ? ` · due ${esc(bDueTxt(nx))}` : ""}</span></span>${c.link === "supps" ? '<span class="chip">Supps</span>' : ""}<span class="num">${money(num(c.amount))}</span>${CHEV}</button>`;
+  return `<li class="krow ${open ? "open" : ""}">${head}${open ? (S.bedit?.id === c.id ? bBillForm() : bBillBody(c)) : ""}</li>`;
+}
+function bBillBody(c) {
+  const f = bBillFreq(c), g = bGroups().find((x) => x.k === bGroupOf(c)), dues = bNextDues(c, 3);
+  const row = (k, v) => `<div class="bkv"><span class="muted">${k}</span><span>${v}</span></div>`;
+  return `<div class="kexp-body bbody">
+    ${row("Amount", `<b class="num">${money(bBillAmt(c), 2)}</b> ${f === "monthly" ? "a month" : BFN[f].toLowerCase()}`)}
+    ${f !== "monthly" ? row("Works out to", `<span class="num">${money(num(c.amount), 2)}</span> a month`) : ""}
+    ${S.bg.plan.freq !== "monthly" && num(S.bg.plan.income) ? row("Per pay", `<span class="num">${money(bPerPay(num(c.amount)), 2)}</span> ${PAYWORD[S.bg.plan.freq]}`) : ""}
+    ${row("Due", dues.length ? dues.map((d, i) => i ? esc(shortD(d, { day: "numeric", month: "short" })) : `<b>${esc(shortD(d, { weekday: "short", day: "numeric", month: "short" }))}</b>`).join(", ") : '<span class="muted">No date set</span>')}
+    ${c.account ? row("Paid from", esc(c.account)) : ""}
+    ${row("Group", `<span class="row" style="gap:6px;display:inline-flex"><i class="sw" style="background:${gcol(g.c)}"></i>${esc(g.name)}</span>`)}
+    ${c.link === "supps" ? '<div class="small muted">Supplement purchases from the Spend tab count here.</div>' : ""}
+    ${c.notes ? `<div class="small bnotes">${esc(c.notes)}</div>` : ""}
+    <div class="actions"><button class="btn sm" data-act="bbilledit" data-id="${c.id}">${PENCIL}Edit</button></div></div>`;
+}
+function bBillForm() {
+  const f = S.bedit;
+  return `<form class="kexp-body bbody" id="bbillform" autocomplete="off">
+    <label class="fl">Name<input class="in" data-bb="name" value="${esc(f.name)}" required></label>
+    <div class="fgrid"><label class="fl">Amount<input class="in num" type="number" inputmode="decimal" min="0" step="0.01" data-bb="billAmt" value="${esc(f.billAmt)}"></label>
+    <label class="fl">How often<select class="in" data-bb="billFreq">${BFREQ.map(([k, n]) => `<option value="${k}" ${f.billFreq === k ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    <label class="fl">Next payment<input class="in" type="date" data-bb="due" value="${esc(f.due)}"></label>
+    <label class="fl">Group<select class="in" data-bb="group">${bGroups().map((g) => `<option value="${g.k}" ${f.group === g.k ? "selected" : ""}>${esc(g.name)}</option>`).join("")}</select></label>
+    <label class="fl full">Paid from<input class="in" data-bb="account" value="${esc(f.account)}" placeholder="e.g. Bills account, credit card, direct debit"></label>
+    <label class="fl full">Notes<textarea class="in" data-bb="notes" placeholder="e.g. Lease ends June, ref number, who to call">${esc(f.notes)}</textarea></label></div>
+    <div class="row" style="gap:8px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" data-act="bbillcancel">Cancel</button><button class="btn danger" type="button" data-act="bdelcat" data-id="${f.id}" style="margin-left:auto">Delete</button></div></form>`;
+}
 function bOverview() {
-  const mo = bSelMonth(), cur = mo === bMonthNow();
-  let html = bMonthHead(cur ? "This month" : monthLabel(mo));
-  if (!S.bg.cats.length) return html + `<div class="card empty">${I.wallet.replace("<svg", '<svg width="44" height="44"')}<h3>Make your first budget</h3><p>Add your take-home pay, pick a way to split it, and Elevate fills in a starter budget you can tweak. Then log what you spend and watch it against the plan.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="btab" data-tab="bplan">Set up my budget</button><button class="btn" data-act="bgsample">Try a sample budget</button></div></div>`;
-  const groups = bGroups(), byG = bByGroup(mo), byC = bByCat(mo);
-  const spendG = groups.filter((g) => !bIsSave(g.k));
-  const plannedSpend = spendG.reduce((a, g) => a + bPlannedGroup(g.k), 0);
-  const spent = spendG.reduce((a, g) => a + byG[g.k], 0) + (byG.none || 0);
-  const savedCats = groups.filter((g) => bIsSave(g.k)).reduce((a, g) => a + byG[g.k], 0);
-  const saved = savedCats + bGoalSavedIn(mo);
-  const extra = bIncomeRows(mo).reduce((a, t) => a + num(t.amount), 0);
-  const income = bIncome() + extra;
-  const left = plannedSpend - spent, over = left < 0;
-  const [y, m] = mo.split("-").map(Number), dim = new Date(y, m, 0).getDate();
-  const daysLeft = cur ? dim - new Date().getDate() + 1 : 0;
-  html += `<div class="ov-top">${bRing(plannedSpend ? spent / plannedSpend : 0, over, `${money(spent)} spent of ${money(plannedSpend)}`, money(Math.abs(left)), over ? "over budget" : "left to spend")}
+  let html = `<div class="ov-head"><div class="grow"><div class="eyebrow">Monthly budget</div><h2 class="ov-title">Overview</h2></div>${S.bg.cats.length ? `<button class="btn sm" data-act="btab" data-tab="bplan">${PENCIL}Edit</button>` : ""}</div>`;
+  if (!S.bg.cats.length) return html + `<div class="card empty">${I.wallet.replace("<svg", '<svg width="44" height="44"')}<h3>Make your first budget</h3><p>Add your take-home pay and the things you pay for, like rent, your phone bill and your car. This page then shows what each one costs and what you have left over.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="btab" data-tab="bplan">Set up my budget</button><button class="btn" data-act="bgsample">Try a sample budget</button></div></div>`;
+  const groups = bGroups(), inc = bIncome(), total = bPlanned(), left = inc - total, freq = S.bg.plan.freq;
+  const perPay = freq !== "monthly" && num(S.bg.plan.income) > 0;
+  const gt = groups.map((g) => ({ ...g, v: bPlannedGroup(g.k) })).filter((g) => g.v > 0);
+  // Donut of the plan by group
+  const R = 64, C = 2 * Math.PI * R, gap = gt.length > 1 ? 3 : 0; let off = 0;
+  const arcs = gt.map((g) => { const len = Math.max(0, (g.v / (total || 1)) * C - gap); const el = `<circle cx="80" cy="80" r="${R}" fill="none" stroke="${gcol(g.c)}" stroke-width="16" stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 80 80)"><title>${esc(g.name)}: ${money(g.v)} (${Math.round((g.v / (total || 1)) * 100)}%)</title></circle>`; off += (g.v / (total || 1)) * C; return el; }).join("");
+  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${esc(money(total))} a month, split by group"><circle cx="80" cy="80" r="${R}" fill="none" stroke="var(--track)" stroke-width="16"/>${arcs}</svg>
+      <div class="ov-ringtxt"><span class="bbig num">${money(total)}</span><span class="small muted">a month</span></div></div>
     <div class="ov-stats">
-      <div><span class="small muted">Spent</span><b class="num">${money(spent)} <span class="muted small">of ${money(plannedSpend)}</span></b></div>
-      ${cur ? `<div><span class="small muted">Safe to spend a day</span><b class="num">${over ? "Nothing left" : money(left / Math.max(1, daysLeft))}</b></div>` : `<div><span class="small muted">Saved</span><b class="num">${money(saved)}</b></div>`}
-      ${cur ? `<div><span class="small muted">Days left</span><b class="num">${daysLeft} of ${dim}</b></div>` : `<div><span class="small muted">Income</span><b class="num">${money(income)}</b></div>`}
+      <div><span class="small muted">Take-home pay</span><b class="num">${inc ? money(inc) : "Not set"}</b></div>
+      <div><span class="small muted">Budgeted</span><b class="num">${money(total)}</b>${perPay ? `<span class="small muted num">${money(bPerPay(total))} ${PAYWORD[freq]}</span>` : ""}</div>
+      ${inc ? `<div><span class="small ${left < -0.5 ? "warntxt" : "muted"}">${left < -0.5 ? "Short by" : "Left over"}</span><b class="num">${Math.abs(left) < 0.5 ? "Nothing spare" : money(Math.abs(left))}</b>${perPay && Math.abs(left) >= 0.5 ? `<span class="small muted num">${money(bPerPay(Math.abs(left)))} ${PAYWORD[freq]}</span>` : ""}</div>` : ""}
     </div></div>`;
-  html += `<div class="statgrid"><div class="stat"><div class="v">${money(income)}</div><div class="k">income${extra ? ` (incl. ${money(extra)} extra)` : ""}</div></div>
-    <div class="stat"><div class="v">${money(saved)}</div><div class="k">saved this month</div></div>
-    <div class="stat"><div class="v">${income ? Math.round((saved / income) * 100) : 0}%</div><div class="k">savings rate</div></div></div>`;
-  // Groups: spent vs planned
-  html += `<section class="card bcard"><div class="row between"><div class="eyebrow">By ${esc(bMethod().name)} group</div><button class="linkbtn" data-act="btab" data-tab="bplan">Edit plan</button></div>
-    ${groups.map((g) => { const p = bPlannedGroup(g.k), s = byG[g.k], pct = p ? Math.min(100, (s / p) * 100) : 0, ov = p && s > p * 1.001 && !bIsSave(g.k);
-      return `<div class="bgrp"><div class="row between"><span class="row" style="gap:7px"><i class="sw" style="background:${gcol(g.c)}"></i><b>${esc(g.name)}</b></span><span class="small num"><b>${money(s)}</b><span class="muted"> / ${money(p)}</span></span></div>
-      <div class="mbar ${ov ? "over" : ""}"><i style="width:${pct}%;background:${ov ? "var(--warn)" : gcol(g.c)}"></i></div>
-      <div class="small muted">${bIsSave(g.k) ? (s >= p - 1 && p ? "Target reached" : `${money(Math.max(0, p - s))} still to put away`) : ov ? `<span class="warntxt">${money(s - p)} over</span>` : `${money(p - s)} left`}</div></div>`; }).join("")}</section>`;
-  // Categories
-  const rows = bCats().map((c) => ({ c, s: byC[c.id] || 0, p: num(c.amount) })).filter((r) => r.p || r.s);
-  html += `<section class="card bcard"><div class="eyebrow">Categories</div><div class="bcats">${rows.map(({ c, s, p }) => { const g = bGroups().find((x) => x.k === bGroupOf(c)); const ov = p ? s > p * 1.001 : s > 0; const sv = bIsSave(g.k);
-      return `<div class="bcat"><div class="row between"><span class="row" style="gap:7px;min-width:0"><i class="sw" style="background:${gcol(g.c)}"></i><span class="bname">${esc(c.name)}</span>${c.link === "supps" ? '<span class="chip">Supps</span>' : ""}</span><span class="small num">${money(s)}<span class="muted"> / ${money(p)}</span></span></div>
-      <div class="mbar thin ${ov && !sv ? "over" : ""}"><i style="width:${p ? Math.min(100, (s / p) * 100) : 100}%;background:${ov && !sv ? "var(--warn)" : gcol(g.c)}"></i></div></div>`; }).join("")}
-    ${byC.none ? `<div class="bcat"><div class="row between"><span class="bname muted">Not categorised</span><span class="small num">${money(byC.none)}</span></div></div>` : ""}</div></section>`;
-  const recent = bSpendRows(mo).slice(0, 5);
-  html += `<section class="card bcard"><div class="row between"><div class="eyebrow">Recent spending</div><button class="btn sm primary" data-act="btab" data-tab="blog">Log spending</button></div>
-    <div class="plist">${recent.length ? recent.map(bTxRow).join("") : '<div class="pi small muted">Nothing logged this month yet.</div>'}</div></section>`;
+  html += `<section class="card bcard"><div class="eyebrow">By ${esc(bMethod().name)} group</div>${bStack(gt, total, "Budget by group")}
+    <div class="bsplit">${gt.map((g) => `<div class="bsrow"><span class="row" style="gap:7px"><i class="sw" style="background:${gcol(g.c)}"></i>${esc(g.name)}</span><span class="small num"><b>${money(g.v)}</b>${inc ? ` <span class="muted">${Math.round((g.v / inc) * 100)}% of pay</span>` : ""}</span></div>`).join("")}</div></section>`;
+  for (const g of groups) {
+    const list = bCats().filter((c) => bGroupOf(c) === g.k && num(c.amount) > 0); if (!list.length) continue;
+    html += `<section class="card bcard"><div class="row between"><span class="row" style="gap:8px"><i class="sw" style="background:${gcol(g.c)}"></i><b>${esc(g.name)}</b></span><span class="small num"><b>${money(bPlannedGroup(g.k))}</b><span class="muted"> a month</span></span></div>
+      <ul class="klist">${list.sort((a, b) => num(b.amount) - num(a.amount)).map(bBillRow).join("")}</ul></section>`;
+  }
+  html += `<p class="hint" style="text-align:center">Amounts are per month. Tap anything to see its details or edit it.</p>`;
   return html;
 }
 function bTxRow(t, del) {
@@ -3523,6 +3556,7 @@ function bPlan() {
   html += `<section class="card bcard"><div class="eyebrow">How to split it</div>
     <div class="seg3">${Object.entries(BMETHODS).map(([k, x]) => `<button type="button" data-act="bmethod" data-v="${k}" aria-pressed="${p.method === k}">${x.name}</button>`).join("")}</div>
     <p class="small muted" style="margin:0">${esc(meth.blurb)}</p>
+    <p class="hint" style="margin:0">Tap a group's name below to rename it.</p>
     ${inc ? `<div class="bsplit">${groups.map((g) => { const pl = bPlannedGroup(g.k), pct = inc ? (pl / inc) * 100 : 0, tgt = g.pct, off = tgt != null && Math.abs(pct - tgt) > 3;
       return `<div class="bsrow"><span class="row" style="gap:7px"><i class="sw" style="background:${gcol(g.c)}"></i>${esc(g.name)}</span><span class="small num">${money(pl)} <span class="${off ? "warntxt" : "muted"}">${Math.round(pct)}%</span>${tgt != null ? `<span class="muted"> · aim ${tgt}% (${money((inc * tgt) / 100)})</span>` : ""}</span></div>`; }).join("")}</div>
       <div><div class="small muted" style="margin-bottom:6px">Your plan</div>${bStack(groups.map((g) => ({ ...g, v: bPlannedGroup(g.k) })), Math.max(inc, planned), "Your plan by group")}
@@ -3535,7 +3569,7 @@ function bPlan() {
   }
   for (const g of groups) {
     const list = bCats().filter((c) => bGroupOf(c) === g.k);
-    html += `<section class="card bcard"><div class="row between"><span class="row" style="gap:8px"><i class="sw" style="background:${gcol(g.c)}"></i><b>${esc(g.name)}</b></span><span class="small num muted">${money(bPlannedGroup(g.k))} a month</span></div>
+    html += `<section class="card bcard"><div class="row between" style="gap:10px"><span class="row grow" style="gap:8px;min-width:0"><i class="sw" style="background:${gcol(g.c)};flex:none"></i><input class="in bgname-in" data-bgn="${g.k}" value="${esc(g.name)}" placeholder="${esc(g.def)}" aria-label="Name for the ${esc(g.def)} group">${PENCIL}</span><span class="small num muted" style="flex:none">${money(bPlannedGroup(g.k))} a month</span></div>
       <div class="bedit">${list.map((c) => `<div class="berow"><input class="in" data-bc="${c.id}" data-k="name" value="${esc(c.name)}" aria-label="Category name"><input class="in num" type="number" inputmode="decimal" min="0" step="1" data-bc="${c.id}" data-k="amount" value="${esc(c.amount)}" aria-label="Monthly amount for ${esc(c.name)}"><button class="iconbtn sm" data-act="bdelcat" data-id="${c.id}" aria-label="Remove ${esc(c.name)}">${TRASH}</button>
         ${c.link === "supps" ? '<div class="hint full">Supplement purchases from the Spend tab count here automatically.</div>' : ""}</div>`).join("") || '<div class="small muted">No categories yet.</div>'}</div>
       <div class="row between"><button class="linkbtn" data-act="baddcat" data-g="${g.k}">+ Add category</button>${inc && num(p.income) ? `<span class="small muted num">≈ ${money(bPerPay(bPlannedGroup(g.k)))} ${PAYWORD[p.freq]}</span>` : ""}</div></section>`;
@@ -3637,6 +3671,9 @@ function bSample() {
     }
   }
   S.bg.tx = tx;
+  const nd = (n) => dstr(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + n));
+  const BILL = { "Rent or mortgage": ["fortnightly", 3, "Bills account", "Direct debit to the agent. Lease renews in June."], "Power, gas and water": ["quarterly", 24, "Credit card", ""], "Phone and internet": ["monthly", 9, "Bills account", "Phone plan and NBN"], Insurance: ["monthly", 12, "Bills account", "Health insurance, hospital and extras"], Subscriptions: ["monthly", 1, "Credit card", "Netflix, Spotify"], "Gym and sport": ["fortnightly", 6, "Everyday account", ""] };
+  for (const c of S.bg.cats) { const b = BILL[c.name]; if (!b) continue; c.billFreq = b[0]; c.billAmt = Math.round((num(c.amount) / BFX[b[0]]) * 100) / 100; c.due = nd(b[1]); c.account = b[2]; c.notes = b[3]; }
   S.bg.goals = [{ id: uid(), name: "Japan trip", target: 6000, by: dstr(new Date(new Date().getFullYear() + 1, 5, 30)), adds: [{ date: bMonthAdd(cur, -3) + "-01", amount: 1800 }, { date: cur + "-01", amount: 400 }] }, { id: uid(), name: "Emergency fund: 3 months", target: 12000, by: dstr(new Date(new Date().getFullYear() + 2, 0, 31)), adds: [{ date: bMonthAdd(cur, -5) + "-01", amount: 4200 }] }];
 }
 
@@ -3648,7 +3685,7 @@ async function budgetClick(a, b) {
     case "bmethod": { const from = S.bg.plan.method, to = b.dataset.v; if (!BMETHODS[to] || from === to) return true; S.bg.plan.method = to; const keys = BMETHODS[to].groups.map((g) => g[0]); const moved = S.bg.cats.filter((c) => !keys.includes(c.group)); for (const c of moved) c.group = bGroupOf(c); render(); await bsavePlan(); for (const c of moved) await bsaveCat(c); return true; }
     case "bstarter": { const list = bStarter(); if (!list.length) { toast("Add your take-home pay first."); return true; } for (const c of list) await bsaveCat(c); render(); toast(`Added ${list.length} categories`); return true; }
     case "baddcat": { const c = { id: uid(), name: "New category", group: b.dataset.g, amount: "", order: S.bg.cats.length }; await bsaveCat(c); render(); const el = document.querySelector(`[data-bc="${c.id}"][data-k="name"]`); if (el) { el.focus(); el.select(); } return true; }
-    case "bdelcat": { const c = S.bg.cats.find((x) => x.id === b.dataset.id); await bdelCat(b.dataset.id); render(); toast(`Removed ${c?.name || "category"}`); return true; }
+    case "bdelcat": { S.bedit = null; const c = S.bg.cats.find((x) => x.id === b.dataset.id); await bdelCat(b.dataset.id); render(); toast(`Removed ${c?.name || "category"}`); return true; }
     case "blink": { const cur = S.bg.cats.find((c) => c.link === "supps"); if (cur) { delete cur.link; await bsaveCat(cur); render(); toast("Supplement spending unlinked"); return true; } let c = S.bg.cats.find((x) => /health|supp|pharm|medic/i.test(x.name)); if (!c) c = { id: uid(), name: "Health and supplements", group: bGroups()[0].k, amount: "", order: S.bg.cats.length }; c.link = "supps"; await bsaveCat(c); render(); toast(`Supplement purchases now count in ${c.name}`); return true; }
     case "bresetask": S.bconfirm = "reset"; render(); return true;
     case "breset": S.bconfirm = null; for (const c of [...S.bg.cats]) await bdelCat(c.id); render(); toast("Categories removed"); return true;
@@ -3662,6 +3699,9 @@ async function budgetClick(a, b) {
     case "bgoalask": S.bconfirm = "add-" + b.dataset.id; render(); document.getElementById("bgadd-" + b.dataset.id)?.focus(); return true;
     case "bgoaladd": { const g = S.bg.goals.find((x) => x.id === b.dataset.id); const v = num(document.getElementById("bgadd-" + b.dataset.id)?.value); if (!g || !v) { toast("Enter an amount."); return true; } g.adds = [...(g.adds || []), { date: today(), amount: v }]; S.bconfirm = null; render(); toast(`${v > 0 ? "Added" : "Took out"} ${money(Math.abs(v), 2)}`); await bsaveGoal(g); return true; }
     case "btrend": S.btrend = b.dataset.m; render(); return true;
+    case "bexp": S.bexp = S.bexp === b.dataset.id ? null : b.dataset.id; S.bedit = null; render(); return true;
+    case "bbilledit": { const c = S.bg.cats.find((x) => x.id === b.dataset.id); if (!c) return true; S.bedit = { id: c.id, name: c.name, billAmt: Math.round(bBillAmt(c) * 100) / 100 || "", billFreq: bBillFreq(c), due: c.due || "", group: bGroupOf(c), account: c.account || "", notes: c.notes || "" }; render(); return true; }
+    case "bbillcancel": S.bedit = null; render(); return true;
     case "bgsample": bSample(); render(); if (store.kind === "db") { await bsavePlan(); for (const c of S.bg.cats) await bsaveCat(c); for (const t of Object.values(S.bg.tx)) await bsaveTx(t); for (const g of S.bg.goals) await bsaveGoal(g); } else blsSave(); toast("Sample budget loaded"); return true;
   }
   return false;
@@ -3670,14 +3710,24 @@ document.addEventListener("input", (e) => {
   const t = e.target;
   if (t.dataset.bt && S.btx) { S.btx[t.dataset.bt] = t.value; S.btx.dirty = true; }
   else if (t.dataset.bgf && S.bgoalForm) S.bgoalForm[t.dataset.bgf] = t.value;
+  else if (t.dataset.bb && S.bedit) S.bedit[t.dataset.bb] = t.value;
 });
 document.addEventListener("change", async (e) => {
   const t = e.target;
+  if (t.dataset.bgn) { const v = t.value.trim().slice(0, 40), k = t.dataset.bgn; S.bg.plan.gnames = { ...(S.bg.plan.gnames || {}) }; if (!v || v === BMETHODS[S.bg.plan.method].groups.find((g) => g[0] === k)?.[1]) delete S.bg.plan.gnames[k]; else S.bg.plan.gnames[k] = v; render(); toast(v ? `Renamed to ${v}` : "Name reset"); await bsavePlan(); return; }
   if (t.dataset.bp) { S.bg.plan[t.dataset.bp] = t.value; render(); await bsavePlan(); return; }
-  if (t.dataset.bc) { const c = S.bg.cats.find((x) => x.id === t.dataset.bc); if (!c) return; c[t.dataset.k] = t.dataset.k === "amount" ? (t.value === "" ? "" : num(t.value)) : t.value.trim() || c.name; render(); await bsaveCat(c); return; }
+  if (t.dataset.bc) { const c = S.bg.cats.find((x) => x.id === t.dataset.bc); if (!c) return; c[t.dataset.k] = t.dataset.k === "amount" ? (t.value === "" ? "" : num(t.value)) : t.value.trim() || c.name; if (t.dataset.k === "amount" && BFX[c.billFreq]) c.billAmt = Math.round((num(c.amount) / BFX[c.billFreq]) * 100) / 100; render(); await bsaveCat(c); return; }
   if (t.dataset.bt === "cat" && S.btx) S.btx.cat = t.value;
 });
 document.addEventListener("submit", async (e) => {
+  if (e.target.id === "bbillform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.bedit, c = S.bg.cats.find((x) => x.id === f?.id); if (!c) return;
+    if (!f.name.trim()) { toast("Give it a name."); return; }
+    const freq = BFX[f.billFreq] ? f.billFreq : "monthly", amt = f.billAmt === "" ? 0 : num(f.billAmt);
+    Object.assign(c, { name: f.name.trim(), billAmt: amt, billFreq: freq, amount: Math.round(amt * BFX[freq] * 100) / 100, due: f.due || "", group: f.group || c.group, account: (f.account || "").trim(), notes: f.notes || "" });
+    S.bedit = null; render(); toast(`Saved ${c.name}`); await bsaveCat(c); return;
+  }
   if (e.target.id === "btxform") {
     e.preventDefault(); e.stopImmediatePropagation();
     const f = S.btx, amt = num(f.amount); if (!(amt > 0)) { toast("Enter an amount."); return; }
@@ -3707,7 +3757,7 @@ function tinitDb(db, id) {
   tstore.items = db.collection(`data/users/${id}/todo/items`);
   tstore.items.onSnapshot((snap) => { S.td.items = snap.docs.map((d) => ({ ...d.data(), id: d.id })); tsoft(); }, () => {});
 }
-function tsoft() { if (S.module !== "todo") return; const a = document.activeElement; if (S.tedit || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+function tsoft() { if (S.module !== "todo") return; const a = document.activeElement; if (S.tedit || (S.ttab === "timport" && S.timp?.result) || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
 async function tsave(x) { const i = S.td.items.findIndex((y) => y.id === x.id); if (i >= 0) S.td.items[i] = x; else S.td.items.push(x); if (store.kind === "db" && tstore.items) return queued("td/" + x.id, () => tstore.items.doc(x.id).set(cjson(x))); tlsSave(); }
 async function tdel(id) { S.td.items = S.td.items.filter((x) => x.id !== id); if (store.kind === "db" && tstore.items) return queued("td/" + id, () => tstore.items.doc(id).delete()); tlsSave(); }
 
@@ -3732,11 +3782,11 @@ function tRow(x) {
     <div class="grow"><div class="tt">${esc(x.text)}</div><div class="tmeta"><span class="tpl">${TPRI[p]}</span>${x.due ? `<span class="${late ? "late" : ""}">${esc(tDueTxt(x))}</span>` : ""}</div></div>
     ${x.done ? `<span class="tdone">${I.check}<span>Done</span></span>` : ""}</li>`;
 }
-function todoView() { return S.ttab === "tmonth" ? tMonth() : tList(); }
+function todoView() { return S.ttab === "tmonth" ? tMonth() : S.ttab === "timport" ? tImport() : tList(); }
 
 function tList() {
   const E = S.tedit, items = E || tSorted();
-  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">To-do</h2>${S.td.items.length ? (E ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="tecancel">Cancel</button><button class="btn sm primary" data-act="tesave">Save</button></span>` : `<button class="btn sm" data-act="tedit">${PENCIL}<span>Edit</span></button>`) : ""}</div>`;
+  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">To-do</h2>${S.td.items.length ? (E ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="tecancel">Cancel</button><button class="btn sm primary" data-act="tesave">Save</button></span>` : `<span class="row" style="gap:6px"><button class="btn sm kimpbtn" data-act="ttab" data-tab="timport">${I.upload}<span>Import</span></button><button class="btn sm" data-act="tedit">${PENCIL}<span>Edit</span></button></span>`) : `<button class="btn sm kimpbtn" data-act="ttab" data-tab="timport">${I.upload}<span>Import / autofill</span></button>`}</div>`;
   if (E) {
     html += `<p class="small muted" style="margin:-6px 0 0">Use the arrows to change the order. Change the wording, importance or date, or remove items, then tap Save.</p>`;
     if (!E.length) html += `<div class="card empty"><p>Everything’s been removed. Tap Save to clear the list, or Cancel to keep it.</p></div>`;
@@ -3751,7 +3801,7 @@ function tList() {
   }
   html += `<form class="card tadd" id="taddform" autocomplete="off"><div class="row" style="gap:8px"><input class="in grow" id="tnewtext" data-tn="text" value="${esc(S.tnew.text)}" placeholder="Add a to-do" maxlength="200" aria-label="New to-do"><button class="btn primary" type="submit">Add</button></div>
     <div class="row wrapflex" style="gap:10px">${tPriPick(S.tnew.pri, "tnpri")}<label class="tdate">Due<input class="in" type="date" data-tn="due" value="${esc(S.tnew.due)}"></label>${S.tnew.due ? `<button type="button" class="linkbtn small" data-act="tnclear">No date</button>` : ""}</div></form>`;
-  if (!items.length) return html + `<div class="card empty">${I.list.replace("<svg", '<svg width="44" height="44"')}<h3>Nothing on your list yet</h3><p>Add your first to-do above. Pick how important it is and, if it needs doing by a certain day, give it a due date. Dated items show on the Month calendar.</p></div>`;
+  if (!items.length) return html + `<div class="card empty">${I.list.replace("<svg", '<svg width="44" height="44"')}<h3>Nothing on your list yet</h3><p>Add your first to-do above. Pick how important it is and, if it needs doing by a certain day, give it a due date. Dated items show on the Month calendar.</p><p class="small muted" style="margin:0">Got a list already? Snap a photo of it, even handwritten, or a screenshot, and Claude fills it in.</p><button class="btn" data-act="ttab" data-tab="timport">${I.upload}<span>Import / autofill</span></button></div>`;
   const left = items.filter((x) => !x.done), late = left.filter((x) => x.due && x.due < today()).length;
   html += `<div class="tsum"><span><b>${left.length}</b> to do</span><span><b>${items.length - left.length}</b> done</span>${late ? `<span class="late"><b>${late}</b> overdue</span>` : ""}</div>`;
   html += `<section class="card"><ul class="tlist">${items.map(tRow).join("")}</ul></section>`;
@@ -3803,9 +3853,286 @@ async function tRunOut(kind, id) {
   const p = tsave(t); render(); toast(`Added “Get more ${nm}” to your to-do list`); await p;
 }
 
+/* ====================== NOTIFICATIONS ====================== */
+/* An in-app inbox. Everything here is worked out from the person's own data each time the app draws,
+   so nothing is sent anywhere. Each notification has a key that changes when its situation changes
+   (e.g. "due soon" becomes "due today"), so a fresh state shows up as new again.
+   Read and dismissed keys are saved with the settings so they follow the person across devices. */
+const NMODS = ["todo", "supplements", "skincare", "cycle", "budget", "progress", "workouts"];
+const NSEV = [["warn", "Needs attention"], ["soon", "Coming up"], ["good", "Progress"]];
+const BELL = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>';
+S.notifOpen = false; S.notifShowDis = false;
+function nState() { const n = S.settings.notif || {}; return { read: n.read || {}, dis: n.dis || {}, off: Array.isArray(n.off) ? n.off : [] }; }
+const nModOn = (m) => !nState().off.includes(m);
+const nWhen = (d) => { const t = today(), n = dDiff(t, d); return n === 0 ? "today" : n === 1 ? "tomorrow" : n === -1 ? "yesterday" : n > 1 && n < 7 ? DOW[parseD(d).getDay()] : shortD(d, { day: "numeric", month: "short" }); };
+const nIn = (n) => (n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${plural(n, "day")}`);
+const nDisp = (x) => (x.brand && !x.name.toLowerCase().includes(String(x.brand).toLowerCase()) ? `${x.brand} ${x.name}` : x.name);
+
+function nList() {
+  if (S.mode === "loading" || S.mode === "error") return [];
+  const t = today(), out = [], add = (o) => out.push(o);
+
+  /* To-do: overdue, due today, due in the next three days, and "Running out" flags */
+  for (const x of S.td.items) {
+    if (x.done) continue;
+    if (x.due) {
+      const n = dDiff(t, x.due);
+      const go = { mod: "todo", tab: "tmonth", day: x.due };
+      if (n < 0) add({ key: `td:${x.id}:${x.due}:late`, mod: "todo", sev: "warn", title: x.text, body: `Overdue. It was due ${nWhen(x.due)}.`, sort: x.due, go });
+      else if (n === 0) add({ key: `td:${x.id}:${x.due}:today`, mod: "todo", sev: "warn", title: x.text, body: "Due today", sort: x.due, go });
+      else if (n <= 3) add({ key: `td:${x.id}:${x.due}:soon`, mod: "todo", sev: "soon", title: x.text, body: `Due ${nWhen(x.due)}`, sort: x.due, go });
+    }
+  }
+
+  /* Supplements running low or out */
+  const flagged = (kind, id) => (tRunTodo(kind, id) ? " It’s on your to-do list." : "");
+  for (const { s, i } of lowItems()) {
+    const out0 = i.rem <= 0;
+    add({ key: `sl:${s.id}:${out0 ? "out" : i.level}`, mod: "supplements", sev: "warn", title: out0 ? `${s.name} has run out` : `${s.name} is running low`,
+      body: (out0 ? "Restock it or move it to the cupboard." : `About ${plural(Math.max(0, Math.floor(i.daysLeft ?? 0)), "day")} left${i.outDate ? `, runs out ${nWhen(dstr(i.outDate))}` : ""}.`) + flagged("supp", s.id), sort: t, go: { mod: "supplements", tab: "stock" } });
+  }
+
+  /* Skincare products running low (uses left) */
+  for (const x of kActive().filter(kLow)) {
+    const l = kLeft(x), wl = kWeeksLeft(x);
+    add({ key: `kl:${x.id}:${l <= 0 ? "out" : "low"}`, mod: "skincare", sev: "warn", title: l <= 0 ? `${nDisp(x)} is finished` : `${nDisp(x)} is running low`,
+      body: (l <= 0 ? "No uses left. Tap New bottle when you open another." : `${plural(l, "use")} left${wl != null ? `, about ${wl < 2 ? plural(Math.max(1, Math.round(wl * 7)), "day") : plural(Math.round(wl), "week")}` : ""}.`) + flagged("skin", x.id), sort: t, go: { mod: "skincare", tab: "kproducts" } });
+  }
+
+  /* Running out flags that don't already show above */
+  for (const x of S.td.items) {
+    if (x.done || !x.src || x.due) continue;
+    const [kind, id] = x.src.split(":");
+    if (out.some((o) => o.key.startsWith((kind === "supp" ? "sl:" : "kl:") + id + ":"))) continue;
+    add({ key: `tr:${x.id}`, mod: "todo", sev: "soon", title: x.text, body: "You flagged this as running out. It’s waiting on your to-do list.", sort: t, go: { mod: "todo", tab: "tlist" } });
+  }
+
+  /* Cycle: doses, stock, and dates starting or ending */
+  const comps = S.cy.compounds;
+  if (comps.length) {
+    const y = addDays(t, -1);
+    const dueNow = comps.filter((c) => cDue(c, t) && !cTaken(c.id, t));
+    if (dueNow.length) add({ key: `cd:${t}`, mod: "cycle", sev: "soon", title: dueNow.length === 1 ? `${dueNow[0].name} is due today` : `${plural(dueNow.length, "dose")} due today`, body: dueNow.map((c) => `${c.name} ${fmtN(num(c.dose), 1)} ${cU(c)}${c.time ? ` at ${c.time}` : ""}`).join(", "), sort: t, go: { mod: "cycle", tab: "ctoday", date: t } });
+    const missed = comps.filter((c) => cDue(c, y) && !cTaken(c.id, y));
+    if (missed.length) add({ key: `cm:${y}`, mod: "cycle", sev: "warn", title: `${plural(missed.length, "dose")} not logged yesterday`, body: `${missed.map((c) => c.name).join(", ")}. Log ${missed.length === 1 ? "it" : "them"} if you took ${missed.length === 1 ? "it" : "them"}.`, sort: y, go: { mod: "cycle", tab: "ctoday", date: y } });
+    for (const c of comps) {
+      if (cLow(c)) { const n = cDosesLeft(c); add({ key: `cl:${c.id}:${n <= 0 ? "out" : "low"}`, mod: "cycle", sev: "warn", title: n <= 0 ? `${c.name} has run out` : `${c.name} is running low`, body: `${plural(Math.max(0, n), "dose")} left in stock.`, sort: t, go: { mod: "cycle", tab: "cstock" } }); }
+      if (c.end && !cEnded(c)) { const f = cForecast(c); if (f.short > 0) add({ key: `cs:${c.id}:${c.end}`, mod: "cycle", sev: "warn", title: `Not enough ${c.name} to finish`, body: `You’re ${plural(f.short, "dose")} short before it ends ${nWhen(c.end)}${f.outOn ? `. Runs out ${nWhen(f.outOn)}` : ""}.`, sort: f.outOn || c.end, go: { mod: "cycle", tab: "cstock" } }); }
+      if (c.start && c.start > t && dDiff(t, c.start) <= 3) add({ key: `cst:${c.id}:${c.start}`, mod: "cycle", sev: "soon", title: `${c.name} starts ${nWhen(c.start)}`, body: `${fmtN(num(c.dose), 1)} ${cU(c)} ${schedTxt(c)}.`, sort: c.start, go: { mod: "cycle", tab: "ccycle" } });
+      if (c.end && c.end >= t && dDiff(t, c.end) <= 3) add({ key: `cen:${c.id}:${c.end}`, mod: "cycle", sev: "soon", title: `${c.name} finishes ${nWhen(c.end)}`, body: dDiff(t, c.end) === 0 ? "Today is the last day on your plan." : `Last dose on your plan is ${shortD(c.end)}.`, sort: c.end, go: { mod: "cycle", tab: "ccycle" } });
+    }
+  }
+  for (const cy of S.cy.settings.cycles || []) {
+    if (cy.example) continue;
+    const nm = cy.name || cy.phase || "Your cycle";
+    if (cy.start > t && dDiff(t, cy.start) <= 7) add({ key: `cyn:${cy.id}:${cy.start}`, mod: "cycle", sev: "soon", title: `${nm} starts ${nWhen(cy.start)}`, body: `${cy.phase ? cy.phase + " · " : ""}${shortD(cy.start)}${cy.end ? ` to ${shortD(cy.end)}` : ""}.`, sort: cy.start, go: { mod: "cycle", tab: "ccycle" } });
+    if (cy.end && cy.start <= t && cy.end >= t && dDiff(t, cy.end) <= 7) add({ key: `cye:${cy.id}:${cy.end}`, mod: "cycle", sev: "soon", title: `${nm} ends ${nIn(dDiff(t, cy.end))}`, body: `Last day is ${shortD(cy.end)}.`, sort: cy.end, go: { mod: "cycle", tab: "ccycle" } });
+  }
+
+  /* Budget: bills coming due, and savings goals */
+  for (const c of S.bg.cats) {
+    const nx = bNextDues(c, 1)[0]; if (!nx) continue; const n = dDiff(t, nx);
+    if (n >= 0 && n <= 3) add({ key: `bdue:${c.id}:${nx}`, mod: "budget", sev: "soon", title: `${c.name} is due ${n === 0 ? "today" : n === 1 ? "tomorrow" : "in " + n + " days"}`, body: `${money(bBillAmt(c), 2)}${c.account ? " from " + c.account : ""} on ${shortD(nx)}.`, sort: nx, go: { mod: "budget", tab: "btoday" } });
+  }
+  for (const g of S.bg.goals) {
+    const tg = num(g.target), sv = bGoalSaved(g); if (!(tg > 0)) continue;
+    const go = { mod: "budget", tab: "bgoals" };
+    if (sv >= tg) { add({ key: `bgd:${g.id}:${tg}`, mod: "budget", sev: "good", title: `You reached your ${g.name} goal`, body: `${money(sv)} saved of ${money(tg)}. Nice work.`, sort: t, go }); continue; }
+    const pct = [75, 50, 25].find((m) => sv / tg >= m / 100);
+    if (pct) add({ key: `bgm:${g.id}:${tg}:${pct}`, mod: "budget", sev: "good", title: `${g.name} is ${pct}% saved`, body: `${money(sv)} of ${money(tg)}. ${money(tg - sv)} to go.`, sort: t, go });
+    if (g.by) { const n = dDiff(t, g.by);
+      if (n < 0) add({ key: `bgl:${g.id}:${g.by}`, mod: "budget", sev: "warn", title: `${g.name} passed its date`, body: `It was due ${shortD(g.by, { day: "numeric", month: "short", year: "numeric" })} with ${money(tg - sv)} still to save. Pick a new date or top it up.`, sort: g.by, go });
+      else if (n <= 30) add({ key: `bgs:${g.id}:${g.by}`, mod: "budget", sev: "soon", title: `${g.name} is due ${nIn(n)}`, body: `${money(tg - sv)} still to save by ${shortD(g.by, { day: "numeric", month: "short" })}.`, sort: g.by, go }); }
+  }
+
+  /* Progress: weigh-ins and goal milestones */
+  const ws = pseries("weight"), G = S.pg.settings.goals || {};
+  if (ws.length && pWeighDue(t)) add({ key: `pw:${t}`, mod: "progress", sev: "soon", title: "Weigh-in due today", body: "Log it on Progress to keep your trend line up to date.", sort: t, go: { mod: "progress", tab: "ptoday" } });
+  if (ws.length && has(G.weight)) {
+    const goal = num(G.weight), start = ws[0], cur = ws[ws.length - 1];
+    if (start.v !== goal) {
+      const frac = (start.v - cur.v) / (start.v - goal), go = { mod: "progress", tab: "ptoday" };
+      if (frac >= 1) add({ key: `pg:${goal}:100`, mod: "progress", sev: "good", title: "You reached your goal weight", body: `${fmtN(cur.v, 1)} kg against a goal of ${fmtN(goal, 1)} kg.`, sort: cur.date, go });
+      else { const m = [75, 50, 25].find((x) => frac >= x / 100); if (m) add({ key: `pg:${goal}:${m}`, mod: "progress", sev: "good", title: `${m}% of the way to your goal weight`, body: `${fmtN(cur.v, 1)} kg now, ${fmtN(Math.abs(cur.v - goal), 1)} kg to go.`, sort: cur.date, go }); }
+      if (frac < 1 && G.by && G.by >= t && dDiff(t, G.by) <= 14) add({ key: `pgd:${G.by}`, mod: "progress", sev: "soon", title: `Goal date is ${nIn(dDiff(t, G.by))}`, body: `${fmtN(Math.abs(cur.v - goal), 1)} kg to go to reach ${fmtN(goal, 1)} kg by ${shortD(G.by, { day: "numeric", month: "short" })}.`, sort: G.by, go });
+    }
+  }
+
+  /* Workouts: today's planned session, if it hasn't started */
+  const wp = wplansFor(t), wst = wstats(t);
+  if (wp.length && wst.planned && !wst.done) add({ key: `wt:${t}`, mod: "workouts", sev: "soon", title: `Today: ${wp.map((p) => p.name).join(", ")}`, body: `${plural(wst.planned, "set")} planned. Nothing logged yet.`, sort: t, go: { mod: "workouts", tab: "wtoday", date: t } });
+
+  const off = nState().off;
+  return out.filter((o) => !off.includes(o.mod));
+}
+function nVisible() { const st = nState(); return nList().filter((o) => !st.dis[o.key]); }
+function nUnread() { const st = nState(); return nVisible().filter((o) => !st.read[o.key]); }
+function nBellBtn() {
+  const n = S.mode === "loading" ? 0 : nUnread().length;
+  return `<button class="mgear mbell ${n ? "has-new" : ""}" data-act="nopen" aria-haspopup="dialog" aria-expanded="${!!S.notifOpen}" aria-label="Notifications${n ? `, ${n} new` : ""}" title="Notifications">${BELL}${n ? `<span class="nbadge">${n > 99 ? "99+" : n}</span>` : ""}</button>`;
+}
+/* Save read / dismissed keys. Entries older than 60 days are dropped so the settings stay small. */
+async function nSave(mut) {
+  const st = nState(), cut = addDays(today(), -60);
+  mut(st);
+  for (const k of ["read", "dis"]) for (const key of Object.keys(st[k])) if (!(st[k][key] >= cut)) delete st[k][key];
+  S.settings = { ...S.settings, notif: { read: st.read, dis: st.dis, off: st.off } };
+  renderChrome(); renderNotif();
+  try { await saveSettings(); } catch {}
+}
+const MODNAME = (id) => MODULES.find((m) => m.id === id)?.name || "";
+function nItem(o, st, dis) {
+  const unread = !st.read[o.key] && !dis;
+  return `<li class="nitem sev-${o.sev} ${unread ? "unread" : ""} ${dis ? "is-dis" : ""}">
+    <button class="nmain" data-act="ngo" data-k="${esc(o.key)}"><span class="nic">${MODICON[o.mod] || BELL}</span>
+      <span class="ntxt"><span class="nmod">${esc(MODNAME(o.mod))}</span><b>${esc(o.title)}</b><span class="small muted">${esc(o.body)}</span></span></button>
+    <span class="nside">${dis ? `<button class="btn sm" data-act="nrestore" data-k="${esc(o.key)}">Restore</button>` : `<button class="iconbtn" data-act="ndis" data-k="${esc(o.key)}" aria-label="Dismiss: ${esc(o.title)}" title="Dismiss">${I.x}</button>
+      <button class="nread" data-act="nread" data-k="${esc(o.key)}" aria-pressed="${!unread}" aria-label="${unread ? "Mark as read" : "Mark as unread"}: ${esc(o.title)}" title="${unread ? "Mark as read" : "Mark as unread"}"><i></i></button>`}</span></li>`;
+}
+function renderNotif() {
+  const el = $("#notesheet"); if (!el) return;
+  if (!S.notifOpen) { el.innerHTML = ""; if (!S.settingsOpen && !$("#overlay")?.innerHTML) document.body.style.overflow = ""; return; }
+  const st = nState(), all = nList(), vis = all.filter((o) => !st.dis[o.key]), dis = all.filter((o) => st.dis[o.key]);
+  const unread = vis.filter((o) => !st.read[o.key]).length;
+  const order = (a, b) => (!!st.read[a.key] - !!st.read[b.key]) || String(a.sort || "").localeCompare(String(b.sort || "")) || a.title.localeCompare(b.title);
+  let body = "";
+  if (!vis.length) body = `<div class="nempty">${BELL}<h3>You’re all caught up</h3><p class="small muted">Things that need your attention show up here: to-dos coming due, products running low, cycle doses, bills coming due and savings goal milestones.</p></div>`;
+  else body = NSEV.map(([sev, name]) => { const xs = vis.filter((o) => o.sev === sev).sort(order); return xs.length ? `<section class="ngroup"><span class="eyebrow">${name} · ${xs.length}</span><ul class="nlist">${xs.map((o) => nItem(o, st, false)).join("")}</ul></section>` : ""; }).join("");
+  if (S.notifShowDis && dis.length) body += `<section class="ngroup"><span class="eyebrow">Dismissed · ${dis.length}</span><ul class="nlist">${dis.map((o) => nItem(o, st, true)).join("")}</ul></section>`;
+  const foot = [dis.length ? `<button class="linkbtn" data-act="nshowdis">${S.notifShowDis ? "Hide dismissed" : `Show dismissed (${dis.length})`}</button>` : "", vis.length ? `<button class="linkbtn" data-act="ndisall">Dismiss all</button>` : "", `<button class="linkbtn" data-act="nsettings">Choose tabs</button>`].filter(Boolean).join("");
+  el.innerHTML = `<div class="sheet-bg" data-act="nclose"><div class="sheet nsheet" role="dialog" aria-modal="true" aria-label="Notifications" data-stop>
+    <div class="grab"></div>
+    <div class="nhead"><h2>Notifications</h2>${unread ? `<button class="btn sm" data-act="nreadall">Mark all read</button>` : ""}<button class="btn sm" data-act="nclose">Done</button></div>
+    ${vis.length ? `<p class="small muted nsum">${unread ? `${plural(unread, "new notification")}. ` : "Nothing new. "}Tap one to go straight to it.</p>` : ""}
+    ${body}
+    <div class="nfoot small">${foot}</div></div></div>`;
+  document.body.style.overflow = "hidden";
+}
+function nGo(o) {
+  const g = o.go || { mod: o.mod };
+  S.module = g.mod; S.detail = null; S.mealAdd = null; S.kview = null; S.wexpage = null; S.bopen = null;
+  try { localStorage.setItem("planner.module", g.mod); } catch {}
+  const TABVAR = { supplements: ["tab", "planner.tab"], workouts: ["wtab", "planner.wtab"], cycle: ["ctab", "planner.ctab"], progress: ["ptab", "planner.ptab"], skincare: ["ktab", "planner.ktab"], budget: ["btab", "planner.btab"], todo: ["ttab", "planner.ttab"] };
+  const tv = TABVAR[g.mod];
+  if (tv && g.tab) { S[tv[0]] = g.tab; try { localStorage.setItem(tv[1], g.tab); } catch {} }
+  if (g.mod === "todo" && g.day) { S.tmo = g.day.slice(0, 7); S.tday = g.day; }
+  if (g.date) S.date = g.date;
+  if (g.month) S.bmonth = g.month;
+  S.notifOpen = false; renderNotif(); render(); window.scrollTo(0, 0);
+}
+async function notifClick(a, b) {
+  const k = b.dataset.k, find = () => nList().find((o) => o.key === k);
+  switch (a) {
+    case "nopen": S.notifOpen = true; S.settingsOpen = false; renderSettings(); renderNotif(); renderChrome(); return true;
+    case "nclose": S.notifOpen = false; renderNotif(); renderChrome(); return true;
+    case "ngo": { const o = find(); if (!o) return true; const st = nState(); if (!st.read[k]) nSave((s) => { s.read[k] = today(); }); nGo(o); return true; }
+    case "nread": { const on = nState().read[k]; await nSave((s) => { if (on) delete s.read[k]; else s.read[k] = today(); }); return true; }
+    case "nreadall": { const keys = nVisible().map((o) => o.key); await nSave((s) => { for (const x of keys) s.read[x] = today(); }); return true; }
+    case "ndis": await nSave((s) => { s.dis[k] = today(); s.read[k] = today(); }); toast("Dismissed. It comes back if anything changes."); return true;
+    case "ndisall": { const keys = nVisible().map((o) => o.key); await nSave((s) => { for (const x of keys) { s.dis[x] = today(); s.read[x] = today(); } }); return true; }
+    case "nrestore": await nSave((s) => { delete s.dis[k]; }); return true;
+    case "nshowdis": S.notifShowDis = !S.notifShowDis; renderNotif(); return true;
+    case "nsettings": S.notifOpen = false; renderNotif(); S.settingsOpen = true; renderSettings(); return true;
+    case "nmodtog": { const m = b.dataset.mod; await nSave((s) => { s.off = s.off.includes(m) ? s.off.filter((x) => x !== m) : [...s.off, m]; }); renderSettings(); return true; }
+  }
+  return false;
+}
+
+/* ---------- Import / autofill a list from a photo, screenshot, file or pasted text ---------- */
+const tImpBlank = () => ({ busy: false, msg: "", kind: "", text: "", files: [], result: null });
+S.timp = tImpBlank();
+const TIPROMPT = () => `You are reading someone's to-do list: a photo of a handwritten list, a screenshot from another app, notes or pasted text. Today is ${today()} (${DOW[new Date().getDay()]}). Turn every task into structured data. Answer with ONLY a JSON object:
+{"items": [{"text": the task in a short, clear line, keeping their wording (fix obvious spelling only),
+ "priority": "high" if it is marked urgent or important (a star, !, underlined, circled, "ASAP", "urgent", in red, or in a high-priority group), "low" if marked low, optional or "someday", otherwise "medium",
+ "due": the date it is due as "YYYY-MM-DD" if the list gives one (turn "Friday", "tomorrow", "by the 21st", "end of month" into the next matching date from today), otherwise null,
+ "done": true if it is ticked, checked or crossed out, otherwise false}]}
+Rules: one entry per task, in the order they appear. Skip headings, dates on their own and doodles. Split a line that holds two clearly separate tasks. Don't invent tasks.`;
+function tImport() {
+  const K = S.timp, R = K.result, canAI = !(S.canPhoto === false || !S.sample);
+  let html = `<div class="row between"><button class="btn sm ghost" data-act="ttab" data-tab="tlist">${I.left}<span>To-do</span></button>${R ? `<button class="btn sm ghost" data-act="ticlear">Start over</button>` : ""}</div>
+    <h2 style="font-size:22px">Import / autofill</h2>`;
+  if (!R) {
+    html += `<div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="small muted" style="margin:0">Take a photo of a list you’ve written by hand, add a screenshot from another app, or paste the text. Claude picks out each task with its importance and any due date, and you can change each one before it’s added.</p>
+      <div class="row wrapflex" style="gap:8px"><label class="btn primary kimpbtn">${I.cam}<span>${K.files.length ? "Add another photo" : "Take or choose a photo"}</span><input type="file" hidden accept="image/*" multiple data-timpfile="1"></label><label class="btn sm kimpbtn">${I.upload}<span>Attach a file</span><input type="file" hidden accept=".txt,.md,.rtf,.csv,text/*,application/pdf,image/*" multiple data-timpfile="1"></label></div>
+      ${K.files.length ? `<div class="kfiles">${K.files.map((f, i) => `<span class="chip">${esc(f.name)}<button type="button" class="kfx" data-act="tirmfile" data-i="${i}" aria-label="Remove ${esc(f.name)}">${I.x}</button></span>`).join("")}</div>` : ""}
+      <label class="fl">Or paste your list<textarea class="in kimptext" data-timp="text" placeholder="e.g.&#10;- Book dentist (urgent!)&#10;- Pay rego by Friday&#10;- Call Mum&#10;- Clean out the garage, someday">${esc(K.text)}</textarea></label>
+      ${canAI ? `<button class="btn primary" data-act="tirun" ${K.busy || !(K.text.trim() || K.files.length) ? "disabled" : ""}>${K.busy ? `<span class="spin"></span> ${esc(K.msg || "Reading your list…")}` : "Autofill my to-do list"}</button>` : `<div class="status">Autofill needs you to be signed in. You can still add to-dos by hand on the List.</div>`}
+      ${!K.busy && K.msg ? `<div class="status ${K.kind}">${esc(K.msg)}</div>` : ""}</div>`;
+    return html;
+  }
+  const L = R.list;
+  html += `<div class="status ok">Found ${plural(L.length, "to-do")}. Change anything you like, then add them to your list.</div>`;
+  html += `<section class="card"><ol class="tlist">${L.map((x, i) => `<li class="trow edit p-${x.pri}"><span class="kn num">${i + 1}</span>
+    <div class="grow tedit"><input class="in" data-tif="${i}" data-k="text" value="${esc(x.text)}" maxlength="200" aria-label="To-do ${i + 1}">
+      <div class="row wrapflex" style="gap:8px">${tPriPick(x.pri, "tipri", String(i))}<input class="in tdin" type="date" data-tif="${i}" data-k="due" value="${esc(x.due)}" aria-label="Due date">
+      <button type="button" class="tdtog" data-act="tidone" data-i="${i}" aria-pressed="${!!x.done}">${x.done ? I.check + "<span>Done</span>" : "<span>Not done</span>"}</button></div></div>
+    <div class="tmv"><button class="iconbtn sm danger" data-act="tirm" data-i="${i}" aria-label="Remove ${esc(x.text)}">${I.x}</button></div></li>`).join("")}</ol></section>`;
+  html += `<div class="sticky-save"><button class="btn" data-act="ticlear">Discard</button><button class="btn primary" data-act="tisave" ${L.length ? "" : "disabled"}>Add ${plural(L.length, "to-do")}</button></div>`;
+  return html;
+}
+async function trunImport() {
+  const K = S.timp; if (!S.sample || K.busy) return;
+  K.busy = true; K.msg = K.files.length ? "Reading your photo…" : "Reading your list…"; K.kind = ""; render();
+  try {
+    const maxImg = S.imgLimits?.maxCount || 5;
+    let text = K.text.trim(), images = [];
+    for (const f of K.files) { const r = await kreadFile(f, maxImg - images.length); text += r.text; images.push(...r.images); }
+    if (!text.trim() && !images.length) throw new Error("empty");
+    K.msg = "Claude is writing out your list…"; render();
+    const opts = { modelTier: "default" }; if (images.length) opts.images = images.slice(0, maxImg);
+    const out = await S.sample.json(TIPROMPT() + (text.trim() ? `\n\nThe to-do list:\n${text.slice(0, 50000)}` : "\n\nThe to-do list is in the images."), opts);
+    const list = (out?.items || []).filter((x) => x && String(x.text || "").trim()).map((x) => ({
+      text: String(x.text).trim().slice(0, 200),
+      pri: x.priority === "high" ? "high" : x.priority === "low" ? "low" : "med",
+      due: /^\d{4}-\d{2}-\d{2}$/.test(String(x.due || "")) ? String(x.due) : "",
+      done: x.done === true }));
+    if (!list.length) throw new Error("none");
+    K.result = { list }; K.msg = ""; K.kind = "ok";
+  } catch (e) {
+    K.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : e?.code === "not_granted" ? "Reading is turned off for this page." : e?.code === "cancelled" ? "" : e?.message === "none" ? "Couldn't find any tasks in that. Try a clearer photo, or paste the text." : "Couldn't read that. Try a clearer photo, or paste the text instead.";
+    K.kind = "err";
+  }
+  K.busy = false; render(); window.scrollTo(0, 0);
+}
+async function tsaveImport() {
+  const K = S.timp, L = K.result?.list; if (!L) return;
+  const items = L.filter((x) => x.text.trim());
+  if (!items.length) { toast("Each to-do needs some words."); return; }
+  let order = S.td.items.reduce((m, y) => Math.max(m, num(y.order) + 1), 0);
+  const now = new Date().toISOString();
+  const add = items.map((x) => ({ id: uid(), text: x.text.trim(), pri: TPRI[x.pri] ? x.pri : "med", due: x.due || "", done: !!x.done, doneAt: x.done ? today() : "", order: order++, created: now }));
+  S.timp = tImpBlank(); S.ttab = "tlist"; try { localStorage.setItem("planner.ttab", "tlist"); } catch {}
+  for (const x of add) { const i = S.td.items.findIndex((y) => y.id === x.id); if (i < 0) S.td.items.push(x); }
+  render(); window.scrollTo(0, 0); toast(`Added ${plural(add.length, "to-do")}`);
+  for (const x of add) await tsave(x);
+}
+function tImpClick(a, b) {
+  const K = S.timp, L = K.result?.list, i = Number(b.dataset.i);
+  switch (a) {
+    case "tirun": trunImport(); return true;
+    case "ticlear": S.timp = { ...tImpBlank(), text: K.text, files: K.files }; render(); window.scrollTo(0, 0); return true;
+    case "tirmfile": K.files.splice(i, 1); render(); return true;
+    case "tirm": if (L) { L.splice(i, 1); render(); } return true;
+    case "tipri": { const x = L?.[Number(b.dataset.id)]; if (x) { x.pri = b.dataset.v; render(); } return true; }
+    case "tidone": if (L?.[i]) { L[i].done = !L[i].done; render(); } return true;
+    case "tisave": tsaveImport(); return true;
+  }
+  return false;
+}
+document.addEventListener("input", (e) => {
+  const t = e.target, K = S.timp;
+  if (t.dataset.timp === "text") { K.text = t.value; const btn = document.querySelector('[data-act="tirun"]'); if (btn && !K.busy) btn.disabled = !(t.value.trim() || K.files.length); }
+  else if (t.dataset.tif != null && K.result) { const x = K.result.list[Number(t.dataset.tif)]; if (x) x[t.dataset.k] = t.value; }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target, K = S.timp;
+  if (t.dataset.timpfile && t.files?.length) { K.files.push(...t.files); K.msg = ""; t.value = ""; render(); }
+});
+
 /* ---------- Events ---------- */
 function tSetPressed(b) { b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
 async function todoClick(a, b) {
+  if (tImpClick(a, b)) return true;
   switch (a) {
     case "runout": await tRunOut(b.dataset.kind, b.dataset.id); return true;
     case "ttab": S.ttab = b.dataset.tab; S.tedit = null; try { localStorage.setItem("planner.ttab", S.ttab); } catch {} render(); window.scrollTo(0, 0); return true;
@@ -3986,6 +4313,7 @@ document.addEventListener("click", async (e) => {
   if (await skinClick(a, b)) return;
   if (await budgetClick(a, b)) return;
   if (await todoClick(a, b)) return;
+  if (await notifClick(a, b)) return;
   if (S.module === "supplements" && suppImpClick(a, b)) return;
   const sp = (x) => S.supps.find((s) => s.id === x);
   switch (a) {
