@@ -2841,22 +2841,20 @@ function kRow(x, key, n) {
   const open = S.kexp === key;
   return `<li class="krow ${open ? "open" : ""}"><button class="khead" data-act="kexp" data-k="${esc(key)}" aria-expanded="${open}">${n != null ? `<span class="kn num">${n}</span>` : ""}<span class="grow kt">${esc(x.name)}</span>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}${CHEV}</button>${open ? kExpBody(x) : ""}</li>`;
 }
-function kSlotCard(wd, slot) {
-  const list = kSorted(S.sk.products.filter((x) => kOn(x, wd, slot)));
+function kSlotCard(slot) {
+  const list = kSorted(kActive().filter((x) => kSlots(x).includes(slot)));
   return `<section class="card kslot"><div class="row" style="gap:8px">${slot === "am" ? SUN : MOON}<h3 class="ov-tlabel">${slot === "am" ? "Morning" : "Night"}</h3><span class="small muted" style="margin-left:auto">${plural(list.length, "step")}</span></div>
-    ${list.length ? `<ol class="klist">${list.map((x, i) => kRow(x, `${slot}|${x.id}`, i + 1)).join("")}</ol>` : `<p class="small muted" style="margin:6px 0 0">Nothing on this ${slot === "am" ? "morning" : "night"}.</p>`}</section>`;
+    ${list.length ? `<ol class="klist">${list.map((x, i) => kRow(x, `${slot}|${x.id}`, i + 1)).join("")}</ol>` : `<p class="small muted" style="margin:6px 0 0">No ${slot === "am" ? "morning" : "night"} products yet.</p>`}</section>`;
 }
 function kToday() {
-  const tw = new Date().getDay(), wd = S.kwd ?? tw;
-  let html = `<div class="row between" style="align-items:flex-end"><div><div class="eyebrow">${wd === tw ? "Today" : "Routine for"}</div><h2 class="ov-title">${esc(new Date(2024, 0, 7 + wd).toLocaleDateString(undefined, { weekday: "long" }))}</h2></div></div>`;
+  let html = `<h2 class="ov-title">Routine</h2>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><h3>Build your routine</h3><p>Snap a photo of each product. Claude reads it, suggests morning or night and how often, and slots it into your routine in the right order.</p><p class="small muted" style="margin:0">Already researched a routine? Paste it in or attach the file and Claude sets it all up.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="ktab" data-tab="kimport">Import / autofill</button><button class="btn" data-act="ktab" data-tab="kadd">Add a product</button><button class="btn" data-act="kexample">Try a sample routine</button></div></div>`;
-  html += `<div class="daypick kwdpick" role="group" aria-label="Day">${KWEEK.map((d) => `<button type="button" data-act="kwd" data-d="${d}" aria-pressed="${d === wd}">${DOW[d].slice(0, 2)}</button>`).join("")}</div>`;
-  html += kSlotCard(wd, "am") + kSlotCard(wd, "pm");
+  html += kSlotCard("am") + kSlotCard("pm");
   html += `<div><button class="btn sm kimpbtn" data-act="ktab" data-tab="kimport">${I.upload}<span>Import / autofill routine</span></button></div>`;
   return html;
 }
 function kWeek() {
-  let html = `<div><h2 class="ov-title" style="font-size:22px">Weekly plan</h2><p class="small muted" style="margin:2px 0 0">Ticks show the days you use each product. Tap a square to change it.</p></div>`;
+  let html = `<div><h2 class="ov-title">Week overview</h2><p class="small muted" style="margin:2px 0 0">Ticks show the days you use each product. Tap a square to change it.</p></div>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><p>Add products to see your week.</p></div>`;
   for (const slot of ["am", "pm"]) {
     const prods = kSorted(kActive().filter((x) => kSlots(x).includes(slot)));
@@ -3040,7 +3038,6 @@ async function skinClick(a, b) {
     case "kdelete": { const f = S.kform; S.kform = kBlank(); S.ktab = "kproducts"; await kdelProd(f.id); render(); toast(`Deleted ${f.name || "product"}`); return true; }
     case "krestock": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; x.usesLeft = num(x.uses) || kLeft(x) || 0; render(); toast(`New bottle of ${x.name}: ${plural(x.usesLeft, "use")}`); await ksaveProd(x); return true; }
     case "kexp": S.kexp = S.kexp === b.dataset.k ? null : b.dataset.k; render(); return true;
-    case "kwd": S.kwd = Number(b.dataset.d); S.kexp = null; render(); return true;
     case "kweekopen": S.kexp = "p|" + b.dataset.id; S.ktab = "kproducts"; render(); requestAnimationFrame(() => document.querySelector(".krow.open")?.scrollIntoView({ block: "center" })); return true;
     case "kwdow": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; const d = Number(b.dataset.d), cur = x.days?.length ? x.days : [...ALLD]; const nd = cur.includes(d) ? cur.filter((v) => v !== d) : [...cur, d]; if (!nd.length) { toast("Keep at least one day. To stop using it, move it to the shelf in Edit."); return true; } x.days = nd.sort(); render(); await ksaveProd(x); return true; }
     case "kirun": krunImport(); return true;
