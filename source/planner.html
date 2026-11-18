@@ -761,6 +761,32 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 .tmk i { width: 7px; height: 7px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 6px var(--pc); }
 .tmk i.done { background: none; box-shadow: none; border: 1.5px solid var(--pc); opacity: .75; }
 .tmk b { font-size: 9.5px; line-height: 7px; color: var(--muted); font-weight: 600; }
+.vrec { display: flex; align-items: center; gap: 18px; padding: 18px; }
+.vrecbtn { flex: none; position: relative; width: 76px; height: 76px; border-radius: 50%; border: 0; background: var(--crit); color: #fff; display: grid; place-items: center; box-shadow: 0 0 0 6px color-mix(in srgb, var(--crit) 18%, transparent), 0 8px 22px color-mix(in srgb, var(--crit) 35%, transparent); transition: transform .15s ease, border-radius .2s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.vrecbtn svg { width: 32px; height: 32px; transition: opacity .15s; }
+.vrecbtn:active { transform: scale(.94); }
+.vrecbtn .vdot { position: absolute; width: 26px; height: 26px; border-radius: 6px; background: #fff; opacity: 0; transform: scale(.4); transition: opacity .15s, transform .2s ease; }
+.vrecbtn.on svg { opacity: 0; }
+.vrecbtn.on .vdot { opacity: 1; transform: scale(1); }
+.vrecbtn.on { animation: vpulse 1.4s ease-in-out infinite; }
+@keyframes vpulse { 0%, 100% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--crit) 22%, transparent), 0 8px 22px color-mix(in srgb, var(--crit) 35%, transparent); } 50% { box-shadow: 0 0 0 16px color-mix(in srgb, var(--crit) 6%, transparent), 0 8px 22px color-mix(in srgb, var(--crit) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .vrecbtn.on { animation: none; } }
+.vrecinfo { display: flex; flex-direction: column; gap: 2px; }
+.vrecinfo b { font-size: 30px; font-weight: 500; line-height: 1.1; }
+.vrow { align-items: flex-start; }
+.vplay { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; padding: 0; }
+.vplay svg { width: 18px; height: 18px; }
+.vplay.on { background: var(--accent); color: var(--accent-ink); }
+.vbar { height: 4px; border-radius: 2px; background: var(--track); margin-top: 6px; overflow: hidden; }
+.vbar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 2px; }
+.vrow .tmv { flex-direction: row; }
+.tfilt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--sunk); border-radius: 12px; padding: 4px; }
+.tfilt button { border: 0; background: transparent; border-radius: 9px; padding: 7px 4px; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; }
+.tfilt button i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 6px color-mix(in srgb, var(--pc) 60%, transparent); }
+.tfilt button b { font-size: 11px; font-weight: 500; color: var(--muted); }
+.tfilt button[aria-selected="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+.tfilt button.p-high[aria-selected="true"], .tfilt button.p-med[aria-selected="true"], .tfilt button.p-low[aria-selected="true"] { box-shadow: inset 0 0 0 1.5px var(--pc); }
+.sheet.tadd { gap: 14px; }
 .tdayhd { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .kprow { display: flex; align-items: center; gap: 8px; }
 .kprow .khead { flex: 1; min-width: 0; }
@@ -1037,7 +1063,7 @@ async function initStore() {
   let id = null;
   if (db && user) { try { id = await user.id(); } catch { id = null; } }
   if (!db || !id) {
-    lsLoad(); mlsLoad(); wlsLoad(); clsLoad(); plsLoad(); klsLoad(); blsLoad(); tlsLoad(); S.mode = "local"; store.kind = "local";
+    lsLoad(); mlsLoad(); wlsLoad(); clsLoad(); plsLoad(); klsLoad(); blsLoad(); tlsLoad(); vlsLoad(); S.mode = "local"; store.kind = "local";
     setSync("Saved on this device only");
     render(); return;
   }
@@ -1053,6 +1079,7 @@ async function initStore() {
   kinitDb(db, id);
   binitDb(db, id);
   tinitDb(db, id);
+  vinitDb(db, id);
   store.settings.onSnapshot((snap) => { if (snap.exists) { S.settings = { ...S.settings, ...snap.data() }; softRender(); } }, () => {});
   let loaded = false;
   const timer = setTimeout(() => { if (!loaded) { setSync("Still connecting…"); } }, 10000);
@@ -1511,8 +1538,8 @@ function renderChrome() {
   paintHdrTog();
   $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - 18px) / 4), 1fr))">${mods.map(tile).join("")}</div><div class="mside">${nBellBtn()}<button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button></div>`;
   if (S.module === "todo") {
-    const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar]];
-    $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
+    const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar], ["tvoice", "Voice", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>']];
+    $("#tabs").style.gridTemplateColumns = "repeat(3, 1fr)";
     $("#tabs").innerHTML = tt.map(([id, label, ic]) => `<button class="tab" data-act="ttab" data-tab="${id}" ${S.ttab === id || (id === "tlist" && S.ttab === "timport") ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
     return;
   }
@@ -4622,8 +4649,9 @@ document.addEventListener("submit", async (e) => {
 
 /* ====================== TO-DO MODULE ====================== */
 S.ttab = "tlist";
-try { const t = localStorage.getItem("planner.ttab"); if (["tlist", "tmonth"].includes(t)) S.ttab = t; } catch {}
+try { const t = localStorage.getItem("planner.ttab"); if (["tlist", "tmonth", "tvoice"].includes(t)) S.ttab = t; } catch {}
 S.td = { items: [] };
+S.tfilt = "all"; S.tadding = false; try { const f = localStorage.getItem("planner.tfilt"); if (["all", "high", "med", "low"].includes(f)) S.tfilt = f; } catch {}
 S.tedit = null; /* while editing the list: a draft copy of the items, in order */
 S.tmo = null; S.tday = today(); S.tnew = { text: "", pri: "med", due: "" };
 const tstore = {};
@@ -4634,7 +4662,7 @@ function tinitDb(db, id) {
   tstore.items = db.collection(`data/users/${id}/todo/items`);
   tstore.items.onSnapshot((snap) => { S.td.items = snap.docs.map((d) => ({ ...d.data(), id: d.id })); tsoft(); }, () => {});
 }
-function tsoft() { if (S.module !== "todo") return; const a = document.activeElement; if (S.tedit || (S.ttab === "timport" && S.timp?.result) || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+function tsoft() { if (S.module !== "todo") return; if (S.ttab === "tvoice") { vsoft(); return; } const a = document.activeElement; if (S.tedit || (S.ttab === "timport" && S.timp?.result) || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
 async function tsave(x) { const i = S.td.items.findIndex((y) => y.id === x.id); if (i >= 0) S.td.items[i] = x; else S.td.items.push(x); if (store.kind === "db" && tstore.items) return queued("td/" + x.id, () => tstore.items.doc(x.id).set(cjson(x))); tlsSave(); }
 async function tdel(id) { S.td.items = S.td.items.filter((x) => x.id !== id); if (store.kind === "db" && tstore.items) return queued("td/" + id, () => tstore.items.doc(id).delete()); tlsSave(); }
 
@@ -4659,11 +4687,22 @@ function tRow(x) {
     <div class="grow"><div class="tt">${esc(x.text)}</div><div class="tmeta"><span class="tpl">${TPRI[p]}</span>${x.due ? `<span class="${late ? "late" : ""}">${esc(tDueTxt(x))}</span>` : ""}</div></div>
     ${x.done ? `<span class="tdone">${I.check}<span>Done</span></span>` : ""}</li>`;
 }
-function todoView() { return S.ttab === "tmonth" ? tMonth() : S.ttab === "timport" ? tImport() : tList(); }
+function todoView() { return S.ttab === "tmonth" ? tMonth() : S.ttab === "timport" ? tImport() : S.ttab === "tvoice" ? tVoice() : tList(); }
 
+const TPLUS = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+/* The add form, as a sheet that slides up over the list */
+function tAddSheet() {
+  return `<div class="sheet-bg" data-act="taddclose"><form class="sheet tadd" id="taddform" autocomplete="off" role="dialog" aria-modal="true" aria-label="Add a to-do" data-stop>
+    <div class="grab"></div>
+    <div class="row between"><h2 style="font-size:22px">Add a to-do</h2><button type="button" class="iconbtn" data-act="taddclose" aria-label="Close">${I.x}</button></div>
+    <input class="in" id="tnewtext" data-tn="text" value="${esc(S.tnew.text)}" placeholder="What needs doing?" maxlength="200" aria-label="New to-do" enterkeyhint="done">
+    <div class="col" style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow">Importance</span>${tPriPick(S.tnew.pri, "tnpri")}</div>
+    <div class="row wrapflex" style="gap:10px"><label class="tdate">Due<input class="in" type="date" data-tn="due" value="${esc(S.tnew.due)}"></label>${S.tnew.due ? `<button type="button" class="linkbtn small" data-act="tnclear">No date</button>` : `<span class="small muted">optional</span>`}</div>
+    <button class="btn primary" type="submit" style="justify-content:center">Add to my list</button></form></div>`;
+}
 function tList() {
   const E = S.tedit, items = E || tSorted();
-  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">To-do</h2>${S.td.items.length ? (E ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="tecancel">Cancel</button><button class="btn sm primary" data-act="tesave">Save</button></span>` : `<span class="row" style="gap:6px"><button class="btn sm kimpbtn" data-act="ttab" data-tab="timport">${I.upload}<span>Import</span></button><button class="btn sm" data-act="tedit">${PENCIL}<span>Edit</span></button></span>`) : `<button class="btn sm kimpbtn" data-act="ttab" data-tab="timport">${I.upload}<span>Import / autofill</span></button>`}</div>`;
+  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">To-do</h2>${S.td.items.length ? (E ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="tecancel">Cancel</button><button class="btn sm primary" data-act="tesave">Save</button></span>` : `<span class="row" style="gap:6px"><button class="btn sm kimpbtn" data-act="ttab" data-tab="timport" aria-label="Import / autofill">${I.upload}<span>Import</span></button><button class="btn sm" data-act="tedit">${PENCIL}<span>Edit</span></button><button class="btn sm primary" data-act="taddopen">${TPLUS}<span>Add</span></button></span>`) : `<span class="row" style="gap:6px"><button class="btn sm kimpbtn" data-act="ttab" data-tab="timport">${I.upload}<span>Import</span></button><button class="btn sm primary" data-act="taddopen">${TPLUS}<span>Add</span></button></span>`}</div>`;
   if (E) {
     html += `<p class="small muted" style="margin:-6px 0 0">Use the arrows to change the order. Change the wording, importance or date, or remove items, then tap Save.</p>`;
     if (!E.length) html += `<div class="card empty"><p>Everything’s been removed. Tap Save to clear the list, or Cancel to keep it.</p></div>`;
@@ -4676,12 +4715,14 @@ function tList() {
     if (dn) html += `<div class="row" style="justify-content:center"><button class="btn sm danger" data-act="teclear">Remove ${plural(dn, "completed item")}</button></div>`;
     return html;
   }
-  html += `<form class="card tadd" id="taddform" autocomplete="off"><div class="row" style="gap:8px"><input class="in grow" id="tnewtext" data-tn="text" value="${esc(S.tnew.text)}" placeholder="Add a to-do" maxlength="200" aria-label="New to-do"><button class="btn primary" type="submit">Add</button></div>
-    <div class="row wrapflex" style="gap:10px">${tPriPick(S.tnew.pri, "tnpri")}<label class="tdate">Due<input class="in" type="date" data-tn="due" value="${esc(S.tnew.due)}"></label>${S.tnew.due ? `<button type="button" class="linkbtn small" data-act="tnclear">No date</button>` : ""}</div></form>`;
-  if (!items.length) return html + `<div class="card empty">${I.list.replace("<svg", '<svg width="44" height="44"')}<h3>Nothing on your list yet</h3><p>Add your first to-do above. Pick how important it is and, if it needs doing by a certain day, give it a due date. Dated items show on the Month calendar.</p><p class="small muted" style="margin:0">Got a list already? Snap a photo of it, even handwritten, or a screenshot, and Claude fills it in.</p><button class="btn" data-act="ttab" data-tab="timport">${I.upload}<span>Import / autofill</span></button></div>`;
+  if (S.tadding) html += tAddSheet();
+  if (!items.length) return html + `<div class="card empty">${I.list.replace("<svg", '<svg width="44" height="44"')}<h3>Nothing on your list yet</h3><p>Tap Add to put in your first to-do. Pick how important it is and, if it needs doing by a certain day, give it a due date. Dated items show on the Month calendar.</p><p class="small muted" style="margin:0">Got a list already? Snap a photo of it, even handwritten, or a screenshot, and Claude fills it in.</p><button class="btn" data-act="ttab" data-tab="timport">${I.upload}<span>Import / autofill</span></button></div>`;
   const left = items.filter((x) => !x.done), late = left.filter((x) => x.due && x.due < today()).length;
   html += `<div class="tsum"><span><b>${left.length}</b> to do</span><span><b>${items.length - left.length}</b> done</span>${late ? `<span class="late"><b>${late}</b> overdue</span>` : ""}</div>`;
-  html += `<section class="card"><ul class="tlist">${items.map(tRow).join("")}</ul></section>`;
+  const F = S.tfilt || "all", cnt = (p) => items.filter((x) => !x.done && (p === "all" || tPri(x) === p)).length;
+  html += `<div class="tfilt" role="tablist" aria-label="Importance">${[["all", "All"], ...TPRIS.map((p) => [p, TPRI[p]])].map(([k, l]) => `<button class="${k === "all" ? "" : "p-" + k}" role="tab" data-act="tfilt" data-v="${k}" aria-selected="${F === k}">${k === "all" ? "" : "<i></i>"}<span>${l}</span><b class="num">${cnt(k)}</b></button>`).join("")}</div>`;
+  const shown = F === "all" ? items : items.filter((x) => tPri(x) === F);
+  html += shown.length ? `<section class="card"><ul class="tlist">${shown.map(tRow).join("")}</ul></section>` : `<div class="card empty"><p>Nothing marked ${esc(TPRI[F])}.</p></div>`;
   if (items.some((x) => x.done)) html += `<p class="hint" style="text-align:center">Finished with a completed item? Tap Edit to remove it.</p>`;
   return html;
 }
@@ -5006,13 +5047,165 @@ document.addEventListener("change", (e) => {
   if (t.dataset.timpfile && t.files?.length) { K.files.push(...t.files); K.msg = ""; t.value = ""; render(); }
 });
 
+/* ---------- Voice notes: tap to record, tap again to stop ---------- */
+/* Each note's details (title, notes, length) are saved like the to-dos. The recording itself is kept on this phone
+   (IndexedDB) so it plays instantly, and also uploaded to the account when the storage allows audio. */
+S.vn = []; S.vrec = null; S.vplay = null; S.vedit = null; S.vdel = null; S.vtick = null;
+const VLS = "planner.voice.v1";
+const MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>';
+const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg>';
+function vlsLoad() { try { const d = JSON.parse(localStorage.getItem(VLS) || "[]"); if (Array.isArray(d)) S.vn = d; } catch {} }
+function vlsSave() { try { localStorage.setItem(VLS, JSON.stringify(S.vn)); } catch {} }
+function vinitDb(db, id) {
+  tstore.voice = db.collection(`data/users/${id}/todo/voice`);
+  tstore.voice.onSnapshot((snap) => { S.vn = snap.docs.map((d) => ({ ...d.data(), id: d.id })); vsoft(); vSyncUp(); }, () => {});
+}
+function vsoft() { if (S.module !== "todo" || S.ttab !== "tvoice") return; const a = document.activeElement; if (S.vrec || S.vedit || (a && /INPUT|TEXTAREA/.test(a.tagName))) return; render(); }
+async function vsave(x) { const i = S.vn.findIndex((y) => y.id === x.id); if (i >= 0) S.vn[i] = x; else S.vn.push(x); if (store.kind === "db" && tstore.voice) return queued("vn/" + x.id, () => tstore.voice.doc(x.id).set(cjson(x))); vlsSave(); }
+async function vdel(id) { S.vn = S.vn.filter((x) => x.id !== id); if (store.kind === "db" && tstore.voice) return queued("vn/" + id, () => tstore.voice.doc(id).delete()); vlsSave(); }
+/* The recordings on this phone */
+let vdbP = null;
+function vdb() { return vdbP || (vdbP = new Promise((res, rej) => { const r = indexedDB.open("planner-voice", 1); r.onupgradeneeded = () => r.result.createObjectStore("blobs"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); }
+async function vblobGet(id) { try { const db = await vdb(); return await new Promise((res) => { const q = db.transaction("blobs").objectStore("blobs").get(id); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); } catch { return null; } }
+async function vblobPut(id, blob) { try { const db = await vdb(); await new Promise((res, rej) => { const t = db.transaction("blobs", "readwrite"); t.objectStore("blobs").put(blob, id); t.oncomplete = res; t.onerror = () => rej(t.error); }); return true; } catch { return false; } }
+async function vblobDel(id) { try { const db = await vdb(); db.transaction("blobs", "readwrite").objectStore("blobs").delete(id); } catch {} }
+/* Upload any recording made on this phone that isn't in the account yet (only works once the storage accepts audio). */
+let vsyncing = false, vsyncTried = new Set();
+async function vSyncUp() {
+  if (vsyncing || store.kind !== "db") return; vsyncing = true;
+  try {
+    const assets = await (window.claude?.use?.("assets") ?? null); if (!assets) return;
+    for (const x of S.vn.filter((n) => !n.ref && !vsyncTried.has(n.id))) {
+      vsyncTried.add(x.id);
+      const b = await vblobGet(x.id); if (!b) continue;
+      try { const r = await assets.upload(b); await vsave({ ...S.vn.find((n) => n.id === x.id), ref: r.id }); } catch { break; }
+    }
+  } finally { vsyncing = false; }
+}
+const vMime = () => { if (typeof MediaRecorder === "undefined") return null; for (const t of ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]) { try { if (MediaRecorder.isTypeSupported(t)) return t; } catch {} } return ""; };
+const vDur = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${pad(s % 60)}`; };
+const vWhen = (iso) => { const d = new Date(iso); return `${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}, ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`; };
+async function vStart() {
+  if (S.vrec) return;
+  const mime = vMime();
+  if (mime === null || !navigator.mediaDevices?.getUserMedia) { toast("This browser can't record audio."); return; }
+  S.vrec = { starting: true, t0: Date.now() }; vPaintRec();
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  catch (e) { S.vrec = null; vPaintRec(); toast(e?.name === "NotAllowedError" ? "Allow the microphone for this app in Settings, then try again." : "Couldn't start the microphone."); return; }
+  if (!S.vrec) { stream.getTracks().forEach((t) => t.stop()); return; }
+  const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream), chunks = [];
+  rec.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
+  rec.onstop = () => vFinish(chunks, rec.mimeType || mime || "audio/mp4", stream);
+  rec.start(1000);
+  S.vrec = { rec, stream, t0: Date.now() }; vPaintRec();
+  clearInterval(S.vtick); S.vtick = setInterval(() => { const el = document.getElementById("vtime"); if (el && S.vrec?.t0) el.textContent = vDur((Date.now() - S.vrec.t0) / 1000); }, 250);
+  try { navigator.vibrate?.(15); } catch {}
+}
+function vStop() {
+  const R = S.vrec; if (!R) return;
+  clearInterval(S.vtick);
+  if (!R.rec) { S.vrec = null; vPaintRec(); return; }
+  R.dur = (Date.now() - R.t0) / 1000; R.stopping = true; vPaintRec();
+  try { R.rec.stop(); } catch { vFinish([], "", R.stream); }
+}
+async function vFinish(chunks, mime, stream) {
+  stream?.getTracks().forEach((t) => t.stop());
+  const R = S.vrec || {}; S.vrec = null;
+  const blob = new Blob(chunks, { type: String(mime).split(";")[0] || "audio/mp4" });
+  if (!blob.size || (R.dur ?? 0) < 0.4) { render(); toast("Too short. Tap once to start, then again to stop."); return; }
+  const now = new Date(), x = { id: uid(), title: "", notes: "", created: now.toISOString(), dur: Math.round((R.dur || 0) * 10) / 10, mime: blob.type };
+  const kept = await vblobPut(x.id, blob);
+  if (!kept && store.kind !== "db") { render(); toast("Couldn't save the recording on this phone."); return; }
+  await vsave(x); render(); toast("Voice note saved");
+  vSyncUp();
+}
+function vPaintRec() {
+  const b = document.getElementById("vrecbtn"); if (!b) return;
+  const R = S.vrec, on = !!R && !R.stopping;
+  b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); b.setAttribute("aria-label", on ? "Stop recording" : "Start recording");
+  const lab = document.getElementById("vlabel"); if (lab) lab.textContent = !R ? "Tap to record" : R.stopping ? "Saving…" : R.starting ? "Starting…" : "Recording · tap to stop";
+  const tm = document.getElementById("vtime"); if (tm) tm.textContent = R?.t0 && !R.starting ? vDur((Date.now() - R.t0) / 1000) : "0:00";
+}
+/* Playback: one note at a time */
+const vaudio = typeof Audio !== "undefined" ? new Audio() : null;
+if (vaudio) {
+  vaudio.preload = "auto";
+  vaudio.addEventListener("timeupdate", () => { const P = S.vplay; if (!P) return; const bar = document.querySelector(`[data-vbar="${P.id}"]`), t = document.querySelector(`[data-vt="${P.id}"]`); const d = vaudio.duration && Number.isFinite(vaudio.duration) ? vaudio.duration : P.dur || 1; if (bar) bar.style.width = Math.min(100, (vaudio.currentTime / d) * 100) + "%"; if (t) t.textContent = vDur(vaudio.currentTime) + " / " + vDur(d); });
+  vaudio.addEventListener("ended", () => { S.vplay = null; if (S.ttab === "tvoice") render(); });
+}
+async function vSrc(x) {
+  const b = await vblobGet(x.id); if (b) return URL.createObjectURL(b);
+  if (x.ref && window.__blobSrc) {
+    for (let i = 0; i < 20; i++) { const u = window.__blobSrc(x.ref); if (u && !/#sb=/.test(u) && !/^data:image/.test(u)) { try { const r = await fetch(u); if (r.ok) { const bl = await r.blob(); vblobPut(x.id, bl); return URL.createObjectURL(bl); } } catch {} return u; } await new Promise((r) => setTimeout(r, 250)); }
+  }
+  return null;
+}
+async function vToggle(id) {
+  if (!vaudio) return;
+  const x = S.vn.find((n) => n.id === id); if (!x) return;
+  if (S.vplay?.id === id) { if (vaudio.paused) { vaudio.play().catch(() => {}); S.vplay.paused = false; } else { vaudio.pause(); S.vplay.paused = true; } render(); return; }
+  vaudio.pause(); if (S.vplay?.url) URL.revokeObjectURL(S.vplay.url);
+  S.vplay = { id, loading: true, dur: x.dur }; render();
+  const url = await vSrc(x);
+  if (S.vplay?.id !== id) return;
+  if (!url) { S.vplay = null; render(); toast("This recording is on another phone and hasn't reached your account yet."); return; }
+  S.vplay = { id, url: /^blob:/.test(url) ? url : null, dur: x.dur }; vaudio.src = url;
+  try { await vaudio.play(); } catch { toast("Couldn't play that recording."); S.vplay = null; }
+  render();
+}
+function tVoice() {
+  const R = S.vrec, on = !!R && !R.stopping;
+  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">Voice notes</h2>${S.vn.length ? `<span class="small muted">${plural(S.vn.length, "note")}</span>` : ""}</div>
+    <section class="card vrec"><button class="vrecbtn ${on ? "on" : ""}" id="vrecbtn" data-act="vrec" aria-pressed="${on}" aria-label="${on ? "Stop recording" : "Start recording"}"><span class="vdot"></span>${MIC}</button>
+      <div class="vrecinfo"><b class="num" id="vtime">${R?.t0 && !R.starting ? vDur((Date.now() - R.t0) / 1000) : "0:00"}</b><span class="small muted" id="vlabel">${!R ? "Tap to record" : R.stopping ? "Saving…" : R.starting ? "Starting…" : "Recording · tap to stop"}</span></div></section>`;
+  if (!S.vn.length) return html + `<div class="card empty">${MIC.replace("<svg", '<svg width="44" height="44"')}<h3>Quick thoughts, out loud</h3><p>Tap the button and talk. Tap it again to stop and the note is saved here to play back later. Give it a name with Edit.</p></div>`;
+  const list = [...S.vn].sort((a, b) => String(b.created).localeCompare(String(a.created)));
+  html += `<section class="card"><ul class="tlist">${list.map((x) => {
+    const P = S.vplay?.id === x.id ? S.vplay : null, playing = P && !P.paused && !P.loading;
+    if (S.vedit?.id === x.id) { const f = S.vedit; return `<li class="trow vrow edit"><form class="grow tedit" id="vform" autocomplete="off"><label class="fl">Name<input class="in" data-vf="title" value="${esc(f.title)}" placeholder="${esc(vWhen(x.created))}" maxlength="80"></label>
+      <label class="fl">Notes<textarea class="in" data-vf="notes" rows="2" placeholder="Anything to remember about it">${esc(f.notes)}</textarea></label>
+      <div class="row" style="gap:8px"><button class="btn sm primary" type="submit">Save</button><button class="btn sm" type="button" data-act="vcancel">Cancel</button></div></form></li>`; }
+    return `<li class="trow vrow"><button class="vplay ${playing ? "on" : ""}" data-act="vplay" data-id="${x.id}" aria-label="${playing ? "Pause" : "Play"} ${esc(x.title || vWhen(x.created))}">${P?.loading ? '<span class="spin"></span>' : playing ? PAUSE : PLAY}</button>
+      <div class="grow" style="min-width:0"><div class="tt">${esc(x.title || "Voice note")}</div>
+        <div class="tmeta"><span>${esc(vWhen(x.created))}</span><span class="num" data-vt="${x.id}">${P && !P.loading ? vDur(vaudio?.currentTime || 0) + " / " + vDur(x.dur) : vDur(x.dur)}</span>${x.ref ? "" : `<span title="Saved on this phone">On this phone</span>`}</div>
+        ${P ? `<div class="vbar"><i data-vbar="${x.id}"></i></div>` : ""}
+        ${x.notes ? `<div class="small muted" style="margin-top:3px;white-space:pre-line">${esc(x.notes)}</div>` : ""}
+        ${S.vdel === x.id ? `<div class="inline-confirm" style="margin-top:6px">Delete this voice note? <button class="btn sm danger" data-act="vdeldo" data-id="${x.id}">Delete</button><button class="btn sm" data-act="vdelno">Keep</button></div>` : ""}</div>
+      <div class="tmv"><button class="iconbtn sm" data-act="vedit" data-id="${x.id}" aria-label="Rename or edit">${PENCIL}</button><button class="iconbtn sm danger" data-act="vdelask" data-id="${x.id}" aria-label="Delete">${I.x}</button></div></li>`; }).join("")}</ul></section>`;
+  if (S.vn.some((x) => !x.ref)) html += `<p class="hint" style="text-align:center">Recordings marked “On this phone” play here only for now.</p>`;
+  return html;
+}
+async function voiceClick(a, b) {
+  switch (a) {
+    case "vrec": if (S.vrec && !S.vrec.stopping) vStop(); else if (!S.vrec) vStart(); return true;
+    case "vplay": vToggle(b.dataset.id); return true;
+    case "vedit": { const x = S.vn.find((n) => n.id === b.dataset.id); if (!x) return true; S.vedit = { id: x.id, title: x.title || "", notes: x.notes || "" }; S.vdel = null; render(); document.querySelector('[data-vf="title"]')?.focus(); return true; }
+    case "vcancel": S.vedit = null; render(); return true;
+    case "vdelask": S.vdel = b.dataset.id; S.vedit = null; render(); return true;
+    case "vdelno": S.vdel = null; render(); return true;
+    case "vdeldo": { const x = S.vn.find((n) => n.id === b.dataset.id); S.vdel = null; if (!x) return true; if (S.vplay?.id === x.id) { vaudio?.pause(); S.vplay = null; } await vdel(x.id); vblobDel(x.id); render(); toast("Voice note deleted"); if (x.ref && store.kind === "db") { const as = await (window.claude?.use?.("assets") ?? null); as?.delete(x.ref).catch(() => {}); } return true; }
+  }
+  return false;
+}
+document.addEventListener("input", (e) => { const t = e.target; if (t.dataset.vf && S.vedit) S.vedit[t.dataset.vf] = t.value; });
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "vform") return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const f = S.vedit, x = S.vn.find((n) => n.id === f?.id); S.vedit = null; if (!x) { render(); return; }
+  const n = { ...x, title: f.title.trim().slice(0, 80), notes: f.notes.trim().slice(0, 1000) };
+  const p = vsave(n); render(); toast("Saved"); await p;
+}, true);
+
 /* ---------- Events ---------- */
 function tSetPressed(b) { b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
 async function todoClick(a, b) {
   if (tImpClick(a, b)) return true;
+  if (await voiceClick(a, b)) return true;
   switch (a) {
     case "runout": await tRunOut(b.dataset.kind, b.dataset.id); return true;
-    case "ttab": S.ttab = b.dataset.tab; S.tedit = null; try { localStorage.setItem("planner.ttab", S.ttab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "ttab": if (S.vrec && b.dataset.tab !== "tvoice") vStop(); S.ttab = b.dataset.tab; S.tedit = null; S.vedit = null; S.vdel = null; try { localStorage.setItem("planner.ttab", S.ttab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "ttoggle": { const x = S.td.items.find((y) => y.id === b.dataset.id); if (!x) return true; const n = { ...x, done: !x.done, doneAt: x.done ? "" : today() }; const p = tsave(n); render(); toast(n.done ? "Done. Nice work." : "Marked as not done"); await p; return true; }
     case "tnpri": S.tnew.pri = b.dataset.v; tSetPressed(b); return true;
     case "tnclear": S.tnew.due = ""; render(); return true;
@@ -5037,7 +5230,10 @@ async function todoClick(a, b) {
     }
     case "tmonth": { const n = Number(b.dataset.n); if (n === 0) { S.tmo = null; S.tday = today(); } else { S.tmo = bMonthAdd(S.tmo || tMonthNow(), n); if (S.tmo === tMonthNow()) S.tmo = null; } render(); return true; }
     case "tday": S.tday = b.dataset.d; render(); return true;
-    case "taddday": S.tnew.due = S.tday || ""; S.ttab = "tlist"; S.tedit = null; try { localStorage.setItem("planner.ttab", S.ttab); } catch {} render(); window.scrollTo(0, 0); document.getElementById("tnewtext")?.focus(); return true;
+    case "taddday": S.tnew.due = S.tday || ""; S.ttab = "tlist"; S.tedit = null; S.tadding = true; try { localStorage.setItem("planner.ttab", S.ttab); } catch {} render(); document.getElementById("tnewtext")?.focus(); return true;
+    case "taddopen": S.tadding = true; render(); document.getElementById("tnewtext")?.focus(); return true;
+    case "taddclose": S.tadding = false; render(); return true;
+    case "tfilt": S.tfilt = b.dataset.v; try { localStorage.setItem("planner.tfilt", S.tfilt); } catch {} render(); return true;
   }
   return false;
 }
@@ -5053,8 +5249,9 @@ document.addEventListener("submit", async (e) => {
   e.preventDefault(); e.stopImmediatePropagation();
   const text = S.tnew.text.trim(); if (!text) { toast("Type what needs doing."); document.getElementById("tnewtext")?.focus(); return; }
   const x = { id: uid(), text, pri: S.tnew.pri, due: S.tnew.due || "", done: false, order: S.td.items.reduce((m, y) => Math.max(m, num(y.order) + 1), 0), created: new Date().toISOString() };
-  S.tnew = { text: "", pri: S.tnew.pri, due: "" };
-  const p = tsave(x); render(); document.getElementById("tnewtext")?.focus(); toast(x.due ? `Added, due ${shortD(x.due)}` : "Added"); await p;
+  S.tnew = { text: "", pri: S.tnew.pri, due: "" }; S.tadding = false;
+  if (S.tfilt !== "all" && S.tfilt !== x.pri) { S.tfilt = "all"; try { localStorage.setItem("planner.tfilt", "all"); } catch {} }
+  const p = tsave(x); render(); toast(x.due ? `Added, due ${shortD(x.due)}` : "Added"); await p;
 }, true);
 
 /* ---------- Cardio ---------- */

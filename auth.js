@@ -445,9 +445,10 @@ async function signWanted() {
 function makeAssets() {
   return {
     upload: async (blob) => {
-      const ext = /png/.test(blob.type) ? "png" : /webp/.test(blob.type) ? "webp" : "jpg";
+      const type = String(blob.type || "image/jpeg").split(";")[0];
+      const ext = /png/.test(type) ? "png" : /webp/.test(type) ? "webp" : /audio\/(mp4|aac|x-m4a)/.test(type) ? "m4a" : /audio\/webm/.test(type) ? "webm" : /audio\/ogg/.test(type) ? "ogg" : /audio\/mpeg/.test(type) ? "mp3" : "jpg";
       const path = `${D.uid}/${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
-      must(await sb.storage.from("uploads").upload(path, blob, { contentType: blob.type || "image/jpeg", cacheControl: "31536000" }));
+      must(await sb.storage.from("uploads").upload(path, blob, { contentType: type, cacheControl: "31536000" }));
       const id = "sb:uploads/" + path;
       SIGNED[id] = { url: URL.createObjectURL(blob), exp: Date.now() + 3600000 };
       return { id };
