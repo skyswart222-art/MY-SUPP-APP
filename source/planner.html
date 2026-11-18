@@ -1534,7 +1534,7 @@ function viewAdd() {
   html += `</div>`;
   const opt = (v, cur, label) => `<option value="${v}" ${v === cur ? "selected" : ""}>${label || v}</option>`;
   html += `<form class="f card" id="sform" novalidate>
-  <fieldset><legend>${editing ? "Details" : "Step 2 · Check the details"}</legend>
+  <fieldset><legend>Details</legend>
     <div class="fgrid">
       <label class="fl full">Name<input class="in" id="f-name" data-f="name" value="${esc(f.name)}" placeholder="e.g. Magnesium Glycinate" autocomplete="off"></label>
       <label class="fl">Brand<input class="in" id="f-brand" data-f="brand" value="${esc(f.brand)}" autocomplete="off"></label>
@@ -3554,11 +3554,12 @@ function kAdd() {
   const fd = f.days || [];
   return `<div class="row between"><h2 style="font-size:22px">${editing ? "Edit " + esc(f.name || "product") : "Add a product"}</h2>${editing || f.name ? `<button class="btn sm ghost" data-act="kdiscard">${editing ? "Cancel" : "Clear"}</button>` : ""}</div>
   ${editing ? "" : `<button class="card kimpcta" data-act="ktab" data-tab="kimport">${I.upload}<span class="grow"><b>Import / autofill a whole routine</b><span class="small muted">Paste what you researched, or attach a text file, PDF or screenshots</span></span>${I.right}</button>`}
-  <div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">${editing ? "Photos" : "Step 1 · Photograph the product"}</div><p class="small muted" style="margin:0">Front for the name, back for the directions and ingredients. Claude fills in the form and suggests when and how often to use it.</p>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">Photos · optional</div><p class="small muted" style="margin:0">Add a front and back photo to keep with the product for reference. If you like, Claude can also read them and fill in the details for you. That part is up to you.</p>
     <div class="photos">${ph("front")}${ph("back")}</div>
-    ${S.canPhoto === false || !S.sample ? `<div class="status">Photo reading needs the Claude app or claude.ai, signed in. You can fill the form in by hand.</div>` : `<button class="btn ${editing ? "" : "primary"}" data-act="kautofill" ${A.busy || !(S.kphotos.front || S.kphotos.back) ? "disabled" : ""}>${A.busy ? '<span class="spin"></span> Reading the label…' : "Fill in from photos"}</button>`}
+    ${S.kphotos.front || S.kphotos.back ? `<div class="status">Photo attached. It’s saved with the product when you tap ${editing ? "Save" : "Add to routine"}. Nothing else changes unless you tap Autofill.</div>` : ""}
+    ${S.canPhoto === false || !S.sample ? "" : S.kphotos.front || S.kphotos.back ? `<button class="btn" data-act="kautofill" ${A.busy ? "disabled" : ""}>${A.busy ? '<span class="spin"></span> Reading the label…' : "Autofill details from photos (optional)"}</button>` : ""}
     ${A.msg ? `<div class="status ${A.kind}">${esc(A.msg)}</div>` : ""}</div>
-  <form class="f card" id="kform" novalidate><fieldset><legend>${editing ? "Details" : "Step 2 · Check the details"}</legend>
+  <form class="f card" id="kform" novalidate><fieldset><legend>Details</legend>
     <label class="fl">Name<input class="in" data-kf="name" value="${esc(f.name)}" placeholder="e.g. Retinol 0.5% serum"></label>
     <div class="fgrid"><label class="fl">Brand<input class="in" data-kf="brand" value="${esc(f.brand)}"></label>
       <label class="fl">Type<select class="in" data-kf="type">${KTYPES.map(([k, l]) => `<option value="${k}" ${f.type === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
