@@ -867,11 +867,59 @@ function viewOverview() {
   return html;
 }
 
+/* View only mode: shows what's due, nothing to tick. Doses count as taken once their time passes, so stock still goes down. */
+const sViewMode = () => S.settings.suppMode === "view";
+function sModeSeg() {
+  return `<div class="seg2" role="group" aria-label="How you use Supplements">${[["tick", "Tick off"], ["view", "View only"]].map(([v, n]) => `<button type="button" data-act="smode" data-v="${v}" aria-pressed="${(sViewMode() ? "view" : "tick") === v}">${n}</button>`).join("")}</div>`;
+}
+let sAutoBusy = false;
+async function sAutoTake() {
+  if (!sViewMode() || sAutoBusy || S.mode === "loading" || S.mode === "error") return;
+  sAutoBusy = true;
+  try {
+    const td = today(), nowT = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
+    let d = S.settings.suppViewFrom || td; if (d < addDays(td, -14)) d = addDays(td, -14);
+    const daysW = new Set(), supps = new Map();
+    for (; d <= td; d = addDays(d, 1)) {
+      const day = S.days[d] || { date: d, taken: {} }; day.taken = day.taken || {};
+      for (const x of dosesFor(d)) {
+        if (d === td && x.time > nowT) continue;
+        if (day.taken[x.key] != null || (day.skip || {})[x.key]) continue;
+        const s = supps.get(x.s.id) || { ...x.s }, units = x.servings * num(s.servingSize, 1);
+        day.taken[x.key] = units; s.remaining = Math.max(0, num(s.remaining) - units);
+        supps.set(s.id, s); S.days[d] = day; daysW.add(d);
+      }
+    }
+    if (!daysW.size) return;
+    for (const s of supps.values()) { const i = S.supps.findIndex((x) => x.id === s.id); if (i >= 0) S.supps[i] = s; }
+    render();
+    await Promise.all([...[...daysW].map((x) => saveDay(x)), ...[...supps.values()].map((x) => saveSupp(x))]);
+  } finally { sAutoBusy = false; }
+}
+function viewDue() {
+  const date = S.date, isToday = date === today(), d = parseD(date), doses = dosesFor(date);
+  const nowT = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
+  const title = isToday ? "Due today" : date === addDays(today(), -1) ? "Yesterday" : date === addDays(today(), 1) ? "Tomorrow" : DOW[d.getDay()];
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
+    <div class="grow"><div class="eyebrow">${esc(d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }))}</div><h2 class="ov-title">${title}</h2></div>
+    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>${sModeSeg()}`;
+  const low = lowItems();
+  if (low.length && isToday) html += `<div class="alerts">${low.slice(0, 3).map(({ s, i }) => `<div class="alert ${i.level === "crit" ? "crit" : ""}"><span class="pip"></span><div><b>${esc(s.name)}</b> ${i.rem <= 0 ? "is empty." : `runs out in about ${plural(Math.max(0, Math.floor(i.daysLeft)), "day")} (${amountStr(i.rem, s.unit)} left).`} <button class="linkbtn" data-act="tab" data-tab="stock">Restock</button></div></div>`).join("")}</div>`;
+  if (!doses.length) return html + `<div class="card empty"><h3>Nothing due ${isToday ? "today" : "this day"}</h3><p>Supplements in your cupboard don't show here until you give them a time.</p><button class="btn" data-act="tab" data-tab="stock">Open stock</button></div>`;
+  const times = [...new Set(doses.map((x) => x.time))], nextT = isToday ? times.find((t) => t >= nowT) : null;
+  html += `<div class="mprep">` + times.map((t) => { const at = doses.filter((x) => x.time === t), past = isToday && t < nowT;
+    return `<section class="mprep-card sdue ${t === nextT ? "is-next" : ""} ${past ? "past" : ""}"><div class="row between"><b class="num">${fmtTime(t)}</b><span class="small muted">${t === nextT ? "Up next" : past ? "Done" : plural(at.length, "supplement")}</span></div>
+      <div class="ov-items">${at.map((x) => `<button class="mfood" data-act="detail" data-id="${x.s.id}"><span class="mfname">${esc(x.s.name)}${x.note ? ` <i class="mfserv">${esc(x.note)}</i>` : ""}</span><span class="mfkcal num">${esc(amountStr(x.servings * num(x.s.servingSize, 1), x.s.unit))}</span></button>`).join("")}</div></section>`; }).join("") + `</div>`;
+  html += `<p class="hint">Nothing to tick here. Each dose counts as taken once its time passes, so your stock and running-out warnings stay up to date. Switch to Tick off any time.</p>`;
+  return html;
+}
 function viewToday() {
   if (!S.supps.length) return emptyState();
-  if (S.todayView === "week") return viewWeek();
+  if (sViewMode()) { setTimeout(sAutoTake, 0); return viewDue(); }
+  if (S.todayView === "week") return sModeSeg() + viewWeek();
   const groups = reminderGroups();
-  return (S.todayView === "full" ? viewDay() : viewOverview()) + (groups.length ? `<div class="card row between wrapflex" style="gap:10px"><div class="grow" style="min-width:180px"><div class="eyebrow">Reminders</div><div class="small muted">Get a phone notification at each dose time through your calendar.</div></div><button class="btn sm" data-act="reminders">Set up reminders</button></div>` : "");
+  return sModeSeg() + (S.todayView === "full" ? viewDay() : viewOverview()) + (groups.length ? `<div class="card row between wrapflex" style="gap:10px"><div class="grow" style="min-width:180px"><div class="eyebrow">Reminders</div><div class="small muted">Get a phone notification at each dose time through your calendar.</div></div><button class="btn sm" data-act="reminders">Set up reminders</button></div>` : "");
 }
 /* ---------- Calendar reminders (Google Calendar links; repeating events) ---------- */
 const BYDAY = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
@@ -4329,6 +4377,7 @@ document.addEventListener("click", async (e) => {
     case "close-settings": S.settingsOpen = false; renderSettings(); break;
     case "settheme": S.theme = b.dataset.v === "light" ? "light" : "dark"; try { localStorage.setItem("planner.theme", S.theme); } catch {} applyTheme(); renderChrome(); renderSettings(); break;
     case "setaccent": if (ACCENTS.some((x) => x.id === b.dataset.v)) { S.accent = b.dataset.v; try { localStorage.setItem("planner.accent", S.accent); } catch {} applyTheme(); renderSettings(); } break;
+    case "smode": { const v = b.dataset.v === "view" ? "view" : "tick"; S.settings = { ...S.settings, suppMode: v }; if (v === "view") S.settings.suppViewFrom = today(); render(); toast(v === "view" ? "View only: doses count as taken at their time" : "Tick off each dose again"); await saveSettings(); break; }
     case "tview": S.todayView = b.dataset.v; try { localStorage.setItem("planner.todayView", S.todayView); } catch {} render(); break;
     case "tmode": S.totalsMode = b.dataset.m; render(); break;
     case "new": S.form = blankForm(); S.photos = { front: null, back: null }; S.ai = { busy: false, msg: "", kind: "" }; setTab("add"); break;
