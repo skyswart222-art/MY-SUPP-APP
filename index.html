@@ -79,10 +79,14 @@ h1, h2, h3, .brand { font-family: var(--font-head) !important; font-weight: 400 
 
 .wrap { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 72%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-bottom: 1px solid var(--line); }
-header.top .wrap { padding-block: 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+header.top .wrap { padding-block: 10px 8px; display: flex; flex-direction: column; gap: 6px; }
 .brandrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { font-family: var(--font-display); font-weight: 600; font-size: 21px; letter-spacing: -0.01em; }
-.modules { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.modules { display: flex; flex-direction: column; gap: 7px; overflow-x: auto; scrollbar-width: none; }
+.modrow { display: flex; gap: 6px; width: max-content; }
+.modrow .mod { padding-inline: 11px; }
+.modset { display: inline-flex; align-items: center; gap: 5px; }
+.modset svg { flex: none; }
 .modules::-webkit-scrollbar { display: none; }
 .mod { flex: none; border: 1px solid transparent; background: var(--sunk); border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
 .mod[aria-current="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
@@ -91,7 +95,11 @@ header.top .wrap { padding-block: 12px 10px; display: flex; flex-direction: colu
 .modord { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .modord li { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 .modord .iconbtn[disabled], .krow .iconbtn[disabled] { opacity: .3; }
-.syncnote { font-size: 12px; color: var(--muted); }
+.syncnote { font-size: 12px; color: var(--warn); text-align: center; }
+.syncnote[hidden] { display: none; }
+.setbtns { display: flex; flex-direction: column; gap: 8px; }
+.setbtns .btn { justify-content: flex-start; padding: 11px 12px; }
+.setbtns .btn .grow { text-align: left; }
 
 main .wrap { padding-block: 16px calc(var(--tabbar-h) + 28px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 18px; }
 
@@ -737,11 +745,8 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 <body>
 <header class="top">
   <div class="wrap">
-    <div class="brandrow">
-      <div class="brand">Elevate</div>
-      <div class="row" style="gap:10px"><div class="syncnote" id="syncnote">Loading…</div><button class="avatarbtn" id="avatarbtn" type="button" aria-label="Your profile" hidden></button><button class="iconbtn" id="themebtn" data-act="theme" aria-label="Switch theme"></button><button class="iconbtn" id="setbtn" data-act="settings" aria-label="Settings: colours"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.5" fill="currentColor"/><circle cx="17.5" cy="10.5" r="1.5" fill="currentColor"/><circle cx="8.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="6.5" cy="12.5" r="1.5" fill="currentColor"/><path d="M12 2a10 10 0 0 0 0 20c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a6 6 0 0 0 6-6c0-4.9-4.5-8.6-10-8.6z"/></svg></button></div>
-    </div>
     <div class="modules" id="modules" role="tablist" aria-label="Plans"></div>
+    <div class="syncnote" id="syncnote" role="status" hidden></div><span id="acct" hidden><button class="avatarbtn" id="avatarbtn" type="button" aria-label="Your profile" hidden></button></span>
   </div>
 </header>
 <main><div class="wrap" id="view"><div class="card empty"><span class="spin"></span><p>Opening your planner…</p></div></div></main>

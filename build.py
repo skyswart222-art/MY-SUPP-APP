@@ -10,10 +10,10 @@ style_end = head.index("</style>") + len("</style>")
 styles, markup = head[:style_end], head[style_end:]
 styles = re.sub(r'<meta name="claude:[^>]*>\n?', "", styles)
 assert "<title>" in styles
-# Header: add the profile button before the theme button.
-needle = '<button class="iconbtn" id="themebtn"'
+# Header: the profile button lives off-screen; Settings opens it ("Your profile and log out").
+needle = '<span id="acct" hidden></span>'
 assert needle in markup
-markup = markup.replace(needle, '<button class="avatarbtn" id="avatarbtn" type="button" aria-label="Your profile" hidden></button>' + needle, 1)
+markup = markup.replace(needle, '<span id="acct" hidden><button class="avatarbtn" id="avatarbtn" type="button" aria-label="Your profile" hidden></button></span>', 1)
 # Photos: private photos are shown through signed links (auth.js provides window.__blobSrc).
 old = 'function storedSrc(ref) { if (!ref) return null; return'
 assert old in body_js
