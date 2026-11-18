@@ -654,16 +654,16 @@ async function removeExamples() { for (const s of S.supps.filter((x) => x.exampl
 const SUN = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
 const GEAR = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+const MODSHORT = { supplements: "Supps" };
+const MODICON = { supplements: I.stock, workouts: I.dumbbell, meals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 7v3H17"/></svg>', progress: I.scale, skincare: I.drop, cycle: I.vial, budget: I.wallet, todo: I.list };
 function renderChrome() {
   document.documentElement.setAttribute("data-mod", S.module);
   const tb = $("#themebtn");
   if (tb) { tb.innerHTML = S.theme === "dark" ? SUN : MOON; tb.setAttribute("aria-label", S.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"); }
-  const mods = modOrdered(), btn = (m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`;
-  /* Two rows: split where the first row holds about half the total width, so both rows end up a similar length. */
-  const w = mods.map((m) => m.name.length + 4), half = (w.reduce((a, b) => a + b, 0) + 6) / 2;
-  let cut = 0, acc = 0; while (cut < mods.length && acc + w[cut] / 2 < half) acc += w[cut++];
-  const gear = `<button class="mod modset" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button>`;
-  $("#modules").innerHTML = `<div class="modrow">${mods.slice(0, cut).map(btn).join("")}</div><div class="modrow">${mods.slice(cut).map(btn).join("")}${gear}</div>`;
+  /* Sections as an icon grid: two even rows of four, scrolling sideways if there are ever more than eight. */
+  const mods = modOrdered(), cols = Math.max(4, Math.ceil(mods.length / 2));
+  const tile = (m) => `<button class="mt" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" aria-label="${esc(m.name)}">${MODICON[m.id] || I.list}<span>${esc(MODSHORT[m.id] || m.name)}</span></button>`;
+  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - 18px) / 4), 1fr))">${mods.map(tile).join("")}</div><button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button>`;
   if (S.module === "todo") {
     const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar]];
     $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
