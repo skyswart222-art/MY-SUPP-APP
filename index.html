@@ -133,6 +133,12 @@ circle[stroke="var(--accent)"][stroke-width="14"] { filter: drop-shadow(0 0 2px 
 .swatch { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); font-weight: 600; text-align: left; }
 .swatch i { flex: none; width: 28px; height: 28px; border-radius: 50%; }
 .swatch[aria-pressed="true"] { border-color: var(--ink); }
+.cdlg-bg { align-items: center !important; justify-content: center; z-index: 80; }
+.cdlg { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; width: min(340px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; box-shadow: 0 20px 60px rgb(0 0 0 / .35); }
+.cdlg h3 { margin: 0; font-size: 18px; }
+.cdlg p { margin: 0; }
+.cdlg-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.btn.danger.solid { background: var(--warn); color: #fff; border-color: transparent; }
 .seg2 { display: grid; grid-template-columns: 1fr 1fr; background: var(--sunk); border-radius: 12px; padding: 4px; gap: 4px; }
 .seg2 button { border: 0; background: transparent; border-radius: 9px; padding: 9px 0; font-weight: 600; color: var(--muted); }
 .seg2 button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }

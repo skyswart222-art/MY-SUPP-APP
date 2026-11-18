@@ -1169,6 +1169,7 @@ function renderOverlay() {
   let host = $("#overlay");
   if (!host) { host = document.createElement("div"); host.id = "overlay"; document.body.appendChild(host); }
   if (S.modEdit) { host.innerHTML = modOrderSheet(); document.body.style.overflow = "hidden"; return; }
+  if (S.mconfirm && S.module === "meals") { const c = S.mconfirm; host.innerHTML = (S.mealAdd ? mealSheet() : "") + `<div class="sheet-bg cdlg-bg" data-act="mcfcancel"><div class="cdlg" role="alertdialog" aria-modal="true" aria-label="${esc(c.title)}" data-stop><h3>${esc(c.title)}</h3>${c.body ? `<p class="small muted">${esc(c.body)}</p>` : ""}<div class="cdlg-btns"><button class="btn" data-act="mcfcancel">Cancel</button><button class="btn danger solid" data-act="mcfok">${esc(c.label || "Delete")}</button></div></div></div>`; document.body.style.overflow = "hidden"; return; }
   if (S.mealAdd) { host.innerHTML = mealSheet(); document.body.style.overflow = "hidden"; return; }
   if (S.reminders) { host.innerHTML = reminderSheet(); document.body.style.overflow = "hidden"; return; }
   const s = S.detail && S.supps.find((x) => x.id === S.detail);
@@ -1676,15 +1677,19 @@ async function mealClick(a, b) {
     case "close-meal": S.mealAdd = null; renderOverlay(); return true;
     case "mpick": { const f = S.meals.foods.find((x) => x.id === b.dataset.id); if (f && S.mealAdd) { Object.assign(S.mealAdd.form, { name: f.name, serving: f.serving || "", kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, qty: 1 }); S.mealAdd.save = false; renderOverlay(); } return true; }
     case "mestimate": mestimate(); return true;
-    case "mdelentry": if (S.mealAdd?.plan) { const A = S.mealAdd; const plan = { ...mplan() }; for (const k of Object.keys(plan)) plan[k] = (plan[k] || []).filter((x) => x.id !== A.id); S.meals.settings = { ...S.meals.settings, plan }; S.mealAdd = null; render(); toast("Removed from plan"); await msaveSettings(); return true; } else { const A = S.mealAdd; const day = S.meals.days[A.date]; if (day) day.entries = day.entries.filter((e) => e.id !== A.id); S.mealAdd = null; render(); toast("Deleted"); await msaveDay(A.date); return true; }
+    case "mdelentry": { const A = S.mealAdd; if (!A) return true; S.mconfirm = { title: A.plan ? `Remove ${A.form.name || "this food"} from your plan?` : `Delete ${A.form.name || "this food"}?`, label: A.plan ? "Remove" : "Delete", act: "mdelentry-do", data: {} }; renderOverlay(); return true; }
+    case "mdelentry-do": if (S.mealAdd?.plan) { const A = S.mealAdd; const plan = { ...mplan() }; for (const k of Object.keys(plan)) plan[k] = (plan[k] || []).filter((x) => x.id !== A.id); S.meals.settings = { ...S.meals.settings, plan }; S.mealAdd = null; render(); toast("Removed from plan"); await msaveSettings(); return true; } else { const A = S.mealAdd; const day = S.meals.days[A.date]; if (day) day.entries = day.entries.filter((e) => e.id !== A.id); S.mealAdd = null; render(); toast("Deleted"); await msaveDay(A.date); return true; }
     case "mquick": mquickAdd(b.dataset.id, nextSlot(), S.date); return true;
-    case "mdelfood": { const f = S.meals.foods.find((x) => x.id === b.dataset.id); await mdeleteFood(b.dataset.id); render(); toast(`Deleted ${f?.name || "food"}`); return true; }
+    case "mdelfood": { const f = S.meals.foods.find((x) => x.id === b.dataset.id); S.mconfirm = { title: `Delete ${f?.name || "this food"} from My foods?`, label: "Delete", act: "mdelfood-do", data: { id: b.dataset.id } }; renderOverlay(); return true; }
+    case "mdelfood-do": { const f = S.meals.foods.find((x) => x.id === b.dataset.id); await mdeleteFood(b.dataset.id); render(); toast(`Deleted ${f?.name || "food"}`); return true; }
     case "mexample": mexample(); return true;
     case "mclearex": mclearExamples(); return true;
     case "mgoday": S.date = b.dataset.date; S.mtab = "mtoday"; render(); window.scrollTo(0, 0); return true;
     case "maddslot": S.mtargetsForm.slots.push({ id: "m" + uid().slice(0, 6), name: `Meal ${S.mtargetsForm.slots.length + 1}`, time: "20:00" }); render(); return true;
     case "mrename": S.mrename = b.dataset.meal; S.mdel = null; render(); setTimeout(() => { const i = $("#mren-in"); i?.focus(); i?.select(); }, 0); return true;
-    case "mdelask": S.mdel = b.dataset.meal; S.mrename = null; render(); return true;
+    case "mdelask": { const sl = mslots().find((x) => x.id === b.dataset.meal); S.mrename = null; S.mconfirm = { title: `Delete ${sl?.name || "this meal"}?`, body: "It comes off your meal plan and schedule. Food you've already logged stays in your history.", label: "Delete meal", act: "mdelslot", data: { meal: b.dataset.meal } }; renderOverlay(); return true; }
+    case "mcfcancel": S.mconfirm = null; renderOverlay(); return true;
+    case "mcfok": { const c = S.mconfirm; S.mconfirm = null; if (!c) return true; renderOverlay(); return mealClick(c.act, { dataset: c.data }); }
     case "mdelcancel": S.mdel = null; render(); return true;
     case "mdelslot": { const sl = mslots().find((x) => x.id === b.dataset.meal); S.mdel = null; S.meals.settings = { ...S.meals.settings, slots: mslots().filter((x) => x.id !== b.dataset.meal) }; render(); toast(`Deleted ${sl?.name || "meal"}`); await msaveSettings(); return true; }
     case "msaveopen": S.msave = { kind: b.dataset.kind, meal: b.dataset.meal || null }; S.mload = null; render(); setTimeout(() => $("#msave-in")?.focus(), 0); return true;
