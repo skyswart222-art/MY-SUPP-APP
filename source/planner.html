@@ -549,6 +549,11 @@ textarea.in.kimptext { height: 220px; min-height: 220px; resize: vertical; line-
 .kimpcta > svg { width: 22px; height: 22px; flex: none; color: var(--accent); }
 .kimpcta b { display: block; }
 .kimpitem.off { opacity: .5; }
+.mimeal .in { min-width: 0; }
+.mifood { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.mimac { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-items: end; }
+.mimac label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); min-width: 0; }
+.mimac .in { padding: 6px; min-width: 0; font-size: 14px; text-align: center; }
 .kimpitem .seg { align-self: flex-start; }
 .kimpitem .daypick { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .kimpitem .daypick button { width: auto; }
@@ -1150,7 +1155,7 @@ function renderChrome() {
   if (S.module === "meals") {
     const mt = [["mtoday", "Today", I.today], ["mplan", "Plan", I.calendar], ["mweek", "Week", I.totals], ["mfoods", "Foods", I.stock], ["mtargets", "Targets", I.spend]];
     $("#tabs").style.gridTemplateColumns = "repeat(5, 1fr)";
-    $("#tabs").innerHTML = mt.map(([id, label, ic]) => `<button class="tab" data-act="mtab" data-tab="${id}" ${S.mtab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+    $("#tabs").innerHTML = mt.map(([id, label, ic]) => `<button class="tab" data-act="mtab" data-tab="${id}" ${S.mtab === id || (id === "mplan" && S.mtab === "mimport") ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
     return;
   }
   $("#tabs").style.gridTemplateColumns = "";
@@ -1172,7 +1177,7 @@ function render() {
   v.innerHTML = S.tab === "today" ? viewToday() : S.tab === "totals" ? viewTotals() : S.tab === "stock" ? viewStock() : S.tab === "spend" ? viewSpend() : viewAdd();
   renderOverlay();
 }
-function softRender() { if (S.module === "budget") { bsoft(); return; } if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail) { renderChrome(); return; } render(); return; } if (S.tab === "add" && S.form) { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
+function softRender() { if (S.module === "budget") { bsoft(); return; } if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail || S.mtab === "mimport") { renderChrome(); return; } render(); return; } if (S.tab === "add" && S.form) { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
 
 function emptyState() {
   return `<div class="card empty">${I.bottle}<h3>Your stack goes here</h3>
@@ -1680,9 +1685,11 @@ const MDEFAULT = {
   ],
 };
 S.module = "supplements"; S.mtab = "mtoday";
-try { const m = localStorage.getItem("planner.module"); if (["meals", "workouts", "cycle", "progress", "skincare", "budget"].includes(m)) S.module = m; const t = localStorage.getItem("planner.mtab"); if (["mtoday", "mplan", "mweek", "mfoods", "mtargets"].includes(t)) S.mtab = t; } catch {}
+try { const m = localStorage.getItem("planner.module"); if (["meals", "workouts", "cycle", "progress", "skincare", "budget"].includes(m)) S.module = m; const t = localStorage.getItem("planner.mtab"); if (["mtoday", "mplan", "mweek", "mfoods", "mtargets", "mimport"].includes(t)) S.mtab = t; } catch {}
 S.meals = { days: {}, foods: [], settings: JSON.parse(JSON.stringify(MDEFAULT)) };
 S.mealAdd = null; S.mtargetsForm = null;
+const mImpBlank = () => ({ busy: false, msg: "", kind: "", text: "", files: [], result: null, day: 0, saveDays: true, useTargets: true, summary: "" });
+S.mimp = mImpBlank();
 
 const mstore = { days: null, foods: null, settings: null };
 const MLS = "planner.meals.v1";
@@ -1697,7 +1704,7 @@ function minitDb(db, id) {
   mstore.foods.onSnapshot((snap) => { S.meals.foods = snap.docs.map((d) => ({ ...d.data(), id: d.id })); msoft(); }, () => {});
   mstore.settings.onSnapshot((snap) => { if (snap.exists) { S.meals.settings = { ...S.meals.settings, ...snap.data() }; msoft(); } }, () => {});
 }
-function msoft() { if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm || S.mrename || S.msave) { renderChrome(); return; } render(); }
+function msoft() { if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm || S.mrename || S.msave || S.mtab === "mimport") { renderChrome(); return; } render(); }
 async function msaveDay(date) {
   const d = S.meals.days[date] || { date, entries: [] };
   if (store.kind === "db" && mstore.days) return queued("md/" + date, () => mstore.days.doc(date).set({ date, entries: JSON.parse(JSON.stringify(d.entries)) }));
@@ -1730,6 +1737,7 @@ function nextSlot() { const nowT = `${pad(new Date().getHours())}:${pad(new Date
 
 /* ---------- Meals views ---------- */
 function mealView() {
+  if (S.mtab === "mimport") return mealImport();
   if (S.mtab === "mweek") return mealWeek();
   if (S.mtab === "mplan") return mealPlan();
   if (S.mtab === "mfoods") return mealFoods();
@@ -1878,7 +1886,8 @@ async function mateAsPlanned(meals, date) {
 function mealPlan() {
   const T = mtargets(), slots = mslots(), plan = mplan();
   const all = slots.flatMap((sl) => plan[sl.id] || []), tot = msum(all);
-  let html = `<div class="row between"><h2 style="font-size:22px">Meal plan</h2></div>
+  let html = `<div class="row between"><h2 style="font-size:22px">Meal plan</h2><button class="btn sm kimpbtn" data-act="mtab" data-tab="mimport">${I.upload}<span>Import / autofill</span></button></div>
+    ${all.length ? "" : `<button class="card kimpcta" data-act="mtab" data-tab="mimport">${I.upload}<span class="grow"><b>Import / autofill your meal plan</b><span class="small muted">Paste a plan you’ve researched or got from a coach, or attach a text file, PDF or screenshots</span></span>${I.right}</button>`}
     <p class="small muted" style="margin:0">Your usual day of eating. On the Today tab, tap "Ate as planned" on a meal (or log the whole day at once) instead of entering food every day.</p>`;
   html += `<div class="card"><div class="row between"><span class="eyebrow">Plan totals vs targets</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
     <div class="mm"><div class="row between"><span class="small muted">Calories</span><span class="small num"><b>${kc(tot.kcal)}</b><span class="muted"> / ${kc(T.kcal)} kcal</span></span></div><div class="mbar ${tot.kcal > T.kcal * 1.05 ? "over" : ""}"><i style="width:${Math.min(100, T.kcal ? (tot.kcal / T.kcal) * 100 : 0)}%"></i></div></div>
@@ -2001,8 +2010,103 @@ async function mclearExamples() {
 }
 
 /* ---------- Meals events ---------- */
+
+/* ---------- Import / autofill a meal plan from pasted text or files ---------- */
+const MIPROMPT = `You are reading a meal plan or diet someone has researched, written down or been given by a coach. Turn it into structured meals. Answer with ONLY a JSON object:
+{"days": [{"name": short name for this day (e.g. "Training day", "Monday", "Rest day"; "My plan" if there is only one), "meals": [{"name": meal name as written (e.g. "Breakfast", "Meal 1", "Pre-workout"), "time": 24-hour time "HH:MM" if given or a sensible time for that meal, "foods": [{"name": food name, "serving": amount as written (e.g. "200 g", "2 eggs", "1 cup"), "kcal": number, "protein": grams, "carbs": grams, "fat": grams, "estimated": true if you estimated the numbers, false if they were given}]}]}],
+ "targets": {"kcal": number, "protein": grams, "carbs": grams, "fat": grams} if the text states daily targets, otherwise null,
+ "summary": up to 3 short lines of general advice from the text that isn't tied to one food, or ""}
+Rules: the numbers are for the serving as written. Use the text's numbers where it gives them, and sensible estimates from standard nutrition data where it doesn't. Only make more than one day if the text has genuinely different days; if it lists alternatives for the same meal ("option A or B"), use the first option and mention the others in summary. Keep meals in the order they're eaten. Don't invent foods that aren't in the text.`;
+const mnum = (v) => { const n = Number(v); return Number.isFinite(n) ? Math.round(n * 10) / 10 : 0; };
+function mealImport() {
+  const K = S.mimp, R = K.result, canAI = !(S.canPhoto === false || !S.sample);
+  let html = `<div class="row between"><button class="btn sm ghost" data-act="mtab" data-tab="mplan">${I.left}<span>Meal plan</span></button>${R ? `<button class="btn sm ghost" data-act="miclear">Start over</button>` : ""}</div>
+    <h2 style="font-size:22px">Import / autofill</h2>`;
+  if (!R) {
+    html += `<div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="small muted" style="margin:0">Paste a meal plan you’ve researched or got from a coach, or attach it as a file. Claude splits it into meals and foods with calories and macros (estimating any it doesn’t say), and you check it before anything changes.</p>
+      <label class="fl">Paste your meal plan<textarea class="in kimptext" data-mimp="text" placeholder="e.g.&#10;Breakfast 7am: 80 g oats, 1 scoop whey, 1 banana&#10;Lunch: 200 g chicken breast, 150 g rice, broccoli&#10;Snack: Greek yoghurt 200 g, 30 g almonds&#10;Dinner: 180 g salmon, 250 g potatoes, salad&#10;Targets: 2600 kcal, 190 g protein">${esc(K.text)}</textarea></label>
+      <div class="row wrapflex" style="gap:8px"><label class="btn sm kimpbtn">${I.upload}<span>${K.files.length ? "Add another file" : "Attach a file"}</span><input type="file" hidden accept=".txt,.md,.rtf,.csv,text/*,application/pdf,image/*" multiple data-mimpfile="1"></label><span class="small muted">Text, PDF, photos or screenshots</span></div>
+      ${K.files.length ? `<div class="kfiles">${K.files.map((f, i) => `<span class="chip">${esc(f.name)}<button type="button" class="kfx" data-act="mirmfile" data-i="${i}" aria-label="Remove ${esc(f.name)}">${I.x}</button></span>`).join("")}</div>` : ""}
+      ${canAI ? `<button class="btn primary" data-act="mirun" ${K.busy || !(K.text.trim() || K.files.length) ? "disabled" : ""}>${K.busy ? `<span class="spin"></span> ${esc(K.msg || "Reading your plan…")}` : "Autofill my meal plan"}</button>` : `<div class="status">Autofill needs you to be signed in. You can still add foods by hand on the Plan tab.</div>`}
+      ${!K.busy && K.msg ? `<div class="status ${K.kind}">${esc(K.msg)}</div>` : ""}</div>
+      <p class="hint">Prefer doing it yourself? <button class="linkbtn" data-act="mtab" data-tab="mplan">Add foods one at a time</button>.</p>`;
+    return html;
+  }
+  const D = R.days[K.day] || R.days[0], T = mtargets(), nt = R.targets, tgt = nt && K.useTargets ? { ...T, ...nt } : T;
+  const tot = msum(D.meals.flatMap((m) => m.foods)), cur = Object.values(mplan()).flat().length;
+  html += `<div class="status ok">Found ${R.days.length > 1 ? `${R.days.length} days, ` : ""}${plural(D.meals.length, "meal")} and ${plural(D.meals.reduce((a, m) => a + m.foods.length, 0), "food")}${R.days.length > 1 ? " on this day" : ""}. Check them, then save.</div>`;
+  if (R.days.length > 1) html += `<div><div class="eyebrow" style="margin-bottom:6px">Which day becomes your meal plan?</div><div class="bchips">${R.days.map((d, i) => `<button class="bchip" data-act="miday" data-i="${i}" aria-pressed="${i === K.day}">${esc(d.name)}</button>`).join("")}</div></div>`;
+  if (K.summary) html += `<div class="card"><div class="eyebrow">From your notes</div><p class="small" style="margin:6px 0 0;white-space:pre-line">${esc(K.summary)}</p></div>`;
+  html += `<div class="card"><div class="row between"><span class="eyebrow">Day totals vs ${nt && K.useTargets ? "new" : "your"} targets</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+    <div class="mm"><div class="row between"><span class="small muted">Calories</span><span class="small num"><b>${kc(tot.kcal)}</b><span class="muted"> / ${kc(tgt.kcal)} kcal</span></span></div><div class="mbar ${tot.kcal > tgt.kcal * 1.05 ? "over" : ""}"><i style="width:${Math.min(100, tgt.kcal ? (tot.kcal / tgt.kcal) * 100 : 0)}%"></i></div></div>
+    ${macroBar("Protein", tot.protein, tgt.protein, "p")}${macroBar("Carbs", tot.carbs, tgt.carbs, "c")}${macroBar("Fat", tot.fat, tgt.fat, "f")}</div>
+    ${nt ? `<label class="row small" style="gap:8px;margin-top:10px"><input type="checkbox" data-mitargets="1" ${K.useTargets ? "checked" : ""}> Set my targets to ${kc(nt.kcal)} kcal · P ${Math.round(nt.protein)} · C ${Math.round(nt.carbs)} · F ${Math.round(nt.fat)}</label>` : ""}</div>`;
+  html += `<div class="mprep">` + D.meals.map((m, mi) => { const st = msum(m.foods); return `<section class="mprep-card mimeal">
+    <div class="row" style="gap:8px"><input class="in grow" data-mim="${mi}" data-k="name" value="${esc(m.name)}" aria-label="Meal name"><input class="in num" type="time" data-mim="${mi}" data-k="time" value="${esc(m.time)}" aria-label="Time" style="width:118px"><button type="button" class="iconbtn" data-act="mirmmeal" data-m="${mi}" aria-label="Remove ${esc(m.name)}">${I.x}</button></div>
+    <div class="mprep-mac num"><span><b>${kc(st.kcal)}</b> kcal</span><span><i style="background:var(--mp)"></i>P ${Math.round(st.protein)}g</span><span><i style="background:var(--mc)"></i>C ${Math.round(st.carbs)}g</span><span><i style="background:var(--mf)"></i>F ${Math.round(st.fat)}g</span></div>
+    ${m.foods.map((f, fi) => `<div class="mifood"><div class="row" style="gap:6px"><input class="in grow" data-mif="${mi}.${fi}" data-k="name" value="${esc(f.name)}" aria-label="Food"><input class="in" data-mif="${mi}.${fi}" data-k="serving" value="${esc(f.serving)}" placeholder="Serving" aria-label="Serving" style="width:96px"><button type="button" class="iconbtn" data-act="mirmfood" data-m="${mi}" data-f="${fi}" aria-label="Remove ${esc(f.name)}">${I.x}</button></div>
+      <div class="mimac">${[["kcal", "kcal"], ["protein", "P"], ["carbs", "C"], ["fat", "F"]].map(([k, l]) => `<label><span>${l}</span><input class="in num" type="number" inputmode="decimal" step="any" data-mif="${mi}.${fi}" data-k="${k}" value="${esc(f[k])}"></label>`).join("")}</div>${f.estimated ? '<span class="small muted">Numbers estimated by Claude</span>' : ""}</div>`).join("") || '<div class="small muted">No foods.</div>'}</section>`; }).join("") + `</div>`;
+  html += `<div class="card" style="display:flex;flex-direction:column;gap:8px">${R.days.length > 1 ? `<label class="row small" style="gap:8px;align-items:flex-start"><input type="checkbox" data-misavedays="1" ${K.saveDays ? "checked" : ""}><span>Also save all ${R.days.length} days under <b>Saved days</b>, so you can load any of them on the Today tab</span></label>` : ""}
+    <p class="small muted" style="margin:0">${cur ? `This replaces your current meal plan. Your current plan is kept under Saved days as “Previous plan”, and food you’ve already logged doesn’t change.` : `This becomes your meal plan. Food you’ve already logged doesn’t change.`}</p></div>`;
+  html += `<div class="sticky-save"><button class="btn" data-act="miclear">Discard</button><button class="btn primary" data-act="misave" ${D.meals.length ? "" : "disabled"}>Use as my meal plan</button></div>`;
+  return html;
+}
+async function mrunImport() {
+  const K = S.mimp; if (!S.sample || K.busy) return;
+  K.busy = true; K.msg = K.files.length ? "Reading your files…" : "Reading your plan…"; K.kind = ""; render();
+  try {
+    const maxImg = S.imgLimits?.maxCount || 5;
+    let text = K.text.trim(), images = [];
+    for (const f of K.files) { const r = await kreadFile(f, maxImg - images.length); text += r.text; images.push(...r.images); }
+    if (!text.trim() && !images.length) throw new Error("empty");
+    K.msg = "Claude is building your meal plan…"; render();
+    const opts = { modelTier: "default" }; if (images.length) opts.images = images.slice(0, maxImg);
+    const out = await S.sample.json(MIPROMPT + (text.trim() ? `\n\nThe meal plan:\n${text.slice(0, 100000)}` : "\n\nThe meal plan is in the images."), opts);
+    const days = (out?.days || []).filter((d) => d && Array.isArray(d.meals)).map((d, di) => ({
+      name: String(d.name || `Day ${di + 1}`).slice(0, 40),
+      meals: d.meals.filter((m) => m && m.name).map((m, mi) => ({ name: String(m.name).slice(0, 40), time: /^\d{1,2}:\d{2}$/.test(String(m.time || "")) ? String(m.time).padStart(5, "0") : `${pad(Math.min(22, 7 + mi * 3))}:00`,
+        foods: (m.foods || []).filter((f) => f && f.name).map((f) => ({ name: String(f.name), serving: String(f.serving || ""), kcal: mnum(f.kcal), protein: mnum(f.protein), carbs: mnum(f.carbs), fat: mnum(f.fat), estimated: !!f.estimated })) })),
+    })).filter((d) => d.meals.length);
+    if (!days.length) throw new Error("none");
+    const t = out?.targets, targets = t && num(t.kcal) > 0 ? { kcal: Math.round(num(t.kcal)), protein: Math.round(num(t.protein)), carbs: Math.round(num(t.carbs)), fat: Math.round(num(t.fat)) } : null;
+    K.result = { days, targets }; K.day = 0; K.useTargets = !!targets; K.saveDays = days.length > 1; K.summary = String(out?.summary || "").trim(); K.msg = ""; K.kind = "ok";
+  } catch (e) {
+    K.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : e?.code === "not_granted" ? "Reading is turned off for this page." : e?.code === "cancelled" ? "" : e?.message === "none" ? "Couldn't find any meals in that. Try adding a bit more detail, like what you eat at each meal." : "Couldn't read that. Try pasting the text instead, or a clearer file.";
+    K.kind = "err";
+  }
+  K.busy = false; render(); window.scrollTo(0, 0);
+}
+async function msaveImport() {
+  const K = S.mimp, R = K.result; if (!R) return;
+  const D = R.days[K.day] || R.days[0], set = { ...S.meals.settings }, old = mslots(), oldPlan = mplan();
+  const strip = (f) => ({ name: f.name.trim() || "Food", serving: f.serving || "", kcal: mnum(f.kcal), protein: mnum(f.protein), carbs: mnum(f.carbs), fat: mnum(f.fat), qty: 1 });
+  let dayT = [...mDayT()];
+  if (Object.values(oldPlan).flat().length) {
+    const meals = old.map((sl) => ({ slot: sl.id, name: sl.name, time: sl.time, foods: (oldPlan[sl.id] || []).map(mstrip) })).filter((m) => m.foods.length);
+    dayT = [...dayT.filter((t) => t.name !== "Previous plan"), { id: uid(), name: "Previous plan", meals }];
+  }
+  const used = new Set(), slots = [], plan = {};
+  for (const m of D.meals) {
+    const match = old.find((x) => !used.has(x.id) && x.name.trim().toLowerCase() === m.name.trim().toLowerCase());
+    const sl = { id: match ? match.id : "m" + uid().slice(0, 6), name: m.name.trim() || `Meal ${slots.length + 1}`, time: m.time || "12:00" };
+    used.add(sl.id); slots.push(sl); plan[sl.id] = m.foods.map((f) => ({ id: uid(), ...strip(f) }));
+  }
+  if (K.saveDays && R.days.length > 1) for (const d of R.days) dayT = [...dayT.filter((t) => t.name.toLowerCase() !== d.name.toLowerCase()), { id: uid(), name: d.name, meals: d.meals.map((m) => ({ name: m.name, time: m.time, foods: m.foods.map(strip) })) }];
+  set.slots = slots; set.plan = plan; set.dayTemplates = dayT;
+  if (R.targets && K.useTargets) set.targets = { ...mtargets(), ...R.targets };
+  S.meals.settings = set; S.mimp = mImpBlank(); S.mtab = "mplan";
+  try { localStorage.setItem("planner.mtab", "mplan"); } catch {}
+  render(); window.scrollTo(0, 0); toast(`Meal plan set: ${plural(slots.length, "meal")}`); await msaveSettings();
+}
 async function mealClick(a, b) {
   switch (a) {
+    case "mirun": mrunImport(); return true;
+    case "miclear": S.mimp = { ...mImpBlank(), text: S.mimp.text, files: S.mimp.files }; render(); window.scrollTo(0, 0); return true;
+    case "mirmfile": S.mimp.files.splice(Number(b.dataset.i), 1); render(); return true;
+    case "miday": S.mimp.day = Number(b.dataset.i); render(); return true;
+    case "mirmmeal": { const D = S.mimp.result?.days[S.mimp.day]; if (D) { D.meals.splice(Number(b.dataset.m), 1); render(); } return true; }
+    case "mirmfood": { const m = S.mimp.result?.days[S.mimp.day]?.meals[Number(b.dataset.m)]; if (m) { m.foods.splice(Number(b.dataset.f), 1); render(); } return true; }
+    case "misave": msaveImport(); return true;
     case "module": { const m = b.dataset.mod; if (m === S.module) return true; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
     case "mtab": S.mtab = b.dataset.tab; S.mtargetsForm = null; try { localStorage.setItem("planner.mtab", S.mtab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "madd": mopenAdd(b.dataset.meal || nextSlot(), { save: !!b.dataset.save, plan: !!b.dataset.plan }); return true;
@@ -2074,11 +2178,18 @@ document.addEventListener("input", (e) => {
     const f = S.mealAdd.form, q = num(f.qty, 1) || 1, el = document.getElementById("ma-total");
     if (el) el.textContent = q !== 1 ? `Total: ${kc(num(f.kcal) * q)} kcal · P ${Math.round(num(f.protein) * q)} · C ${Math.round(num(f.carbs) * q)} · F ${Math.round(num(f.fat) * q)}` : "Numbers are per serving.";
   } else if (t.dataset.ma === "desc" && S.mealAdd) S.mealAdd.desc = t.value;
+  else if (t.dataset.mimp === "text") { const had = !!S.mimp.text.trim(); S.mimp.text = t.value; if (had !== !!t.value.trim()) { const btn = document.querySelector('[data-act="mirun"]'); if (btn && !S.mimp.busy) btn.disabled = !(t.value.trim() || S.mimp.files.length); } }
+  else if (t.dataset.mim != null && S.mimp.result) { const m = S.mimp.result.days[S.mimp.day]?.meals[Number(t.dataset.mim)]; if (m) m[t.dataset.k] = t.value; }
+  else if (t.dataset.mif != null && S.mimp.result) { const [mi, fi] = t.dataset.mif.split(".").map(Number), f = S.mimp.result.days[S.mimp.day]?.meals[mi]?.foods[fi]; if (f) { f[t.dataset.k] = t.value; if (t.dataset.k !== "name" && t.dataset.k !== "serving") f.estimated = false; } }
   else if (t.dataset.mt && S.mtargetsForm) S.mtargetsForm.targets[t.dataset.mt] = t.value;
   else if (t.dataset.ms && S.mtargetsForm) S.mtargetsForm.slots[Number(t.dataset.ms)][t.dataset.k] = t.value;
 });
 document.addEventListener("change", async (e) => {
   const t = e.target;
+  if (t.dataset.mimpfile && t.files?.length) { S.mimp.files.push(...t.files); S.mimp.msg = ""; t.value = ""; render(); return; }
+  if (t.dataset.mitargets) { S.mimp.useTargets = t.checked; render(); return; }
+  if (t.dataset.misavedays) { S.mimp.saveDays = t.checked; return; }
+  if ((t.dataset.mif != null && t.dataset.k !== "name" && t.dataset.k !== "serving") && S.mimp.result) { render(); return; }
   if (t.dataset.ma === "meal" && S.mealAdd) { S.mealAdd.meal = t.value; renderOverlay(); }
   else if (t.dataset.ma === "save" && S.mealAdd) S.mealAdd.save = t.checked;
   else if (t.dataset.mphoto && S.mealAdd && t.files?.[0]) { S.mealAdd.photo = await shrink(t.files[0]); renderOverlay(); }
