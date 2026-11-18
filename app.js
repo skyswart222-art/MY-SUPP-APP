@@ -116,6 +116,7 @@ function applyTheme() { const r = document.documentElement; r.setAttribute("data
 function renderSettings() {
   const el = $("#setsheet"); if (!el) return;
   if (!S.settingsOpen) { el.innerHTML = ""; return; }
+  const ab = document.getElementById("avatarbtn"), acct = ab && !ab.hidden, sync = $("#syncnote")?.textContent || "";
   el.innerHTML = `<div class="sheet-bg" data-act="close-settings"><div class="sheet" role="dialog" aria-modal="true" aria-label="Settings" data-stop>
     <div class="grab"></div>
     <div class="row between"><h2>Settings</h2><button class="btn sm" data-act="close-settings">Done</button></div>
@@ -124,6 +125,10 @@ function renderSettings() {
     <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Colour</span>
       <div class="setgrid">${ACCENTS.map((x) => `<button type="button" class="swatch" data-act="setaccent" data-v="${x.id}" aria-pressed="${S.accent === x.id}"><i style="background:${S.theme === "dark" ? x.d : x.l};color:${S.theme === "dark" ? x.d : x.l}"></i>${x.name}</button>`).join("")}</div>
       <p class="small muted" style="margin:0">Used for buttons, progress rings and the selected tab.</p></div>
+    <div class="col setbtns"><span class="eyebrow">Tabs and account</span>
+      <button type="button" class="btn" data-act="modorder"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg><span class="grow">Arrange tabs</span>${I.right}</button>
+      ${acct ? `<button type="button" class="btn" data-act="set-profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span class="grow">Your profile and log out</span>${I.right}</button>` : ""}
+      ${sync ? `<p class="small muted" style="margin:0">${esc(sync)}</p>` : ""}</div>
   </div></div>`;
 }
 applyTheme();
@@ -232,7 +237,9 @@ async function initStore() {
   }, () => {});
   // photo autofill availability
 }
-function setSync(t) { $("#syncnote").textContent = t; }
+/* The sync line stays hidden while all is well; it only shows up when saving has a problem. */
+const syncOk = (t) => /^(Synced|Saved on this device|Loading)/.test(t);
+function setSync(t) { const el = $("#syncnote"); if (!el) return; el.textContent = t; el.hidden = syncOk(t); }
 
 async function initSample() {
   const c = window.claude;
@@ -646,11 +653,17 @@ async function removeExamples() { for (const s of S.supps.filter((x) => x.exampl
 /* ---------- Rendering ---------- */
 const SUN = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+const GEAR = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 function renderChrome() {
   document.documentElement.setAttribute("data-mod", S.module);
   const tb = $("#themebtn");
   if (tb) { tb.innerHTML = S.theme === "dark" ? SUN : MOON; tb.setAttribute("aria-label", S.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"); }
-  $("#modules").innerHTML = modOrdered().map((m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`).join("") + `<button class="mod modarr" data-act="modorder" aria-label="Arrange tabs" title="Arrange tabs"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>`;
+  const mods = modOrdered(), btn = (m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`;
+  /* Two rows: split where the first row holds about half the total width, so both rows end up a similar length. */
+  const w = mods.map((m) => m.name.length + 4), half = (w.reduce((a, b) => a + b, 0) + 6) / 2;
+  let cut = 0, acc = 0; while (cut < mods.length && acc + w[cut] / 2 < half) acc += w[cut++];
+  const gear = `<button class="mod modset" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button>`;
+  $("#modules").innerHTML = `<div class="modrow">${mods.slice(0, cut).map(btn).join("")}</div><div class="modrow">${mods.slice(cut).map(btn).join("")}${gear}</div>`;
   if (S.module === "todo") {
     const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar]];
     $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
@@ -1648,7 +1661,8 @@ async function mealClick(a, b) {
     case "mirmmeal": { const D = S.mimp.result?.days[S.mimp.day]; if (D) { D.meals.splice(Number(b.dataset.m), 1); render(); } return true; }
     case "mirmfood": { const m = S.mimp.result?.days[S.mimp.day]?.meals[Number(b.dataset.m)]; if (m) { m.foods.splice(Number(b.dataset.f), 1); render(); } return true; }
     case "misave": msaveImport(); return true;
-    case "modorder": S.modEdit = modOrdered().map((m) => m.id); renderOverlay(); return true;
+    case "set-profile": S.settingsOpen = false; renderSettings(); document.getElementById("avatarbtn")?.click(); return true;
+    case "modorder": S.settingsOpen = false; renderSettings(); S.modEdit = modOrdered().map((m) => m.id); renderOverlay(); return true;
     case "modmove": { const i = Number(b.dataset.i), j = i + Number(b.dataset.d), a = S.modEdit; if (j < 0 || j >= a.length) return true; [a[i], a[j]] = [a[j], a[i]]; renderOverlay(); return true; }
     case "modcancel": S.modEdit = null; renderOverlay(); return true;
     case "modsave": { const o = S.modEdit; S.modEdit = null; S.settings = { ...S.settings, modOrder: o }; try { localStorage.setItem("planner.modorder", JSON.stringify(o)); } catch {} renderOverlay(); renderChrome(); toast("Tab order saved"); await saveSettings(); return true; }
