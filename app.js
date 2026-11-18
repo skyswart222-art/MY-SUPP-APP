@@ -2822,7 +2822,7 @@ function skinView() {
   return kToday();
 }
 /* Routine views: a schedule to look at, not a checklist. Each product shows its name; tap it to open the details. */
-S.kexp = null; S.kwd = null;
+S.kexp = null; S.kwd = null; S.kwedit = null; /* while editing the week: { [productId]: days[] } */
 const KWEEK = [1, 2, 3, 4, 5, 6, 0];
 const kOn = (x, wd, slot) => x.status !== "shelf" && kSlots(x).includes(slot) && (x.days?.length ? x.days : ALLD).includes(wd);
 const kSorted = (list) => list.slice().sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99) || a.name.localeCompare(b.name));
@@ -2854,13 +2854,16 @@ function kToday() {
   return html;
 }
 function kWeek() {
-  let html = `<div><h2 class="ov-title">Week overview</h2><p class="small muted" style="margin:2px 0 0">Ticks show the days you use each product. Tap a square to change it.</p></div>`;
+  const E = S.kwedit, daysOf = (x) => (E && E[x.id]) || (x.days?.length ? x.days : ALLD);
+  const on = (x, d, slot) => x.status !== "shelf" && kSlots(x).includes(slot) && daysOf(x).includes(d);
+  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">Week overview</h2>${S.sk.products.length ? (E ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="kwcancel">Cancel</button><button class="btn sm primary" data-act="kwsave">Save</button></span>` : `<button class="btn sm" data-act="kwedit">${PENCIL}<span>Edit</span></button>`) : ""}</div>
+    <p class="small muted" style="margin:-6px 0 0">${E ? "Tap the squares to change which days you use each product, then tap Save." : "Ticks show the days you use each product. Tap Edit to change them."}</p>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><p>Add products to see your week.</p></div>`;
   for (const slot of ["am", "pm"]) {
     const prods = kSorted(kActive().filter((x) => kSlots(x).includes(slot)));
     if (!prods.length) continue;
     html += `<section class="card kweek"><div class="kgrid"><span class="row kwh" style="gap:6px">${slot === "am" ? SUN : MOON}<b>${slot === "am" ? "Morning" : "Night"}</b></span>${KWEEK.map((d) => `<span class="kday">${DOW[d].slice(0, 1)}</span>`).join("")}
-      ${prods.map((x) => `<button class="kpname" data-act="kweekopen" data-id="${x.id}">${esc(x.name)}</button>${KWEEK.map((d) => { const on = kOn(x, d, slot); return `<button class="kcell ${on ? "on" : ""}" data-act="kwdow" data-id="${x.id}" data-d="${d}" aria-pressed="${on}" aria-label="${esc(x.name)} on ${DOW[d]}">${on ? I.check : ""}</button>`; }).join("")}`).join("")}</div></section>`;
+      ${prods.map((x) => `<button class="kpname" data-act="kweekopen" data-id="${x.id}">${esc(x.name)}</button>${KWEEK.map((d) => { const v = on(x, d, slot); return E ? `<button class="kcell editing ${v ? "on" : ""}" data-act="kwdow" data-id="${x.id}" data-d="${d}" aria-pressed="${v}" aria-label="${esc(x.name)} on ${DOW[d]}">${v ? I.check : ""}</button>` : `<span class="kcell ${v ? "on" : ""}" role="img" aria-label="${esc(x.name)} ${v ? "used" : "not used"} on ${DOW[d]}">${v ? I.check : ""}</span>`; }).join("")}`).join("")}</div></section>`;
   }
   if (kActive().some((x) => x.when === "both")) html += `<p class="hint">Products used morning and night share one set of days, so changing one changes both.</p>`;
   return html;
@@ -3023,7 +3026,7 @@ async function kexample() {
 }
 async function skinClick(a, b) {
   switch (a) {
-    case "ktab": S.ktab = b.dataset.tab; S.kview = null; if (S.ktab === "kadd" && !S.kform) S.kform = kBlank(); try { localStorage.setItem("planner.ktab", S.ktab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "ktab": S.ktab = b.dataset.tab; S.kview = null; S.kwedit = null; if (S.ktab === "kadd" && !S.kform) S.kform = kBlank(); try { localStorage.setItem("planner.ktab", S.ktab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "ktick": ktoggle(b.dataset.id, b.dataset.slot, S.date); return true;
     case "kweektick": ktoggle(b.dataset.id, b.dataset.slot, b.dataset.date); return true;
     case "kall": { const slot = b.dataset.slot; for (const x of kRoutine(S.date, slot)) if (!kDone(S.date, x.id, slot)) await ktoggle(x.id, slot, S.date); return true; }
@@ -3040,7 +3043,10 @@ async function skinClick(a, b) {
     case "krestock": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; x.usesLeft = num(x.uses) || kLeft(x) || 0; render(); toast(`New bottle of ${x.name}: ${plural(x.usesLeft, "use")}`); await ksaveProd(x); return true; }
     case "kexp": S.kexp = S.kexp === b.dataset.k ? null : b.dataset.k; render(); return true;
     case "kweekopen": S.kexp = "p|" + b.dataset.id; S.ktab = "kproducts"; render(); requestAnimationFrame(() => document.querySelector(".krow.open")?.scrollIntoView({ block: "center" })); return true;
-    case "kwdow": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; const d = Number(b.dataset.d), cur = x.days?.length ? x.days : [...ALLD]; const nd = cur.includes(d) ? cur.filter((v) => v !== d) : [...cur, d]; if (!nd.length) { toast("Keep at least one day. To stop using it, move it to the shelf in Edit."); return true; } x.days = nd.sort(); render(); await ksaveProd(x); return true; }
+    case "kwedit": S.kwedit = {}; render(); return true;
+    case "kwcancel": S.kwedit = null; render(); return true;
+    case "kwsave": { const E = S.kwedit || {}; S.kwedit = null; const changed = S.sk.products.filter((x) => E[x.id] && E[x.id].join() !== (x.days?.length ? x.days : ALLD).slice().sort().join()); for (const x of changed) x.days = E[x.id]; render(); toast(changed.length ? `Saved ${plural(changed.length, "product")}` : "No changes"); for (const x of changed) await ksaveProd(x); return true; }
+    case "kwdow": { if (!S.kwedit) return true; const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; const d = Number(b.dataset.d), cur = S.kwedit[x.id] || (x.days?.length ? x.days : [...ALLD]); const nd = cur.includes(d) ? cur.filter((v) => v !== d) : [...cur, d]; if (!nd.length) { toast("Keep at least one day. To stop using it, move it to the shelf in Edit."); return true; } S.kwedit[x.id] = nd.sort(); render(); return true; }
     case "kirun": krunImport(); return true;
     case "kiclear": S.kimp = { ...kImpBlank(), text: S.kimp.text, files: S.kimp.files }; render(); window.scrollTo(0, 0); return true;
     case "kirmfile": S.kimp.files.splice(Number(b.dataset.i), 1); render(); return true;
