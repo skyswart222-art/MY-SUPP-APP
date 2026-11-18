@@ -494,7 +494,7 @@ function renderChrome() {
     return;
   }
   if (S.module === "skincare") {
-    const kt = [["ktoday", "Today", I.today], ["kweek", "Week", I.calendar], ["kproducts", "Products", I.stock], ["kadd", S.kform?.id ? "Edit" : "Add", I.add]];
+    const kt = [["ktoday", "Routine", I.today], ["kweek", "Week", I.calendar], ["kproducts", "Products", I.stock], ["kadd", S.kform?.id ? "Edit" : "Add", I.add]];
     const lowk = kActive().filter(kLow).length;
     $("#tabs").style.gridTemplateColumns = "repeat(4, 1fr)";
     $("#tabs").innerHTML = kt.map(([id, label, ic]) => `<button class="tab" data-act="ktab" data-tab="${id}" ${(S.ktab === id || (id === "kadd" && S.ktab === "kimport")) && !S.kview ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "kproducts" && lowk ? `<span class="dot">${lowk}</span>` : ""}</button>`).join("");
@@ -871,7 +871,7 @@ function viewAdd() {
   html += `</div>`;
   const opt = (v, cur, label) => `<option value="${v}" ${v === cur ? "selected" : ""}>${label || v}</option>`;
   html += `<form class="f card" id="sform" novalidate>
-  <fieldset><legend>${editing ? "Details" : "Step 2 · Check the details"}</legend>
+  <fieldset><legend>Details</legend>
     <div class="fgrid">
       <label class="fl full">Name<input class="in" id="f-name" data-f="name" value="${esc(f.name)}" placeholder="e.g. Magnesium Glycinate" autocomplete="off"></label>
       <label class="fl">Brand<input class="in" id="f-brand" data-f="brand" value="${esc(f.brand)}" autocomplete="off"></label>
@@ -2821,64 +2821,54 @@ function skinView() {
   if (S.ktab === "kimport") return kImport();
   return kToday();
 }
-function kSlotCard(date, slot) {
-  const list = kRoutine(date, slot); if (!list.length) return "";
-  const done = list.filter((x) => kDone(date, x.id, slot)).length, hr = new Date().getHours();
-  const now = date === today() && ((slot === "am" && hr < 12) || (slot === "pm" && hr >= 17));
-  return `<section class="card kslot ${now ? "is-now" : ""}"><div class="row between"><div class="row" style="gap:8px">${slot === "am" ? SUN : MOON}<h3 class="ov-tlabel">${slot === "am" ? "Morning" : "Night"}</h3></div><span class="ov-state ${done === list.length ? "done" : ""}">${done === list.length ? "DONE" : `${done}/${list.length}`}</span></div>
-    <ol class="ksteps">${list.map((x, i) => { const tk = kDone(date, x.id, slot); return `<li class="kstep ${tk ? "taken" : ""}"><button class="kck" data-act="ktick" data-id="${x.id}" data-slot="${slot}" aria-pressed="${!!tk}" aria-label="${tk ? "Done. Tap to undo" : "Mark done"}: ${esc(x.name)}">${tk ? I.check : `<span>${i + 1}</span>`}</button>
-      <button class="kname" data-act="kopen" data-id="${x.id}"><b>${esc(x.name)}</b><span class="small muted">${esc(KTYPE[x.type] || "Product")}${x.howTo ? " · " + esc(x.howTo) : ""}</span></button>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}</li>`; }).join("")}</ol>
-    ${done < list.length ? `<button class="btn sm" data-act="kall" data-slot="${slot}">Mark all done</button>` : ""}</section>`;
+/* Routine views: a schedule to look at, not a checklist. Each product shows its name; tap it to open the details. */
+S.kexp = null; S.kwd = null;
+const KWEEK = [1, 2, 3, 4, 5, 6, 0];
+const kOn = (x, wd, slot) => x.status !== "shelf" && kSlots(x).includes(slot) && (x.days?.length ? x.days : ALLD).includes(wd);
+const kSorted = (list) => list.slice().sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99) || a.name.localeCompare(b.name));
+const CHEV = '<svg class="kchev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+function kExpBody(x) {
+  const l = kLeft(x), tot = num(x.uses), pct = l != null && tot ? Math.min(100, (l / tot) * 100) : null, wl = kWeeksLeft(x);
+  return `<div class="kexp-body">
+    <div class="small muted">${esc([x.brand, KTYPE[x.type]].filter(Boolean).join(" · "))}</div>
+    <div class="small"><b>${esc(kWhenTxt(x))}</b> · ${esc(kFreqTxt(x))}</div>
+    ${x.howTo ? `<div class="small">${esc(x.howTo)}</div>` : ""}
+    ${pct != null ? `<div class="level ${kLow(x) ? "warn" : ""}"><i style="width:${pct.toFixed(1)}%"></i></div>` : ""}
+    <div class="small muted">${l != null ? `${plural(l, "use")} left${tot ? ` of ${fmtN(tot, 0)}` : ""}${wl != null && x.status !== "shelf" ? ` · about ${wl < 2 ? plural(Math.round(wl * 7), "day") : plural(Math.round(wl), "week")}` : ""}` : "Uses not tracked"}</div>
+    <div class="actions"><button class="btn sm" data-act="kopen" data-id="${x.id}">Details</button><button class="btn sm" data-act="kedit" data-id="${x.id}">Edit</button>${l != null ? `<button class="btn sm ghost" data-act="krestock" data-id="${x.id}">New bottle</button>` : ""}</div></div>`;
+}
+function kRow(x, key, n) {
+  const open = S.kexp === key;
+  return `<li class="krow ${open ? "open" : ""}"><button class="khead" data-act="kexp" data-k="${esc(key)}" aria-expanded="${open}">${n != null ? `<span class="kn num">${n}</span>` : ""}<span class="grow kt">${esc(x.name)}</span>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}${CHEV}</button>${open ? kExpBody(x) : ""}</li>`;
+}
+function kSlotCard(slot) {
+  const list = kSorted(kActive().filter((x) => kSlots(x).includes(slot)));
+  return `<section class="card kslot"><div class="row" style="gap:8px">${slot === "am" ? SUN : MOON}<h3 class="ov-tlabel">${slot === "am" ? "Morning" : "Night"}</h3><span class="small muted" style="margin-left:auto">${plural(list.length, "step")}</span></div>
+    ${list.length ? `<ol class="klist">${list.map((x, i) => kRow(x, `${slot}|${x.id}`, i + 1)).join("")}</ol>` : `<p class="small muted" style="margin:6px 0 0">No ${slot === "am" ? "morning" : "night"} products yet.</p>`}</section>`;
 }
 function kToday() {
-  const date = S.date, d = parseD(date), isToday = date === today();
-  const title = isToday ? "Today’s routine" : date === addDays(today(), -1) ? "Yesterday" : DOW[d.getDay()] + "’s routine";
-  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
-    <div class="grow"><div class="eyebrow">${esc(shortD(date))}</div><h2 class="ov-title">${title}</h2></div>
-    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
-    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  let html = `<h2 class="ov-title">Routine</h2>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><h3>Build your routine</h3><p>Snap a photo of each product. Claude reads it, suggests morning or night and how often, and slots it into your routine in the right order.</p><p class="small muted" style="margin:0">Already researched a routine? Paste it in or attach the file and Claude sets it all up.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="ktab" data-tab="kimport">Import / autofill</button><button class="btn" data-act="ktab" data-tab="kadd">Add a product</button><button class="btn" data-act="kexample">Try a sample routine</button></div></div>`;
-  const am = kRoutine(date, "am"), pm = kRoutine(date, "pm"), all = am.length + pm.length;
-  const done = am.filter((x) => kDone(date, x.id, "am")).length + pm.filter((x) => kDone(date, x.id, "pm")).length;
-  const low = kActive().filter(kLow), C = 2 * Math.PI * 68, frac = all ? done / all : 0;
-  let streak = 0; for (let i = isToday && done < all ? 1 : 0; i < 365; i++) { const dd = addDays(today(), -i), a = kRoutine(dd, "am"), p = kRoutine(dd, "pm"), n = a.length + p.length; if (!n) continue; const k = a.filter((x) => kDone(dd, x.id, "am")).length + p.filter((x) => kDone(dd, x.id, "pm")).length; if (k < n) break; streak++; }
-  const tonight = pm.filter((x) => (x.days?.length ? x.days : ALLD).length < 7).map((x) => x.name);
-  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${done} of ${all} steps done">
-      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
-      <circle cx="80" cy="80" r="68" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
-      <div class="ov-ringtxt"><span class="ov-big">${done}<span>/${all}</span></span><span class="small muted">steps done</span></div></div>
-    <div class="ov-stats"><div><span class="small muted">Streak</span><b>${streak ? plural(streak, "full day") : "Starts today"}</b></div>
-      <div><span class="small muted">Tonight’s extras</span><b>${tonight.length ? esc(tonight.join(", ")) : "Just the basics"}</b></div>
-      <div><span class="small ${low.length ? "warntxt" : "muted"}">Running low</span>${low.length ? `<button class="ov-low" data-act="ktab" data-tab="kproducts">${esc(low.map((x) => `${x.name} · ${plural(kLeft(x), "use")}`).join(", "))}</button>` : "<b>All good</b>"}</div></div></div>`;
-  const cf = kConflicts(date); if (cf.length) html += `<div class="alerts">${cf.map((t) => `<div class="alert"><span class="pip"></span><div>${esc(t)}</div></div>`).join("")}</div>`;
-  html += kSlotCard(date, "am") + kSlotCard(date, "pm");
-  if (!all) html += `<div class="card"><p class="small muted" style="margin:0">Nothing scheduled for this day.</p></div>`;
+  html += kSlotCard("am") + kSlotCard("pm");
   html += `<div><button class="btn sm kimpbtn" data-act="ktab" data-tab="kimport">${I.upload}<span>Import / autofill routine</span></button></div>`;
   return html;
 }
 function kWeek() {
-  const week = weekDates(S.date), td = today();
-  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-7" aria-label="Previous week">${I.left}</button><div class="grow"><h2 class="ov-title" style="font-size:22px">This week</h2><div class="small muted">${esc(shortD(week[0], { day: "numeric", month: "short" }))} – ${esc(shortD(week[6], { day: "numeric", month: "short" }))}</div></div><button class="iconbtn" data-act="day" data-n="7" aria-label="Next week">${I.right}</button></div>`;
+  let html = `<div><h2 class="ov-title">Week overview</h2><p class="small muted" style="margin:2px 0 0">Ticks show the days you use each product. Tap a square to change it.</p></div>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><p>Add products to see your week.</p></div>`;
   for (const slot of ["am", "pm"]) {
-    const prods = kActive().filter((x) => kSlots(x).includes(slot)).sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99));
+    const prods = kSorted(kActive().filter((x) => kSlots(x).includes(slot)));
     if (!prods.length) continue;
-    html += `<section class="card kweek"><div class="row" style="gap:8px;margin-bottom:6px">${slot === "am" ? SUN : MOON}<b>${slot === "am" ? "Morning" : "Night"}</b></div>
-      <div class="kgrid"><span></span>${week.map((d) => `<button class="kday ${d === td ? "is-today" : ""}" data-act="kgoday" data-date="${d}"><span>${DOW[parseD(d).getDay()].slice(0, 2)}</span><b>${parseD(d).getDate()}</b></button>`).join("")}
-      ${prods.map((x) => `<button class="kpname" data-act="kopen" data-id="${x.id}">${esc(x.name)}</button>${week.map((d) => { const due = kDue(x, d, slot), dn = kDone(d, x.id, slot); const st = dn ? "taken" : !due ? "off" : d < td ? "missed" : "todo"; return st === "off" ? `<span class="kcell off" aria-hidden="true"></span>` : `<button class="kcell ${st}" data-act="kweektick" data-id="${x.id}" data-slot="${slot}" data-date="${d}" aria-pressed="${!!dn}" aria-label="${esc(x.name)} ${DOW[parseD(d).getDay()]}: ${st}">${dn ? I.check : ""}</button>`; }).join("")}`).join("")}</div></section>`;
+    html += `<section class="card kweek"><div class="kgrid"><span class="row kwh" style="gap:6px">${slot === "am" ? SUN : MOON}<b>${slot === "am" ? "Morning" : "Night"}</b></span>${KWEEK.map((d) => `<span class="kday">${DOW[d].slice(0, 1)}</span>`).join("")}
+      ${prods.map((x) => `<button class="kpname" data-act="kweekopen" data-id="${x.id}">${esc(x.name)}</button>${KWEEK.map((d) => { const on = kOn(x, d, slot); return `<button class="kcell ${on ? "on" : ""}" data-act="kwdow" data-id="${x.id}" data-d="${d}" aria-pressed="${on}" aria-label="${esc(x.name)} on ${DOW[d]}">${on ? I.check : ""}</button>`; }).join("")}`).join("")}</div></section>`;
   }
-  html += `<div class="blegend small muted"><span><i class="sw" style="background:var(--accent)"></i>Done</span><span><i class="sw" style="border:1.5px solid var(--warn)"></i>Missed</span><span><i class="sw" style="border:1.5px dashed var(--line)"></i>Coming up</span></div><p class="hint">Tap a square to tick or undo that day.</p>`;
+  if (kActive().some((x) => x.when === "both")) html += `<p class="hint">Products used morning and night share one set of days, so changing one changes both.</p>`;
   return html;
 }
 function kProducts() {
   let html = `<div class="row between"><h2 style="font-size:22px">Products</h2><span class="row" style="gap:6px"><button class="btn sm" data-act="ktab" data-tab="kimport">Import</button><button class="btn sm" data-act="ktab" data-tab="kadd">Add product</button></span></div>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><p>No products yet.</p><button class="btn primary" data-act="ktab" data-tab="kadd">Add a product</button></div>`;
-  const low = kActive().filter(kLow);
-  if (low.length) html += `<div class="alerts">${low.map((x) => `<div class="alert ${kLeft(x) <= 2 ? "crit" : ""}"><span class="pip"></span><div><b>${esc(x.name)}</b> has ${plural(kLeft(x), "use")} left${kWeeksLeft(x) != null ? `, about ${kWeeksLeft(x) < 2 ? plural(Math.round(kWeeksLeft(x) * 7), "day") : plural(Math.round(kWeeksLeft(x)), "week")}` : ""}.</div></div>`).join("")}</div>`;
-  const group = (list, label) => list.length ? `<div class="eyebrow">${label}</div>` + list.sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99)).map((x) => { const l = kLeft(x), tot = num(x.uses), pct = l != null && tot ? Math.min(100, (l / tot) * 100) : null, wl = kWeeksLeft(x); return `<div class="card sitem"><div class="top">${x.photos?.front ? `<img class="kthumb" src="${esc(storedSrc(x.photos.front))}" alt="">` : ""}<div class="grow"><div class="row between"><h3>${esc(x.name)}</h3>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}${x.example ? '<span class="chip ex">Example</span>' : ""}</div><div class="small muted">${esc([x.brand, KTYPE[x.type]].filter(Boolean).join(" · "))}</div><div class="small">${esc(kWhenTxt(x))} · ${esc(kFreqTxt(x))}</div></div></div>
-    ${pct != null ? `<div class="level ${kLow(x) ? "warn" : ""}"><i style="width:${pct.toFixed(1)}%"></i></div>` : ""}
-    <div class="small muted">${l != null ? `${plural(l, "use")} left${tot ? ` of ${fmtN(tot, 0)}` : ""}${wl != null && x.status !== "shelf" ? ` · about ${wl < 2 ? plural(Math.round(wl * 7), "day") : plural(Math.round(wl), "week")}` : ""}` : "Uses not tracked"}</div>
-    <div class="actions"><button class="btn sm" data-act="kopen" data-id="${x.id}">Details</button><button class="btn sm" data-act="kedit" data-id="${x.id}">Edit</button>${l != null ? `<button class="btn sm ghost" data-act="krestock" data-id="${x.id}">New bottle</button>` : ""}</div></div>`; }).join("") : "";
+  const group = (list, label) => list.length ? `<section class="card kslot"><div class="eyebrow">${label}</div><ul class="klist">${kSorted(list).map((x) => kRow(x, "p|" + x.id)).join("")}</ul></section>` : "";
   html += group(kActive(), "In my routine") + group(S.sk.products.filter((x) => x.status === "shelf"), "On the shelf");
   if (S.sk.products.some((x) => x.example)) html += `<div><button class="btn sm ghost danger" data-act="kclearex">Remove sample products</button></div>`;
   return html;
@@ -2901,11 +2891,12 @@ function kAdd() {
   const fd = f.days || [];
   return `<div class="row between"><h2 style="font-size:22px">${editing ? "Edit " + esc(f.name || "product") : "Add a product"}</h2>${editing || f.name ? `<button class="btn sm ghost" data-act="kdiscard">${editing ? "Cancel" : "Clear"}</button>` : ""}</div>
   ${editing ? "" : `<button class="card kimpcta" data-act="ktab" data-tab="kimport">${I.upload}<span class="grow"><b>Import / autofill a whole routine</b><span class="small muted">Paste what you researched, or attach a text file, PDF or screenshots</span></span>${I.right}</button>`}
-  <div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">${editing ? "Photos" : "Step 1 · Photograph the product"}</div><p class="small muted" style="margin:0">Front for the name, back for the directions and ingredients. Claude fills in the form and suggests when and how often to use it.</p>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">Photos · optional</div><p class="small muted" style="margin:0">Add a front and back photo to keep with the product for reference. If you like, Claude can also read them and fill in the details for you. That part is up to you.</p>
     <div class="photos">${ph("front")}${ph("back")}</div>
-    ${S.canPhoto === false || !S.sample ? `<div class="status">Photo reading needs the Claude app or claude.ai, signed in. You can fill the form in by hand.</div>` : `<button class="btn ${editing ? "" : "primary"}" data-act="kautofill" ${A.busy || !(S.kphotos.front || S.kphotos.back) ? "disabled" : ""}>${A.busy ? '<span class="spin"></span> Reading the label…' : "Fill in from photos"}</button>`}
+    ${S.kphotos.front || S.kphotos.back ? `<div class="status">Photo attached. It’s saved with the product when you tap ${editing ? "Save" : "Add to routine"}. Nothing else changes unless you tap Autofill.</div>` : ""}
+    ${S.canPhoto === false || !S.sample ? "" : S.kphotos.front || S.kphotos.back ? `<button class="btn" data-act="kautofill" ${A.busy ? "disabled" : ""}>${A.busy ? '<span class="spin"></span> Reading the label…' : "Autofill details from photos (optional)"}</button>` : ""}
     ${A.msg ? `<div class="status ${A.kind}">${esc(A.msg)}</div>` : ""}</div>
-  <form class="f card" id="kform" novalidate><fieldset><legend>${editing ? "Details" : "Step 2 · Check the details"}</legend>
+  <form class="f card" id="kform" novalidate><fieldset><legend>Details</legend>
     <label class="fl">Name<input class="in" data-kf="name" value="${esc(f.name)}" placeholder="e.g. Retinol 0.5% serum"></label>
     <div class="fgrid"><label class="fl">Brand<input class="in" data-kf="brand" value="${esc(f.brand)}"></label>
       <label class="fl">Type<select class="in" data-kf="type">${KTYPES.map(([k, l]) => `<option value="${k}" ${f.type === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
@@ -3047,6 +3038,9 @@ async function skinClick(a, b) {
     case "kautofill": kautofill(); return true;
     case "kdelete": { const f = S.kform; S.kform = kBlank(); S.ktab = "kproducts"; await kdelProd(f.id); render(); toast(`Deleted ${f.name || "product"}`); return true; }
     case "krestock": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; x.usesLeft = num(x.uses) || kLeft(x) || 0; render(); toast(`New bottle of ${x.name}: ${plural(x.usesLeft, "use")}`); await ksaveProd(x); return true; }
+    case "kexp": S.kexp = S.kexp === b.dataset.k ? null : b.dataset.k; render(); return true;
+    case "kweekopen": S.kexp = "p|" + b.dataset.id; S.ktab = "kproducts"; render(); requestAnimationFrame(() => document.querySelector(".krow.open")?.scrollIntoView({ block: "center" })); return true;
+    case "kwdow": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; const d = Number(b.dataset.d), cur = x.days?.length ? x.days : [...ALLD]; const nd = cur.includes(d) ? cur.filter((v) => v !== d) : [...cur, d]; if (!nd.length) { toast("Keep at least one day. To stop using it, move it to the shelf in Edit."); return true; } x.days = nd.sort(); render(); await ksaveProd(x); return true; }
     case "kirun": krunImport(); return true;
     case "kiclear": S.kimp = { ...kImpBlank(), text: S.kimp.text, files: S.kimp.files }; render(); window.scrollTo(0, 0); return true;
     case "kirmfile": S.kimp.files.splice(Number(b.dataset.i), 1); render(); return true;
