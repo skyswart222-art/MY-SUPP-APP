@@ -330,6 +330,9 @@ textarea.in { min-height: 64px; resize: vertical; }
 .madd.solid { border-style: solid; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .mfood { display: flex; gap: 8px; align-items: baseline; width: 100%; border: 0; background: none; padding: 5px 0; text-align: left; font-size: 13px; color: var(--ink); border-bottom: 1px dashed var(--line); }
 .mfood:last-child { border-bottom: 0; }
+.mfmac { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
+.mfmac span { display: inline-flex; align-items: center; gap: 4px; }
+.mfmac i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 .madd { margin-top: auto; align-self: flex-start; border: 1px dashed var(--line); background: none; color: var(--accent); border-radius: 10px; padding: 6px 10px; font-size: 13px; font-weight: 600; }
 .mweek { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; height: 170px; margin-top: 12px; padding-bottom: 20px; }
 .mwcol { position: relative; border: 0; background: none; padding: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
@@ -1076,6 +1079,158 @@ async function submitForm() {
   await saveSupp(s);
 }
 
+/* ---------- Import / autofill the whole stack from pasted text or files ---------- */
+const sImpBlank = () => ({ busy: false, msg: "", kind: "", text: "", files: [], result: null, summary: "", shelveRest: false });
+S.simp = sImpBlank();
+const SFORMS = ["capsule", "tablet", "softgel", "gummy", "powder", "liquid", "other"];
+const SUNITS = ["capsule", "tablet", "softgel", "gummy", "scoop", "g", "ml", "drop", "chew", "packet"];
+const SIPROMPT = `You are reading someone's supplement stack: a write-up, notes, a coach's protocol, a shopping list or screenshots. Turn every supplement in it into structured data. Answer with ONLY a JSON object:
+{"supplements": [{"name": product or supplement name (e.g. "Magnesium Glycinate"), "brand": brand if given or "",
+ "form": one of "capsule","tablet","softgel","gummy","powder","liquid","other",
+ "unit": what it is counted in, one of "capsule","tablet","softgel","gummy","scoop","g","ml","drop","chew","packet",
+ "servingSize": how many units make one serving (e.g. 2 capsules, 5 g),
+ "containerAmount": units in a full container if given, else null,
+ "remaining": units left right now if the text says, else null,
+ "price": price paid for one container if given, else null,
+ "times": [{"time": 24-hour "HH:MM", "servings": servings taken at that time, "note": short note like "with food" or ""}],
+ "days": list of weekdays taken, 0=Sunday … 6=Saturday, or null if every day,
+ "status": "active" if they take it now, "cupboard" if it's paused, not started yet or just owned,
+ "ingredients": [{"name": ingredient, "amount": number per serving, "unit": "mg","mcg","g","IU","CFU" or "ml"}],
+ "notes": short reason or instruction from the text, or ""}],
+ "summary": up to 3 short lines of general advice from the text that isn't about one supplement, or ""}
+Rules: use the amounts as written. Turn words into times: morning or with breakfast 08:00, midday or lunch 12:30, pre-workout 16:30, evening or with dinner 18:30, before bed 21:30. If no time is given for something they take, use 08:00. If a dose is "2 capsules twice a day", servingSize is 1 or 2 to match the label serving and the times carry the servings. List the ingredient that gives the supplement its name with its dose when the text gives one; don't invent ingredients or doses. Keep the order they appear in.`;
+const sTime = (t) => { const m = String(t || "").match(/^(\d{1,2}):(\d{2})/); return m && Number(m[1]) < 24 ? pad(Number(m[1])) + ":" + m[2] : ""; };
+const sNum = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : ""; };
+const sMatch = (name) => { const k = String(name || "").trim().toLowerCase(); return k ? S.supps.find((x) => x.name.trim().toLowerCase() === k) || null : null; };
+function suppImport() {
+  const K = S.simp, R = K.result, canAI = !(S.canPhoto === false || !S.sample);
+  const back = S.supps.length ? "stock" : "today";
+  let html = `<div class="row between"><button class="btn sm ghost" data-act="tab" data-tab="${back}">${I.left}<span>Back</span></button>${R ? `<button class="btn sm ghost" data-act="siclear">Start over</button>` : ""}</div>
+    <h2 style="font-size:22px">Import / autofill</h2>`;
+  if (!R) {
+    html += `<div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="small muted" style="margin:0">Paste a write-up of your stack, or attach it as a file. Claude picks out each supplement with its dose, times and days, and you check them before anything is saved. Add how much you have left to get running-out warnings.</p>
+      <label class="fl">Paste your supplement stack<textarea class="in kimptext" data-simp="text" placeholder="e.g.&#10;Morning with breakfast: Vitamin D3 5000 IU, 1 softgel; Omega-3 2 softgels&#10;Pre-workout: Creatine 5 g&#10;Before bed: Magnesium glycinate 2 capsules (400 mg), about 30 left&#10;Zinc 30 mg, bought but not started yet">${esc(K.text)}</textarea></label>
+      <div class="row wrapflex" style="gap:8px"><label class="btn sm kimpbtn">${I.upload}<span>${K.files.length ? "Add another file" : "Attach a file"}</span><input type="file" hidden accept=".txt,.md,.rtf,.csv,text/*,application/pdf,image/*" multiple data-simpfile="1"></label><span class="small muted">Text, PDF, photos or screenshots</span></div>
+      ${K.files.length ? `<div class="kfiles">${K.files.map((f, i) => `<span class="chip">${esc(f.name)}<button type="button" class="kfx" data-act="sirmfile" data-i="${i}" aria-label="Remove ${esc(f.name)}">${I.x}</button></span>`).join("")}</div>` : ""}
+      ${canAI ? `<button class="btn primary" data-act="sirun" ${K.busy || !(K.text.trim() || K.files.length) ? "disabled" : ""}>${K.busy ? `<span class="spin"></span> ${esc(K.msg || "Reading your stack…")}` : "Autofill my stack"}</button>` : `<div class="status">Autofill needs you to be signed in. You can still add supplements by hand on the Add tab.</div>`}
+      ${!K.busy && K.msg ? `<div class="status ${K.kind}">${esc(K.msg)}</div>` : ""}</div>
+      <p class="hint">Prefer doing it yourself? <button class="linkbtn" data-act="new">Add supplements one at a time</button>.</p>`;
+    return html;
+  }
+  const L = R.list, upd = L.filter((x) => sMatch(x.name)).length, rest = active().filter((s) => !L.some((x) => x.name.trim().toLowerCase() === s.name.trim().toLowerCase()));
+  html += `<div class="status ok">Found ${plural(L.length, "supplement")}${upd ? `, ${upd} already in your app` : ""}. Check them, then save.</div>`;
+  if (K.summary) html += `<div class="card"><div class="eyebrow">From your notes</div><p class="small" style="margin:6px 0 0;white-space:pre-line">${esc(K.summary)}</p></div>`;
+  const opt = (v, cur, label) => `<option value="${v}" ${v === cur ? "selected" : ""}>${label || v}</option>`;
+  html += L.map((x, i) => { const ex = sMatch(x.name); return `<section class="card siitem" style="display:flex;flex-direction:column;gap:10px">
+    <div class="row" style="gap:8px"><input class="in grow" data-sif="${i}" data-k="name" value="${esc(x.name)}" aria-label="Name"><button type="button" class="iconbtn" data-act="sirm" data-i="${i}" aria-label="Remove ${esc(x.name)}">${I.x}</button></div>
+    ${ex ? `<span class="small muted">Already in your app, so this updates it. Its photos, purchases and history stay.</span>` : ""}
+    <div class="fgrid">
+      <label class="fl">Brand<input class="in" data-sif="${i}" data-k="brand" value="${esc(x.brand)}"></label>
+      <label class="fl">Counted in<select class="in" data-sif="${i}" data-k="unit">${SUNITS.map((u) => opt(u, x.unit, COUNT_UNITS.includes(u) ? u + "s" : u)).join("")}</select></label>
+      <label class="fl">Per serving<input class="in num" type="number" inputmode="decimal" min="0" step="any" data-sif="${i}" data-k="servingSize" value="${esc(x.servingSize)}"></label>
+      <label class="fl">Where it lives<select class="in" data-sif="${i}" data-k="status">${opt("active", x.status, "Daily stack")}${opt("cupboard", x.status, "Cupboard")}</select></label>
+      <label class="fl">In a full container<input class="in num" type="number" inputmode="decimal" min="0" step="any" data-sif="${i}" data-k="containerAmount" value="${esc(x.containerAmount)}" placeholder="${ex ? esc(fmtN(num(ex.containerAmount), 0).replace(/,/g, "")) || "e.g. 120" : "e.g. 120"}"></label>
+      <label class="fl">Left right now<input class="in num" type="number" inputmode="decimal" min="0" step="any" data-sif="${i}" data-k="remaining" value="${esc(x.remaining)}" placeholder="${ex ? "keep current" : "full"}"></label>
+    </div>
+    ${x.status === "active" ? `${x.schedule.map((r, j) => `<div class="schedrow">
+      <label class="fl"><span>Time</span><input class="in num" type="time" data-sis="${i}.${j}" data-k="time" value="${esc(r.time)}"></label>
+      <label class="fl"><span>Servings</span><input class="in num" type="number" inputmode="decimal" min="0" step="any" data-sis="${i}.${j}" data-k="servings" value="${esc(r.servings)}"></label>
+      <label class="fl note-field"><span>Note</span><input class="in" data-sis="${i}.${j}" data-k="note" value="${esc(r.note)}" placeholder="with food"></label>
+      <button type="button" class="iconbtn" data-act="sirmtime" data-i="${i}" data-j="${j}" aria-label="Remove time">${I.x}</button></div>`).join("")}
+    <div><button type="button" class="btn sm" data-act="siaddtime" data-i="${i}">Add a time</button></div>
+    <div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" data-act="sidow" data-i="${i}" data-d="${d}" aria-pressed="${x.days.includes(d)}">${DOW[d].slice(0, 2)}</button>`).join("")}</div>
+    <label class="fl">Warn me when this many days are left<input class="in num" type="number" inputmode="numeric" min="1" step="1" data-sif="${i}" data-k="alertDays" value="${esc(x.alertDays)}"></label>` : ""}
+    ${x.ingredients.length ? `<div class="small muted">Per serving: ${esc(x.ingredients.map((g) => `${g.name}${g.amount ? " " + fmtN(g.amount, 2) + " " + g.unit : ""}`).join(", "))}</div>` : ""}
+    ${x.notes ? `<div class="small muted">${esc(x.notes)}</div>` : ""}</section>`; }).join("");
+  html += `<div class="card" style="display:flex;flex-direction:column;gap:8px">${rest.length ? `<label class="row small" style="gap:8px;align-items:flex-start"><input type="checkbox" data-sishelve="1" ${K.shelveRest ? "checked" : ""}><span>Move the ${plural(rest.length, "supplement")} not in this list (${esc(rest.map((s) => s.name).join(", "))}) to the cupboard</span></label>` : ""}
+    <p class="small muted" style="margin:0">Ingredients and label photos can be changed later with Edit. Doses you’ve already ticked off don’t change.</p></div>`;
+  html += `<div class="sticky-save"><button class="btn" data-act="siclear">Discard</button><button class="btn primary" data-act="sisave" ${L.length ? "" : "disabled"}>Save ${plural(L.length, "supplement")}</button></div>`;
+  return html;
+}
+async function srunImport() {
+  const K = S.simp; if (!S.sample || K.busy) return;
+  K.busy = true; K.msg = K.files.length ? "Reading your files…" : "Reading your stack…"; K.kind = ""; render();
+  try {
+    const maxImg = S.imgLimits?.maxCount || 5;
+    let text = K.text.trim(), images = [];
+    for (const f of K.files) { const r = await kreadFile(f, maxImg - images.length); text += r.text; images.push(...r.images); }
+    if (!text.trim() && !images.length) throw new Error("empty");
+    K.msg = "Claude is building your stack…"; render();
+    const opts = { modelTier: "default" }; if (images.length) opts.images = images.slice(0, maxImg);
+    const out = await S.sample.json(SIPROMPT + (text.trim() ? `\n\nThe supplement stack:\n${text.slice(0, 100000)}` : "\n\nThe supplement stack is in the images."), opts);
+    const list = (out?.supplements || []).filter((x) => x && x.name).map((x) => {
+      const ex = sMatch(x.name), form = SFORMS.includes(x.form) ? x.form : ex?.form || "capsule";
+      const unit = SUNITS.includes(x.unit) ? x.unit : ex?.unit || ({ powder: "g", liquid: "ml" }[form] || (COUNT_UNITS.includes(form) ? form : "capsule"));
+      const status = x.status === "cupboard" ? "cupboard" : "active";
+      let schedule = (Array.isArray(x.times) ? x.times : []).map((r) => ({ time: sTime(r?.time), servings: sNum(r?.servings) || 1, note: String(r?.note || "").slice(0, 60) })).filter((r) => r.time);
+      if (status === "active" && !schedule.length) schedule = ex?.schedule?.length ? ex.schedule.map((r) => ({ ...r })) : [{ time: "08:00", servings: 1, note: "" }];
+      const days = Array.isArray(x.days) && x.days.length ? [...new Set(x.days.map(Number).filter((d) => d >= 0 && d <= 6))] : [...ALL_DAYS];
+      return { name: String(x.name).trim().slice(0, 80), brand: String(x.brand || ex?.brand || "").slice(0, 60), form, unit, servingSize: sNum(x.servingSize) || 1,
+        containerAmount: sNum(x.containerAmount), remaining: x.remaining == null || x.remaining === "" ? "" : String(Math.max(0, num(x.remaining))), price: sNum(x.price), status, schedule, days: days.length ? days : [...ALL_DAYS],
+        alertDays: num(ex?.alertDays, 10) || 10, notes: String(x.notes || "").slice(0, 300),
+        ingredients: (Array.isArray(x.ingredients) ? x.ingredients : []).filter((g) => g && g.name).map((g) => ({ name: String(g.name).trim(), amount: num(g.amount), unit: ["mg", "mcg", "g", "IU", "CFU", "ml"].includes(g.unit) ? g.unit : "mg" })) };
+    });
+    if (!list.length) throw new Error("none");
+    K.result = { list }; K.summary = String(out?.summary || "").trim(); K.shelveRest = false; K.msg = ""; K.kind = "ok";
+  } catch (e) {
+    K.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : e?.code === "not_granted" ? "Reading is turned off for this page." : e?.code === "cancelled" ? "" : e?.message === "none" ? "Couldn't find any supplements in that. Try adding a bit more detail, like the name and how much you take." : "Couldn't read that. Try pasting the text instead, or a clearer file.";
+    K.kind = "err";
+  }
+  K.busy = false; render(); window.scrollTo(0, 0);
+}
+async function ssaveImport() {
+  const K = S.simp, R = K.result; if (!R) return;
+  const now = new Date().toISOString(), writes = [], seen = new Set();
+  for (const x of R.list) {
+    const name = String(x.name || "").trim(); if (!name || seen.has(name.toLowerCase())) continue; seen.add(name.toLowerCase());
+    const ex = sMatch(name), size = num(x.servingSize, 1) || 1;
+    const cont = num(x.containerAmount) || num(ex?.containerAmount) || 0;
+    const remaining = x.remaining !== "" && x.remaining != null ? Math.max(0, num(x.remaining)) : ex ? num(ex.remaining) : cont;
+    const purchases = (ex?.purchases || []).map((p) => ({ ...p }));
+    if (num(x.price) > 0 && !purchases.length) purchases.push({ id: uid(), date: today(), price: num(x.price), amount: cont });
+    const s = { ...(ex || {}), id: ex?.id || uid(), name, brand: String(x.brand || "").trim(), form: x.form, unit: x.unit || "capsule", servingSize: size,
+      servingDesc: ex?.servingDesc || "", servingsPerContainer: cont ? cont / size : num(ex?.servingsPerContainer), containerAmount: cont, remaining,
+      status: x.status === "cupboard" ? "cupboard" : "active",
+      schedule: x.status === "cupboard" ? [] : x.schedule.filter((r) => r.time).map((r) => ({ time: r.time, servings: num(r.servings, 1) || 1, note: r.note || "" })),
+      days: x.days?.length ? [...x.days].sort() : [...ALL_DAYS], alertDays: num(x.alertDays, 10) || 10,
+      ingredients: x.ingredients.length ? x.ingredients : ex?.ingredients || [], notes: x.notes || ex?.notes || "", directions: ex?.directions || "",
+      example: false, purchases, photos: ex?.photos || {}, addedAt: ex?.addedAt || now, updatedAt: now };
+    if (s.status === "active" && !s.schedule.length) s.schedule = [{ time: "08:00", servings: 1, note: "" }];
+    writes.push(s);
+  }
+  if (K.shelveRest) for (const s of active()) if (!seen.has(s.name.trim().toLowerCase())) writes.push({ ...s, status: "cupboard", updatedAt: now });
+  const n = R.list.length; S.simp = sImpBlank();
+  setTab("stock"); toast(`Saved ${plural(n, "supplement")}`);
+  for (const s of writes) await saveSupp(s);
+  render();
+}
+function suppImpClick(a, b) {
+  const K = S.simp, L = K.result?.list, i = Number(b.dataset.i);
+  switch (a) {
+    case "sirun": srunImport(); return true;
+    case "siclear": S.simp = { ...sImpBlank(), text: K.text, files: K.files }; render(); window.scrollTo(0, 0); return true;
+    case "sirmfile": K.files.splice(i, 1); render(); return true;
+    case "sirm": if (L) { L.splice(i, 1); render(); } return true;
+    case "siaddtime": if (L?.[i]) { const last = L[i].schedule.slice(-1)[0]; L[i].schedule.push({ time: last ? "21:30" : "08:00", servings: 1, note: "" }); render(); } return true;
+    case "sirmtime": if (L?.[i]) { L[i].schedule.splice(Number(b.dataset.j), 1); render(); } return true;
+    case "sidow": if (L?.[i]) { const d = Number(b.dataset.d), set = new Set(L[i].days); set.has(d) ? set.delete(d) : set.add(d); if (!set.size) return true; L[i].days = [...set]; b.setAttribute("aria-pressed", set.has(d)); } return true;
+    case "sisave": ssaveImport(); return true;
+  }
+  return false;
+}
+document.addEventListener("input", (e) => {
+  const t = e.target, K = S.simp;
+  if (t.dataset.simp === "text") { const had = !!K.text.trim(); K.text = t.value; if (had !== !!t.value.trim()) { const btn = document.querySelector('[data-act="sirun"]'); if (btn && !K.busy) btn.disabled = !(t.value.trim() || K.files.length); } }
+  else if (t.dataset.sif != null && K.result) { const x = K.result.list[Number(t.dataset.sif)]; if (x) x[t.dataset.k] = t.value; }
+  else if (t.dataset.sis != null && K.result) { const [i, j] = t.dataset.sis.split(".").map(Number), r = K.result.list[i]?.schedule[j]; if (r) r[t.dataset.k] = t.value; }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target, K = S.simp;
+  if (t.dataset.simpfile && t.files?.length) { K.files.push(...t.files); K.msg = ""; t.value = ""; render(); return; }
+  if (t.dataset.sishelve) { K.shelveRest = t.checked; return; }
+  if (t.dataset.sif != null && t.dataset.k === "status" && K.result) { const x = K.result.list[Number(t.dataset.sif)]; if (x && x.status === "active" && !x.schedule.length) x.schedule = [{ time: "08:00", servings: 1, note: "" }]; render(); }
+});
+
 /* ---------- Photo autofill (Claude vision through the page's sample capability) ---------- */
 async function shrink(file, maxDim = 1568, q = 0.85) {
   const url = URL.createObjectURL(file);
@@ -1211,7 +1366,7 @@ function renderChrome() {
   $("#tabs").style.gridTemplateColumns = "";
   const low = lowItems().length;
   const tabs = [["today", "Today", I.today], ["totals", "Totals", I.totals], ["stock", "Stock", I.stock], ["spend", "Spend", I.spend], ["add", S.form?.id ? "Edit" : "Add", I.add]];
-  $("#tabs").innerHTML = tabs.map(([id, label, ic]) => `<button class="tab" data-act="tab" data-tab="${id}" ${S.tab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "stock" && low ? `<span class="dot">${low}</span>` : ""}</button>`).join("");
+  $("#tabs").innerHTML = tabs.map(([id, label, ic]) => `<button class="tab" data-act="tab" data-tab="${id}" ${S.tab === id || (id === "add" && S.tab === "simport") ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "stock" && low ? `<span class="dot">${low}</span>` : ""}</button>`).join("");
 }
 function render() {
   renderChrome();
@@ -1224,15 +1379,15 @@ function render() {
   if (S.module === "progress") { v.innerHTML = progressView(); renderOverlay(); return; }
   if (S.module === "skincare") { v.innerHTML = skinView(); renderOverlay(); return; }
   if (S.module === "budget") { v.innerHTML = budgetView(); renderOverlay(); return; }
-  v.innerHTML = S.tab === "today" ? viewToday() : S.tab === "totals" ? viewTotals() : S.tab === "stock" ? viewStock() : S.tab === "spend" ? viewSpend() : viewAdd();
+  v.innerHTML = S.tab === "today" ? viewToday() : S.tab === "totals" ? viewTotals() : S.tab === "stock" ? viewStock() : S.tab === "spend" ? viewSpend() : S.tab === "simport" ? suppImport() : viewAdd();
   renderOverlay();
 }
-function softRender() { if (S.module === "budget") { bsoft(); return; } if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail || S.mtab === "mimport") { renderChrome(); return; } render(); return; } if (S.tab === "add" && S.form) { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
+function softRender() { if (S.module === "budget") { bsoft(); return; } if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail || S.mtab === "mimport") { renderChrome(); return; } render(); return; } if ((S.tab === "add" && S.form) || S.tab === "simport") { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
 
 function emptyState() {
   return `<div class="card empty">${I.bottle}<h3>Your stack goes here</h3>
   <p>Add a supplement by photographing its label, then pick the times you take it. Each day shows up hour by hour.</p>
-  <div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="new">Add a supplement</button><button class="btn" data-act="examples">Try an example stack</button></div></div>`;
+  <div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="new">Add a supplement</button><button class="btn" data-act="tab" data-tab="simport">Import / autofill</button><button class="btn" data-act="examples">Try an example stack</button></div></div>`;
 }
 
 function viewSwitch() {
@@ -1533,7 +1688,7 @@ function viewStock() {
   const act = active().map((s) => ({ s, i: stockInfo(s) })).sort((a, b) => (a.i.daysLeft ?? 1e9) - (b.i.daysLeft ?? 1e9));
   const cup = cupboard().sort((a, b) => a.name.localeCompare(b.name));
   const low = lowItems();
-  let html = `<div class="row between"><h2 style="font-size:22px">Stock</h2><button class="btn sm" data-act="new-cup">Add to cupboard</button></div>`;
+  let html = `<div class="row between"><h2 style="font-size:22px">Stock</h2><span class="row" style="gap:6px"><button class="btn sm" data-act="tab" data-tab="simport">Import</button><button class="btn sm" data-act="new-cup">Add to cupboard</button></span></div>`;
   if (low.length) html += `<div class="alerts">${low.map(({ s, i }) => `<div class="alert ${i.level === "crit" ? "crit" : ""}"><span class="pip"></span><div><b>${esc(s.name)}</b> ${i.rem <= 0 ? "is empty." : `has about ${plural(Math.floor(i.daysLeft), "day")} left.`}${cup.some((c) => c.name.toLowerCase() === s.name.toLowerCase()) ? " You have one in the cupboard." : ""}</div></div>`).join("")}</div>`;
   html += `<section class="stock"><div class="eyebrow">Taking now · ${act.length}</div>${act.length ? act.map((x) => stockCard(x.s)).join("") : `<div class="card muted small">Nothing in your daily stack.</div>`}</section>`;
   html += `<section class="stock"><div class="eyebrow">In the cupboard · ${cup.length}</div>${cup.length ? cup.map(stockCard).join("") : `<div class="card muted small">Unopened or paused supplements go here so you can see what you have. Use "Add to cupboard" or "Move to cupboard".</div>`}</section>`;
@@ -1552,6 +1707,7 @@ function viewAdd() {
       <input id="ph-${side}" type="file" accept="image/*" data-photo="${side}"></label>`;
   };
   let html = `<div class="row between"><h2 style="font-size:22px">${editing ? "Edit " + esc(f.name || "supplement") : "Add a supplement"}</h2>${editing || S.form?.name ? `<button class="btn sm ghost" data-act="discard">${editing ? "Cancel" : "Clear"}</button>` : ""}</div>`;
+  if (!editing) html += `<button class="card kimpcta" data-act="tab" data-tab="simport">${I.upload}<span class="grow"><b>Import / autofill your whole stack</b><span class="small muted">Paste a write-up, or attach a text file, PDF or screenshots</span></span>${I.right}</button>`;
   html += `<div class="card" style="display:flex;flex-direction:column;gap:10px"><div><div class="eyebrow">${editing ? "Label photos" : "Step 1 · Photograph the label"}</div>
     <div class="small muted">${editing ? "Tap a photo to replace it. Photos are kept with this supplement so you can check the label later." : "Front for the name, back for the Supplement Facts. Claude reads both and fills in the form below. The photos are saved with the supplement."}</div></div>
     <div class="photos">${ph("front")}${ph("back")}</div>`;
@@ -1832,7 +1988,7 @@ function mloadList(kind, meal) {
       <button type="button" class="btn sm primary" data-act="mloadgo" data-kind="${kind}" data-id="${t.id}" ${meal ? `data-meal="${esc(meal)}"` : ""}>Load</button><button type="button" class="iconbtn" data-act="mtdel" data-kind="${kind}" data-id="${t.id}" aria-label="Delete ${esc(t.name)}">${I.x}</button></div>`; }).join("")}
     <button type="button" class="btn sm" data-act="mloadcancel" style="align-self:flex-start">Close</button></div>`;
 }
-const mfoodRow = (e, act, extra = "") => `<button class="mfood" data-act="${act}" ${extra} data-id="${e.id}"><span class="grow">${esc(e.name)}${num(e.qty, 1) !== 1 ? ` <span class="muted">×${fmtN(num(e.qty, 1), 2)}</span>` : ""}${e.serving ? `<br><span class="small muted">${esc(e.serving)}</span>` : ""}</span><span class="num muted">${kc(num(e.kcal) * (num(e.qty, 1) || 1))} kcal</span></button>`;
+const mfoodRow = (e, act, extra = "") => { const q = num(e.qty, 1) || 1, g = (k) => Math.round(num(e[k]) * q); return `<button class="mfood" data-act="${act}" ${extra} data-id="${e.id}"><span class="grow">${esc(e.name)}${q !== 1 ? ` <span class="muted">×${fmtN(q, 2)}</span>` : ""}${e.serving ? `<br><span class="small muted">${esc(e.serving)}</span>` : ""}<span class="mfmac num"><span><i style="background:var(--mp)"></i>P ${g("protein")}g</span><span><i style="background:var(--mc)"></i>C ${g("carbs")}g</span><span><i style="background:var(--mf)"></i>F ${g("fat")}g</span></span></span><span class="num muted">${kc(num(e.kcal) * q)} kcal</span></button>`; };
 function mealToday() {
   const date = S.date, isToday = date === today(), d = parseD(date);
   const T = mtargets(), all = mentries(date), tot = msum(all);
@@ -1887,7 +2043,7 @@ function mealWeek() {
   html += `<div class="statgrid"><div class="stat"><div class="v">${avg ? kc(avg.kcal) : "–"}</div><div class="k">avg kcal a day</div></div><div class="stat"><div class="v">${avg ? Math.round(avg.protein) + "g" : "–"}</div><div class="k">avg protein</div></div><div class="stat"><div class="v">${logged.length}/7</div><div class="k">days logged</div></div></div>`;
   html += `<div class="card"><div class="row between"><span class="eyebrow">Calories per day</span><span class="small muted">line = ${kc(T.kcal)} target</span></div>
     <div class="mweek"><div class="mtarget" style="bottom:calc(20px + ${((T.kcal / max) * 150).toFixed(1)}px)"></div>${days.map((x) => { const dd = parseD(x.date); return `<button class="mwcol" data-act="mgoday" data-date="${x.date}" aria-label="${dd.toLocaleDateString(undefined, { weekday: "long" })}: ${kc(x.t.kcal)} kcal"><span class="mwval num">${x.n ? kc(x.t.kcal) : ""}</span><i style="height:${(x.t.kcal / max) * 100}%" class="${x.t.kcal > T.kcal * 1.05 ? "over" : ""}"></i><span class="mwday ${x.date === today() ? "is-today" : ""}">${DOW[dd.getDay()].slice(0, 2)}</span></button>`; }).join("")}</div></div>`;
-  html += `<div class="card" style="padding:4px 12px"><div class="ingrid inghead mwhead" style="grid-template-columns:minmax(0,1fr) 60px 36px 36px 36px"><span>Day</span><span class="r">kcal</span><span class="r">P</span><span class="r">C</span><span class="r">F</span></div>${days.map((x) => `<button class="ingrid mwrow" data-act="mgoday" data-date="${x.date}" style="grid-template-columns:minmax(0,1fr) 60px 36px 36px 36px"><span>${parseD(x.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric" })}</span><span class="r num">${x.n ? kc(x.t.kcal) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.protein) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.carbs) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.fat) : "–"}</span></button>`).join("")}</div>`;
+  html += `<div class="card" style="padding:4px 12px"><div class="ingrid inghead mwhead" style="grid-template-columns:minmax(0,1fr) 60px 36px 36px 36px"><span>Day</span><span class="r">kcal</span><span class="r" style="color:var(--mp)">P</span><span class="r" style="color:var(--mc)">C</span><span class="r" style="color:var(--mf)">F</span></div>${days.map((x) => `<button class="ingrid mwrow" data-act="mgoday" data-date="${x.date}" style="grid-template-columns:minmax(0,1fr) 60px 36px 36px 36px"><span>${parseD(x.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric" })}</span><span class="r num">${x.n ? kc(x.t.kcal) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.protein) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.carbs) : "–"}</span><span class="r num">${x.n ? Math.round(x.t.fat) : "–"}</span></button>`).join("")}</div>`;
   return html;
 }
 function mealFoods() {
@@ -2096,7 +2252,7 @@ function mealImport() {
     <div class="row" style="gap:8px"><input class="in grow" data-mim="${mi}" data-k="name" value="${esc(m.name)}" aria-label="Meal name"><input class="in num" type="time" data-mim="${mi}" data-k="time" value="${esc(m.time)}" aria-label="Time" style="width:118px"><button type="button" class="iconbtn" data-act="mirmmeal" data-m="${mi}" aria-label="Remove ${esc(m.name)}">${I.x}</button></div>
     <div class="mprep-mac num"><span><b>${kc(st.kcal)}</b> kcal</span><span><i style="background:var(--mp)"></i>P ${Math.round(st.protein)}g</span><span><i style="background:var(--mc)"></i>C ${Math.round(st.carbs)}g</span><span><i style="background:var(--mf)"></i>F ${Math.round(st.fat)}g</span></div>
     ${m.foods.map((f, fi) => `<div class="mifood"><div class="row" style="gap:6px"><input class="in grow" data-mif="${mi}.${fi}" data-k="name" value="${esc(f.name)}" aria-label="Food"><input class="in" data-mif="${mi}.${fi}" data-k="serving" value="${esc(f.serving)}" placeholder="Serving" aria-label="Serving" style="width:96px"><button type="button" class="iconbtn" data-act="mirmfood" data-m="${mi}" data-f="${fi}" aria-label="Remove ${esc(f.name)}">${I.x}</button></div>
-      <div class="mimac">${[["kcal", "kcal"], ["protein", "P"], ["carbs", "C"], ["fat", "F"]].map(([k, l]) => `<label><span>${l}</span><input class="in num" type="number" inputmode="decimal" step="any" data-mif="${mi}.${fi}" data-k="${k}" value="${esc(f[k])}"></label>`).join("")}</div>${f.estimated ? '<span class="small muted">Numbers estimated by Claude</span>' : ""}</div>`).join("") || '<div class="small muted">No foods.</div>'}</section>`; }).join("") + `</div>`;
+      <div class="mimac">${[["kcal", "kcal", ""], ["protein", "P", "--mp"], ["carbs", "C", "--mc"], ["fat", "F", "--mf"]].map(([k, l, c]) => `<label><span${c ? ` style="color:var(${c})"` : ""}>${l}</span><input class="in num" type="number" inputmode="decimal" step="any" data-mif="${mi}.${fi}" data-k="${k}" value="${esc(f[k])}"></label>`).join("")}</div>${f.estimated ? '<span class="small muted">Numbers estimated by Claude</span>' : ""}</div>`).join("") || '<div class="small muted">No foods.</div>'}</section>`; }).join("") + `</div>`;
   html += `<div class="card" style="display:flex;flex-direction:column;gap:8px">${R.days.length > 1 ? `<label class="row small" style="gap:8px;align-items:flex-start"><input type="checkbox" data-misavedays="1" ${K.saveDays ? "checked" : ""}><span>Also save all ${R.days.length} days under <b>Saved days</b>, so you can load any of them on the Today tab</span></label>` : ""}
     <p class="small muted" style="margin:0">${cur ? `This replaces your current meal plan. Your current plan is kept under Saved days as “Previous plan”, and food you’ve already logged doesn’t change.` : `This becomes your meal plan. Food you’ve already logged doesn’t change.`}</p></div>`;
   html += `<div class="sticky-save"><button class="btn" data-act="miclear">Discard</button><button class="btn primary" data-act="misave" ${D.meals.length ? "" : "disabled"}>Use as my meal plan</button></div>`;
@@ -4274,6 +4430,7 @@ document.addEventListener("click", async (e) => {
   if (await progressClick(a, b)) return;
   if (await skinClick(a, b)) return;
   if (await budgetClick(a, b)) return;
+  if (S.module === "supplements" && suppImpClick(a, b)) return;
   const sp = (x) => S.supps.find((s) => s.id === x);
   switch (a) {
     case "tab": if (b.dataset.tab === "add" && S.tab !== "add" && !S.form) S.form = blankForm(); setTab(b.dataset.tab); break;
