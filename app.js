@@ -3391,7 +3391,7 @@ const BMETHODS = {
 };
 const BGMAP = { needs: { buckets: "daily" }, daily: { "503020": "needs", zero: "needs" }, wants: { buckets: "splurge" }, splurge: { "503020": "wants", zero: "wants" }, save: { buckets: "fire" }, fire: { "503020": "save", zero: "save" }, smile: { "503020": "save", zero: "save" } };
 const bMethod = () => BMETHODS[S.bg.plan.method] || BMETHODS["503020"];
-const bGroups = () => bMethod().groups.map(([k, name, pct, c]) => ({ k, name, pct, c }));
+const bGroups = () => bMethod().groups.map(([k, name, pct, c]) => ({ k, name: (S.bg.plan.gnames?.[k] || "").trim() || name, def: name, pct, c }));
 const bGroupOf = (cat) => { const m = S.bg.plan.method, keys = bGroups().map((g) => g.k); if (keys.includes(cat.group)) return cat.group; return BGMAP[cat.group]?.[m] || keys[0]; };
 const bIsSave = (k) => ["save", "fire", "smile"].includes(k);
 const BSTARTER = [
@@ -3556,6 +3556,7 @@ function bPlan() {
   html += `<section class="card bcard"><div class="eyebrow">How to split it</div>
     <div class="seg3">${Object.entries(BMETHODS).map(([k, x]) => `<button type="button" data-act="bmethod" data-v="${k}" aria-pressed="${p.method === k}">${x.name}</button>`).join("")}</div>
     <p class="small muted" style="margin:0">${esc(meth.blurb)}</p>
+    <p class="hint" style="margin:0">Tap a group's name below to rename it.</p>
     ${inc ? `<div class="bsplit">${groups.map((g) => { const pl = bPlannedGroup(g.k), pct = inc ? (pl / inc) * 100 : 0, tgt = g.pct, off = tgt != null && Math.abs(pct - tgt) > 3;
       return `<div class="bsrow"><span class="row" style="gap:7px"><i class="sw" style="background:${gcol(g.c)}"></i>${esc(g.name)}</span><span class="small num">${money(pl)} <span class="${off ? "warntxt" : "muted"}">${Math.round(pct)}%</span>${tgt != null ? `<span class="muted"> · aim ${tgt}% (${money((inc * tgt) / 100)})</span>` : ""}</span></div>`; }).join("")}</div>
       <div><div class="small muted" style="margin-bottom:6px">Your plan</div>${bStack(groups.map((g) => ({ ...g, v: bPlannedGroup(g.k) })), Math.max(inc, planned), "Your plan by group")}
@@ -3568,7 +3569,7 @@ function bPlan() {
   }
   for (const g of groups) {
     const list = bCats().filter((c) => bGroupOf(c) === g.k);
-    html += `<section class="card bcard"><div class="row between"><span class="row" style="gap:8px"><i class="sw" style="background:${gcol(g.c)}"></i><b>${esc(g.name)}</b></span><span class="small num muted">${money(bPlannedGroup(g.k))} a month</span></div>
+    html += `<section class="card bcard"><div class="row between" style="gap:10px"><span class="row grow" style="gap:8px;min-width:0"><i class="sw" style="background:${gcol(g.c)};flex:none"></i><input class="in bgname-in" data-bgn="${g.k}" value="${esc(g.name)}" placeholder="${esc(g.def)}" aria-label="Name for the ${esc(g.def)} group">${PENCIL}</span><span class="small num muted" style="flex:none">${money(bPlannedGroup(g.k))} a month</span></div>
       <div class="bedit">${list.map((c) => `<div class="berow"><input class="in" data-bc="${c.id}" data-k="name" value="${esc(c.name)}" aria-label="Category name"><input class="in num" type="number" inputmode="decimal" min="0" step="1" data-bc="${c.id}" data-k="amount" value="${esc(c.amount)}" aria-label="Monthly amount for ${esc(c.name)}"><button class="iconbtn sm" data-act="bdelcat" data-id="${c.id}" aria-label="Remove ${esc(c.name)}">${TRASH}</button>
         ${c.link === "supps" ? '<div class="hint full">Supplement purchases from the Spend tab count here automatically.</div>' : ""}</div>`).join("") || '<div class="small muted">No categories yet.</div>'}</div>
       <div class="row between"><button class="linkbtn" data-act="baddcat" data-g="${g.k}">+ Add category</button>${inc && num(p.income) ? `<span class="small muted num">≈ ${money(bPerPay(bPlannedGroup(g.k)))} ${PAYWORD[p.freq]}</span>` : ""}</div></section>`;
@@ -3713,6 +3714,7 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("change", async (e) => {
   const t = e.target;
+  if (t.dataset.bgn) { const v = t.value.trim().slice(0, 40), k = t.dataset.bgn; S.bg.plan.gnames = { ...(S.bg.plan.gnames || {}) }; if (!v || v === BMETHODS[S.bg.plan.method].groups.find((g) => g[0] === k)?.[1]) delete S.bg.plan.gnames[k]; else S.bg.plan.gnames[k] = v; render(); toast(v ? `Renamed to ${v}` : "Name reset"); await bsavePlan(); return; }
   if (t.dataset.bp) { S.bg.plan[t.dataset.bp] = t.value; render(); await bsavePlan(); return; }
   if (t.dataset.bc) { const c = S.bg.cats.find((x) => x.id === t.dataset.bc); if (!c) return; c[t.dataset.k] = t.dataset.k === "amount" ? (t.value === "" ? "" : num(t.value)) : t.value.trim() || c.name; if (t.dataset.k === "amount" && BFX[c.billFreq]) c.billAmt = Math.round((num(c.amount) / BFX[c.billFreq]) * 100) / 100; render(); await bsaveCat(c); return; }
   if (t.dataset.bt === "cat" && S.btx) S.btx.cat = t.value;
