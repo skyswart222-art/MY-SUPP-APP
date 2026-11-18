@@ -92,6 +92,15 @@ header.top .wrap { padding-block: 10px 8px; display: flex; flex-direction: colum
 .mt span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mt[aria-current="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; border-color: var(--rim); box-shadow: 0 0 0 1px var(--rim), 0 0 12px 1px var(--glow), 0 0 26px 4px var(--glow2); }
 .mt[disabled] { opacity: .55; cursor: default; }
+/* Show/hide handle for the sections grid. It hangs just below the header; when the grid is hidden it shows where you are. */
+.hdrtog { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: -1px; display: inline-flex; align-items: center; gap: 5px; height: 22px; min-width: 46px; justify-content: center; padding: 0 10px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 12px 12px; background: color-mix(in srgb, var(--bg) 82%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: var(--muted); font-size: 12px; font-weight: 600; z-index: 1; }
+.hdrtog svg { width: 15px; height: 15px; flex: none; }
+.hdrtog .ic svg { width: 14px; height: 14px; }
+.hdrtog::before { content: ""; position: absolute; inset: -10px -8px; }
+:root.hdr-min header.top .wrap { display: none; }
+:root.hdr-min header.top { border-bottom: 0; }
+:root.hdr-min .hdrtog { margin-top: 0; top: 0; height: 28px; border-top: 0; padding: 0 12px; color: var(--ink); }
+:root.hdr-min main .wrap { padding-top: 40px; }
 .mgear { flex: none; width: 34px; border-radius: 14px; border: 1px solid var(--line); background: var(--sunk); color: var(--muted); display: grid; place-items: center; padding: 0; }
 .mgear svg { width: 17px; height: 17px; }
 .modules::-webkit-scrollbar { display: none; }
@@ -766,6 +775,7 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
     <div class="modules" id="modules" role="tablist" aria-label="Plans"></div>
     <div class="syncnote" id="syncnote" role="status" hidden></div><span id="acct" hidden><button class="avatarbtn" id="avatarbtn" type="button" aria-label="Your profile" hidden></button></span>
   </div>
+  <button class="hdrtog" id="hdrtog" type="button" data-act="hdrtog" aria-expanded="true" aria-controls="modules" aria-label="Hide sections"></button>
 </header>
 <main><div class="wrap" id="view"><div class="card empty"><span class="spin"></span><p>Opening your planner…</p></div></div></main>
 <nav class="tabs" aria-label="Sections"><div class="row" id="tabs"></div></nav>
