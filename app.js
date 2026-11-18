@@ -703,8 +703,8 @@ function renderChrome() {
     return;
   }
   if (S.module === "meals") {
-    const mt = mPlanMode() ? [["mtoday", "My plan", I.today], ["mplan", "Edit plan", I.calendar], ["mfoods", "Foods", I.stock], ["mtargets", "Targets", I.spend]] : [["mtoday", "Today", I.today], ["mplan", "Plan", I.calendar], ["mweek", "Week", I.totals], ["mfoods", "Foods", I.stock], ["mtargets", "Targets", I.spend]];
-    $("#tabs").style.gridTemplateColumns = `repeat(${mt.length}, 1fr)`;
+    const mt = [["mtoday", "Today", I.today], ["mplan", "Plan", I.calendar], ["mweek", "Week", I.totals], ["mfoods", "Foods", I.stock], ["mtargets", "Targets", I.spend]];
+    $("#tabs").style.gridTemplateColumns = "repeat(5, 1fr)";
     $("#tabs").innerHTML = mt.map(([id, label, ic]) => `<button class="tab" data-act="mtab" data-tab="${id}" ${S.mtab === id || (id === "mplan" && S.mtab === "mimport") ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
     return;
   }
@@ -1290,30 +1290,8 @@ const gr = (n) => fmtN(Math.round(n), 0) + " g";
 function nextSlot() { const nowT = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`; const sl = mslots(); let pick = sl[0]; for (const s of sl) if (s.time <= nowT) pick = s; return pick?.id || "other"; }
 
 /* ---------- Meals views ---------- */
-const mPlanMode = () => S.meals.settings.mode === "plan";
-function mModeSeg() {
-  return `<div class="seg2" role="group" aria-label="How you use Meals">${[["log", "Log each day"], ["plan", "Set meal plan"]].map(([v, n]) => `<button type="button" data-act="mmode" data-v="${v}" aria-pressed="${(mPlanMode() ? "plan" : "log") === v}">${n}</button>`).join("")}</div>`;
-}
-/* Set meal plan mode: the plan, every day, with nothing to log */
-function mealPlanView() {
-  const T = mtargets(), slots = mslots(), plan = mplan(), all = slots.flatMap((sl) => plan[sl.id] || []), tot = msum(all), nx = nextSlot();
-  let html = `<div class="ov-head"><div class="grow"><div class="eyebrow">Every day</div><h2 class="ov-title">My meal plan</h2></div><button class="btn sm" data-act="mtab" data-tab="mplan">Edit</button></div>${mModeSeg()}`;
-  if (!all.length) return html + `<div class="card empty"><h3>No meal plan yet</h3><p>Add what you eat at each meal, or paste a plan and Claude fills it in.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="mtab" data-tab="mimport">Import / autofill</button><button class="btn" data-act="mtab" data-tab="mplan">Add foods</button></div></div>`;
-  const cal = T.kcal ? Math.round((tot.kcal / T.kcal) * 100) : 0;
-  html += `<div class="card"><div class="row between"><span class="eyebrow">Daily totals</span><span class="small num"><b>${kc(tot.kcal)}</b><span class="muted"> / ${kc(T.kcal)} kcal${T.kcal ? ` · ${cal}%` : ""}</span></span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-    ${macroBar("Protein", tot.protein, T.protein, "p")}${macroBar("Carbs", tot.carbs, T.carbs, "c")}${macroBar("Fat", tot.fat, T.fat, "f")}</div></div>`;
-  html += `<div class="mprep">`;
-  slots.forEach((sl, i) => {
-    const items = plan[sl.id] || [], st = msum(items), isNext = sl.id === nx;
-    html += `<section class="mprep-card ${isNext ? "is-next" : ""}">${mprepHead(sl, i, st, isNext ? "Up next" : "", true)}
-      <div class="ov-items">${items.map((e) => mfoodRow(e, "").replace('<button class="mfood"', '<div class="mfood"').replace(/<\/button>$/, "</div>")).join("") || '<div class="small muted">Nothing planned.</div>'}</div></section>`;
-  });
-  html += `</div><p class="hint">To change a meal, tap Edit. Switch to "Log each day" any time to track what you actually eat.</p>`;
-  return html;
-}
 function mealView() {
   if (S.mtab === "mimport") return mealImport();
-  if (mPlanMode() && (S.mtab === "mtoday" || S.mtab === "mweek")) return mealPlanView();
   if (S.mtab === "mweek") return mealWeek();
   if (S.mtab === "mplan") return mealPlan();
   if (S.mtab === "mfoods") return mealFoods();
@@ -1327,7 +1305,7 @@ function macroBar(label, val, target, cls) {
 }
 const PENCIL = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
 const TRASH = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
-function mprepHead(sl, i, st, sub, view) {
+function mprepHead(sl, i, st, sub) {
   const real = sl.id !== "other";
   if (real && S.mrename === sl.id) return `<div class="mprep-head"><span class="mprep-n num">${i + 1}</span><div class="grow mren">
       <label class="fl"><span>Meal name</span><input class="in" id="mren-in" value="${esc(sl.name)}" maxlength="40"></label>
@@ -1337,7 +1315,7 @@ function mprepHead(sl, i, st, sub, view) {
   return `<div class="mprep-head"><span class="mprep-n num">${real ? i + 1 : "+"}</span><div class="grow" style="min-width:0"><h3 class="mprep-name">${esc(sl.name)}</h3>
     <span class="ov-ttime">${sl.time ? fmtTime(sl.time) : ""}${sub ? " · " + sub : ""}</span></div>
     <div class="mprep-kcal"><b class="num">${kc(st.kcal)}</b><span class="small muted">kcal</span></div>
-    ${real && !view ? `<div class="mprep-tools"><button type="button" class="mprep-edit" data-act="mrename" data-meal="${esc(sl.id)}" aria-label="Edit ${esc(sl.name)}">${PENCIL}</button><button type="button" class="mprep-edit" data-act="mdelask" data-meal="${esc(sl.id)}" aria-label="Delete ${esc(sl.name)}">${TRASH}</button></div>` : ""}</div>
+    ${real ? `<div class="mprep-tools"><button type="button" class="mprep-edit" data-act="mrename" data-meal="${esc(sl.id)}" aria-label="Edit ${esc(sl.name)}">${PENCIL}</button><button type="button" class="mprep-edit" data-act="mdelask" data-meal="${esc(sl.id)}" aria-label="Delete ${esc(sl.name)}">${TRASH}</button></div>` : ""}</div>
     <div class="mprep-mac num"><span><i style="background:var(--mp)"></i>P ${Math.round(st.protein)}g</span><span><i style="background:var(--mc)"></i>C ${Math.round(st.carbs)}g</span><span><i style="background:var(--mf)"></i>F ${Math.round(st.fat)}g</span></div>${confirm}`;
 }
 /* Saved days and saved meals (kept in meal settings so they sync with the account) */
@@ -1374,7 +1352,6 @@ function mealToday() {
       <div class="ov-ringtxt"><span class="ov-big" style="font-size:34px">${kc(tot.kcal)}</span><span class="small muted">of ${kc(T.kcal)} kcal</span></div></div>
     <div class="ov-stats" style="gap:10px"><div><span class="small ${left < 0 ? "warntxt" : "muted"}">${left < 0 ? "Over by" : "Left today"}</span><b class="num">${kc(Math.abs(left))} kcal</b></div>
       ${macroBar("Protein", tot.protein, T.protein, "p")}${macroBar("Carbs", tot.carbs, T.carbs, "c")}${macroBar("Fat", tot.fat, T.fat, "f")}</div></div>`;
-  if (!S.meals.settings.modeSeen) html += `<div class="card" style="display:flex;flex-direction:column;gap:8px"><div class="row between"><span class="eyebrow">How do you want to use Meals?</span><button class="iconbtn" data-act="mmodehide" aria-label="Hide">${I.x}</button></div>${mModeSeg()}<span class="small muted">Set meal plan just shows your plan every day, with nothing to tick off. You can change this on the Targets tab.</span></div>`;
   const slots = mslots();
   const known = new Set(slots.map((s) => s.id));
   const nx = isToday ? nextSlot() : null;
@@ -1430,7 +1407,6 @@ function mealTargets() {
   const f = S.mtargetsForm || (S.mtargetsForm = JSON.parse(JSON.stringify({ targets: mtargets(), slots: mslots() })));
   const fromMacros = Math.round(num(f.targets.protein) * 4 + num(f.targets.carbs) * 4 + num(f.targets.fat) * 9);
   return `<h2 style="font-size:22px">Targets and meal times</h2>
-  <div class="card" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">How you use Meals</span>${mModeSeg()}<span class="small muted">${mPlanMode() ? "Meals shows your set plan every day. Nothing to log." : "Log what you eat each day and see it against your targets."}</span></div>
   <form class="f card" id="mtform" novalidate><fieldset><legend>Daily targets</legend><div class="fgrid">
     <label class="fl">Calories (kcal)<input class="in num" id="mt-kcal" type="number" inputmode="numeric" data-mt="kcal" value="${esc(f.targets.kcal)}"></label>
     <label class="fl">Protein (g)<input class="in num" id="mt-p" type="number" inputmode="numeric" data-mt="protein" value="${esc(f.targets.protein)}"></label>
@@ -1466,7 +1442,7 @@ function mealPlan() {
   const all = slots.flatMap((sl) => plan[sl.id] || []), tot = msum(all);
   let html = `<div class="row between"><h2 style="font-size:22px">Meal plan</h2><button class="btn sm kimpbtn" data-act="mtab" data-tab="mimport">${I.upload}<span>Import / autofill</span></button></div>
     ${all.length ? "" : `<button class="card kimpcta" data-act="mtab" data-tab="mimport">${I.upload}<span class="grow"><b>Import / autofill your meal plan</b><span class="small muted">Paste a plan you’ve researched or got from a coach, or attach a text file, PDF or screenshots</span></span>${I.right}</button>`}
-    <p class="small muted" style="margin:0">${mPlanMode() ? "Your set day of eating. It shows on the My plan tab every day." : `Your usual day of eating. On the Today tab, tap "Ate as planned" on a meal (or log the whole day at once) instead of entering food every day.`}</p>`;
+    <p class="small muted" style="margin:0">Your usual day of eating. On the Today tab, tap "Ate as planned" on a meal (or log the whole day at once) instead of entering food every day.</p>`;
   html += `<div class="card"><div class="row between"><span class="eyebrow">Plan totals vs targets</span></div><div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
     <div class="mm"><div class="row between"><span class="small muted">Calories</span><span class="small num"><b>${kc(tot.kcal)}</b><span class="muted"> / ${kc(T.kcal)} kcal</span></span></div><div class="mbar ${tot.kcal > T.kcal * 1.05 ? "over" : ""}"><i style="width:${Math.min(100, T.kcal ? (tot.kcal / T.kcal) * 100 : 0)}%"></i></div></div>
     ${macroBar("Protein", tot.protein, T.protein, "p")}${macroBar("Carbs", tot.carbs, T.carbs, "c")}${macroBar("Fat", tot.fat, T.fat, "f")}</div></div>`;
@@ -1691,8 +1667,6 @@ async function mealClick(a, b) {
     case "modcancel": S.modEdit = null; renderOverlay(); return true;
     case "modsave": { const o = S.modEdit; S.modEdit = null; S.settings = { ...S.settings, modOrder: o }; try { localStorage.setItem("planner.modorder", JSON.stringify(o)); } catch {} renderOverlay(); renderChrome(); toast("Tab order saved"); await saveSettings(); return true; }
     case "module": { const m = b.dataset.mod; if (m === S.module) return true; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
-    case "mmode": { const v = b.dataset.v === "plan" ? "plan" : "log"; S.meals.settings = { ...S.meals.settings, mode: v, modeSeen: true }; if (S.mtab === "mweek" && v === "plan") S.mtab = "mtoday"; render(); toast(v === "plan" ? "Meals now shows your set plan" : "Back to logging each day"); await msaveSettings(); return true; }
-    case "mmodehide": S.meals.settings = { ...S.meals.settings, modeSeen: true }; render(); await msaveSettings(); return true;
     case "mtab": S.mtab = b.dataset.tab; S.mtargetsForm = null; try { localStorage.setItem("planner.mtab", S.mtab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "madd": mopenAdd(b.dataset.meal || nextSlot(), { save: !!b.dataset.save, plan: !!b.dataset.plan }); return true;
     case "mpedit": mopenPlanEdit(b.dataset.meal, b.dataset.id); return true;
