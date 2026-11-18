@@ -580,7 +580,10 @@ ul.klist .kexp-body { padding-left: 0; }
 .kwh { font-size: 13px; }
 .kwh svg { width: 16px; height: 16px; color: var(--muted); }
 .kweek .kday { font-size: 11px; font-weight: 600; justify-content: center; }
-.kweek .kcell { width: 26px; height: 26px; max-width: none; aspect-ratio: auto; border: 1.5px solid var(--line); border-radius: 7px; background: none; cursor: pointer; }
+.kweek .kcell { width: 26px; height: 26px; max-width: none; aspect-ratio: auto; border: 1.5px solid var(--line); border-radius: 7px; background: none; }
+.kweek .kcell.editing { cursor: pointer; border-style: dashed; }
+.kweek .kcell.editing.on { border-style: solid; }
+.kweek .kcell.off::after { content: none; }
 .kweek .kcell.on { background: var(--accent); border-color: var(--accent); }
 .kweek .kcell svg { width: 13px; height: 13px; }
 .mimeal .in { min-width: 0; }
