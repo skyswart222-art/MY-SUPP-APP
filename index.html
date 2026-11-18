@@ -666,6 +666,68 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 .bcol { height: 100%; display: flex; align-items: flex-end; justify-content: center; padding: 0 3px; }
 .bcolin { width: 100%; max-width: 30px; display: flex; flex-direction: column; gap: 2px; border-radius: 4px 4px 0 0; overflow: hidden; }
 .bcolin > i { display: block; min-height: 2px; }
+/* To-do: three importance colours (red, yellow, green), readable in both themes */
+:root { --p-high: #d8352a; --p-med: #e2a400; --p-low: #2e9a4e; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --p-high: #ff6a5c; --p-med: #f6c945; --p-low: #5fd27f; } }
+:root[data-theme="dark"] { --p-high: #ff6a5c; --p-med: #f6c945; --p-low: #5fd27f; }
+.p-high { --pc: var(--p-high); } .p-med { --pc: var(--p-med); } .p-low { --pc: var(--p-low); }
+.tadd { display: flex; flex-direction: column; gap: 10px; }
+.tadd .in.grow { flex: 1; }
+.tdate { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.tdate .in, .tdin { width: auto; padding: 6px 8px; font-size: 14px; }
+.tpri { display: inline-flex; gap: 3px; background: var(--sunk); border-radius: 10px; padding: 3px; flex-wrap: wrap; }
+.tpri button { border: 0; background: transparent; border-radius: 8px; padding: 5px 10px; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.tpri button i, .tleg i, .tpl::before { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 6px color-mix(in srgb, var(--pc) 60%, transparent); }
+.tpri button[aria-pressed="true"] { background: color-mix(in srgb, var(--pc) 16%, var(--surface)); color: var(--ink); font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--pc); }
+.tsum { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); padding: 0 4px; }
+.tsum b { color: var(--ink); font-weight: 600; }
+.tsum .late b { color: var(--crit); }
+.tlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.trow { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+.trow:first-child { border-top: 0; padding-top: 4px; }
+.trow:last-child { padding-bottom: 4px; }
+.tcheck { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--pc); background: color-mix(in srgb, var(--pc) 10%, transparent); display: grid; place-items: center; padding: 0; color: #fff; box-shadow: 0 0 8px color-mix(in srgb, var(--pc) 40%, transparent); }
+.tcheck svg { width: 14px; height: 14px; }
+.trow.done .tcheck { background: var(--pc); }
+.trow.p-med .tcheck { color: #2b2000; }
+.tt { font-weight: 500; overflow-wrap: anywhere; }
+.trow.done .tt { text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: color-mix(in srgb, var(--ink) 70%, transparent); color: var(--muted); }
+.tmeta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.tmeta .late { color: var(--crit); font-weight: 600; }
+.tpl { display: inline-flex; align-items: center; gap: 5px; }
+.tpl::before { content: ""; width: 7px; height: 7px; }
+.tdone { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); padding: 3px 9px 3px 7px; border-radius: 999px; }
+.tdone svg { width: 13px; height: 13px; }
+.trow.edit { align-items: flex-start; }
+.trow.edit .kn { margin-top: 8px; border-color: var(--pc); color: var(--ink); }
+.tedit { display: flex; flex-direction: column; gap: 8px; }
+.tmv { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.tmv .iconbtn[disabled] { opacity: .3; }
+.tmv .iconbtn.danger { color: var(--crit); }
+.tdtog { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 5px 10px; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+.tdtog svg { width: 13px; height: 13px; }
+.tdtog[aria-pressed="true"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--bg)); font-weight: 600; }
+.tleg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.tleg span { display: inline-flex; align-items: center; gap: 6px; }
+.tleg i.hollow { background: none; box-shadow: none; border: 1.5px solid var(--muted); width: 8px; height: 8px; }
+.tcal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 10px; }
+.tcal .wd { text-align: center; font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .04em; padding-bottom: 2px; }
+.tcell { min-height: 54px; border: 1.5px solid transparent; border-radius: 11px; background: var(--sunk); display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 5px 2px; font-size: 13px; color: var(--ink); min-width: 0; }
+.tcell.blank { background: none; pointer-events: none; }
+.tcell .dn { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; font-family: var(--font-data); font-size: 12px; }
+.tcell.past .dn { color: var(--muted); }
+.tcell.today .dn { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.tcell[aria-pressed="true"] { border-color: var(--ink); background: var(--surface); }
+.tmk { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; max-width: 100%; }
+.tmk i { width: 7px; height: 7px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 6px var(--pc); }
+.tmk i.done { background: none; box-shadow: none; border: 1.5px solid var(--pc); opacity: .75; }
+.tmk b { font-size: 9.5px; line-height: 7px; color: var(--muted); font-weight: 600; }
+.tdayhd { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.kprow { display: flex; align-items: center; gap: 8px; }
+.kprow .khead { flex: 1; min-width: 0; }
+.krun { flex: none; white-space: nowrap; }
+.krun[aria-pressed="true"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.krun svg { width: 13px; height: 13px; }
 </style>
 <link rel="stylesheet" href="auth.css">
 </head>

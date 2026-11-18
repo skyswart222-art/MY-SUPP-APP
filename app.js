@@ -11,6 +11,7 @@ const MODULES = [
   { id: "skincare", name: "Skincare", ready: true },
   { id: "cycle", name: "Cycle", ready: true },
   { id: "budget", name: "Budget", ready: true },
+  { id: "todo", name: "To-do", ready: true },
 ];
 /* The person's own order for the tabs at the top, saved with their settings (and on the phone for a fast start). */
 function modOrdered() {
@@ -199,7 +200,7 @@ async function initStore() {
   let id = null;
   if (db && user) { try { id = await user.id(); } catch { id = null; } }
   if (!db || !id) {
-    lsLoad(); mlsLoad(); wlsLoad(); clsLoad(); plsLoad(); klsLoad(); blsLoad(); S.mode = "local"; store.kind = "local";
+    lsLoad(); mlsLoad(); wlsLoad(); clsLoad(); plsLoad(); klsLoad(); blsLoad(); tlsLoad(); S.mode = "local"; store.kind = "local";
     setSync("Saved on this device only");
     render(); return;
   }
@@ -214,6 +215,7 @@ async function initStore() {
   pinitDb(db, id);
   kinitDb(db, id);
   binitDb(db, id);
+  tinitDb(db, id);
   store.settings.onSnapshot((snap) => { if (snap.exists) { S.settings = { ...S.settings, ...snap.data() }; softRender(); } }, () => {});
   let loaded = false;
   const timer = setTimeout(() => { if (!loaded) { setSync("Still connecting…"); } }, 10000);
@@ -497,6 +499,12 @@ function renderChrome() {
   const tb = $("#themebtn");
   if (tb) { tb.innerHTML = S.theme === "dark" ? SUN : MOON; tb.setAttribute("aria-label", S.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"); }
   $("#modules").innerHTML = modOrdered().map((m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`).join("") + `<button class="mod modarr" data-act="modorder" aria-label="Arrange tabs" title="Arrange tabs"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>`;
+  if (S.module === "todo") {
+    const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar]];
+    $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
+    $("#tabs").innerHTML = tt.map(([id, label, ic]) => `<button class="tab" data-act="ttab" data-tab="${id}" ${S.ttab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+    return;
+  }
   if (S.module === "budget") {
     const bt = [["btoday", "Overview", I.today], ["bplan", "Plan", I.wallet], ["blog", "Log", I.list], ["bgoals", "Goals", I.target], ["btrends", "Trends", I.trend]];
     $("#tabs").style.gridTemplateColumns = "repeat(5, 1fr)";
@@ -551,10 +559,11 @@ function render() {
   if (S.module === "progress") { v.innerHTML = progressView(); renderOverlay(); return; }
   if (S.module === "skincare") { v.innerHTML = skinView(); renderOverlay(); return; }
   if (S.module === "budget") { v.innerHTML = budgetView(); renderOverlay(); return; }
+  if (S.module === "todo") { v.innerHTML = todoView(); renderOverlay(); return; }
   v.innerHTML = S.tab === "today" ? viewToday() : S.tab === "totals" ? viewTotals() : S.tab === "stock" ? viewStock() : S.tab === "spend" ? viewSpend() : viewAdd();
   renderOverlay();
 }
-function softRender() { if (S.module === "budget") { bsoft(); return; } if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail || S.mtab === "mimport") { renderChrome(); return; } render(); return; } if (S.tab === "add" && S.form) { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
+function softRender() { if (S.module === "todo") { tsoft(); return; } if (S.module === "budget") { bsoft(); return; } if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail || S.mtab === "mimport") { renderChrome(); return; } render(); return; } if (S.tab === "add" && S.form) { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
 
 function emptyState() {
   return `<div class="card empty">${I.bottle}<h3>Your stack goes here</h3>
@@ -847,6 +856,7 @@ function stockCard(s) {
     ${conf ? confirmBox(s, conf) : `<div class="actions"><button class="btn sm" data-act="edit" data-id="${s.id}">Edit</button>
       <button class="btn sm" data-act="ask" data-kind="refill" data-id="${s.id}">Restock</button>
       <button class="btn sm" data-act="ask" data-kind="count" data-id="${s.id}">Set count</button>
+      ${tRunBtn("supp", s)}
       ${isCup ? `<button class="btn sm primary" data-act="activate" data-id="${s.id}">Start taking</button>` : `<button class="btn sm ghost" data-act="shelve" data-id="${s.id}">Move to cupboard</button>`}
       <button class="btn sm ghost danger" data-act="ask" data-kind="delete" data-id="${s.id}">Delete</button></div>`}</div>`;
 }
@@ -1063,7 +1073,7 @@ const MDEFAULT = {
   ],
 };
 S.module = "supplements"; S.mtab = "mtoday";
-try { const m = localStorage.getItem("planner.module"); if (["meals", "workouts", "cycle", "progress", "skincare", "budget"].includes(m)) S.module = m; const t = localStorage.getItem("planner.mtab"); if (["mtoday", "mplan", "mweek", "mfoods", "mtargets", "mimport"].includes(t)) S.mtab = t; } catch {}
+try { const m = localStorage.getItem("planner.module"); if (["meals", "workouts", "cycle", "progress", "skincare", "budget", "todo"].includes(m)) S.module = m; const t = localStorage.getItem("planner.mtab"); if (["mtoday", "mplan", "mweek", "mfoods", "mtargets", "mimport"].includes(t)) S.mtab = t; } catch {}
 S.meals = { days: {}, foods: [], settings: JSON.parse(JSON.stringify(MDEFAULT)) };
 S.mealAdd = null; S.mtargetsForm = null;
 const mImpBlank = () => ({ busy: false, msg: "", kind: "", text: "", files: [], result: null, day: 0, saveDays: true, useTargets: true, summary: "" });
@@ -2866,9 +2876,11 @@ function kExpBody(x) {
     <div class="small muted">${l != null ? `${plural(l, "use")} left${tot ? ` of ${fmtN(tot, 0)}` : ""}${wl != null && x.status !== "shelf" ? ` · about ${wl < 2 ? plural(Math.round(wl * 7), "day") : plural(Math.round(wl), "week")}` : ""}` : "Uses not tracked"}</div>
     <div class="actions"><button class="btn sm" data-act="kopen" data-id="${x.id}">Details</button><button class="btn sm" data-act="kedit" data-id="${x.id}">Edit</button>${l != null ? `<button class="btn sm ghost" data-act="krestock" data-id="${x.id}">New bottle</button>` : ""}</div></div>`;
 }
-function kRow(x, key, n) {
+function kRow(x, key, n, run) {
   const open = S.kexp === key;
-  return `<li class="krow ${open ? "open" : ""}"><button class="khead" data-act="kexp" data-k="${esc(key)}" aria-expanded="${open}">${n != null ? `<span class="kn num">${n}</span>` : ""}<span class="grow kt">${esc(x.name)}</span>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}${CHEV}</button>${open ? kExpBody(x) : ""}</li>`;
+  const head = `<button class="khead" data-act="kexp" data-k="${esc(key)}" aria-expanded="${open}">${n != null ? `<span class="kn num">${n}</span>` : ""}<span class="grow kt">${esc(x.name)}</span>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}${CHEV}</button>`;
+  if (run) return `<li class="krow ${open ? "open" : ""}"><div class="kprow">${head}${tRunBtn("skin", x)}</div>${open ? kExpBody(x) : ""}</li>`;
+  return `<li class="krow ${open ? "open" : ""}">${head}${open ? kExpBody(x) : ""}</li>`;
 }
 function kSlotCard(slot) {
   const list = kSlotList(slot);
@@ -2904,7 +2916,7 @@ function kWeek() {
 function kProducts() {
   let html = `<div class="row between"><h2 style="font-size:22px">Products</h2><span class="row" style="gap:6px"><button class="btn sm" data-act="ktab" data-tab="kimport">Import</button><button class="btn sm" data-act="ktab" data-tab="kadd">Add product</button></span></div>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><p>No products yet.</p><button class="btn primary" data-act="ktab" data-tab="kadd">Add a product</button></div>`;
-  const group = (list, label) => list.length ? `<section class="card kslot"><div class="eyebrow">${label}</div><ul class="klist">${kSorted(list).map((x) => kRow(x, "p|" + x.id)).join("")}</ul></section>` : "";
+  const group = (list, label) => list.length ? `<section class="card kslot"><div class="eyebrow">${label}</div><ul class="klist">${kSorted(list).map((x) => kRow(x, "p|" + x.id, null, true)).join("")}</ul></section>` : "";
   html += group(kActive(), "In my routine") + group(S.sk.products.filter((x) => x.status === "shelf"), "On the shelf");
   if (S.sk.products.some((x) => x.example)) html += `<div><button class="btn sm ghost danger" data-act="kclearex">Remove sample products</button></div>`;
   return html;
@@ -3469,6 +3481,166 @@ document.addEventListener("submit", async (e) => {
   }
 }, true);
 
+/* ====================== TO-DO MODULE ====================== */
+S.ttab = "tlist";
+try { const t = localStorage.getItem("planner.ttab"); if (["tlist", "tmonth"].includes(t)) S.ttab = t; } catch {}
+S.td = { items: [] };
+S.tedit = null; /* while editing the list: a draft copy of the items, in order */
+S.tmo = null; S.tday = today(); S.tnew = { text: "", pri: "med", due: "" };
+const tstore = {};
+const TLS = "planner.todo.v1";
+function tlsLoad() { try { const d = JSON.parse(localStorage.getItem(TLS) || "{}"); if (Array.isArray(d.items)) S.td.items = d.items; } catch {} }
+function tlsSave() { try { localStorage.setItem(TLS, JSON.stringify(S.td)); } catch {} }
+function tinitDb(db, id) {
+  tstore.items = db.collection(`data/users/${id}/todo/items`);
+  tstore.items.onSnapshot((snap) => { S.td.items = snap.docs.map((d) => ({ ...d.data(), id: d.id })); tsoft(); }, () => {});
+}
+function tsoft() { if (S.module !== "todo") return; const a = document.activeElement; if (S.tedit || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+async function tsave(x) { const i = S.td.items.findIndex((y) => y.id === x.id); if (i >= 0) S.td.items[i] = x; else S.td.items.push(x); if (store.kind === "db" && tstore.items) return queued("td/" + x.id, () => tstore.items.doc(x.id).set(cjson(x))); tlsSave(); }
+async function tdel(id) { S.td.items = S.td.items.filter((x) => x.id !== id); if (store.kind === "db" && tstore.items) return queued("td/" + id, () => tstore.items.doc(id).delete()); tlsSave(); }
+
+const TPRI = { high: "High", med: "Medium", low: "Low" };
+const TPRIS = ["high", "med", "low"];
+const tPri = (x) => (TPRI[x.pri] ? x.pri : "med");
+const tSorted = () => [...S.td.items].sort((a, b) => num(a.order) - num(b.order) || String(a.created || "").localeCompare(String(b.created || "")));
+const tMonthNow = () => today().slice(0, 7);
+function tDueTxt(x) {
+  if (!x.due) return "";
+  const t = today();
+  if (x.due === t) return "Due today";
+  if (x.due === addDays(t, 1)) return "Due tomorrow";
+  return x.due < t && !x.done ? `Overdue · ${shortD(x.due)}` : `Due ${shortD(x.due)}`;
+}
+function tPriPick(cur, act, id) {
+  return `<div class="tpri" role="group" aria-label="Importance">${TPRIS.map((p) => `<button type="button" class="p-${p}" data-act="${act}" ${id ? `data-id="${id}"` : ""} data-v="${p}" aria-pressed="${cur === p}"><i></i>${TPRI[p]}</button>`).join("")}</div>`;
+}
+function tRow(x) {
+  const p = tPri(x), late = x.due && !x.done && x.due < today();
+  return `<li class="trow p-${p} ${x.done ? "done" : ""}"><button class="tcheck" data-act="ttoggle" data-id="${x.id}" aria-pressed="${!!x.done}" aria-label="${x.done ? "Mark not done" : "Mark done"}: ${esc(x.text)}">${x.done ? I.check : ""}</button>
+    <div class="grow"><div class="tt">${esc(x.text)}</div><div class="tmeta"><span class="tpl">${TPRI[p]}</span>${x.due ? `<span class="${late ? "late" : ""}">${esc(tDueTxt(x))}</span>` : ""}</div></div>
+    ${x.done ? `<span class="tdone">${I.check}<span>Done</span></span>` : ""}</li>`;
+}
+function todoView() { return S.ttab === "tmonth" ? tMonth() : tList(); }
+
+function tList() {
+  const E = S.tedit, items = E || tSorted();
+  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">To-do</h2>${S.td.items.length ? (E ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="tecancel">Cancel</button><button class="btn sm primary" data-act="tesave">Save</button></span>` : `<button class="btn sm" data-act="tedit">${PENCIL}<span>Edit</span></button>`) : ""}</div>`;
+  if (E) {
+    html += `<p class="small muted" style="margin:-6px 0 0">Use the arrows to change the order. Change the wording, importance or date, or remove items, then tap Save.</p>`;
+    if (!E.length) html += `<div class="card empty"><p>Everything’s been removed. Tap Save to clear the list, or Cancel to keep it.</p></div>`;
+    else html += `<section class="card"><ol class="tlist">${E.map((x, i) => { const p = tPri(x); return `<li class="trow edit p-${p}"><span class="kn num">${i + 1}</span>
+      <div class="grow tedit"><input class="in" data-te="text" data-id="${x.id}" value="${esc(x.text)}" maxlength="200" aria-label="To-do ${i + 1}">
+        <div class="row wrapflex" style="gap:8px">${tPriPick(p, "tepri", x.id)}<input class="in tdin" type="date" data-te="due" data-id="${x.id}" value="${esc(x.due || "")}" aria-label="Due date">
+        <button type="button" class="tdtog" data-act="tedone" data-id="${x.id}" aria-pressed="${!!x.done}">${x.done ? I.check + "<span>Done</span>" : "<span>Not done</span>"}</button></div></div>
+      <div class="tmv"><button class="iconbtn sm" data-act="temove" data-i="${i}" data-d="-1" ${i ? "" : "disabled"} aria-label="Move up">${UPI}</button><button class="iconbtn sm" data-act="temove" data-i="${i}" data-d="1" ${i < E.length - 1 ? "" : "disabled"} aria-label="Move down">${DNI}</button><button class="iconbtn sm danger" data-act="tedel" data-id="${x.id}" aria-label="Delete ${esc(x.text)}">${I.x}</button></div></li>`; }).join("")}</ol></section>`;
+    const dn = E.filter((x) => x.done).length;
+    if (dn) html += `<div class="row" style="justify-content:center"><button class="btn sm danger" data-act="teclear">Remove ${plural(dn, "completed item")}</button></div>`;
+    return html;
+  }
+  html += `<form class="card tadd" id="taddform" autocomplete="off"><div class="row" style="gap:8px"><input class="in grow" id="tnewtext" data-tn="text" value="${esc(S.tnew.text)}" placeholder="Add a to-do" maxlength="200" aria-label="New to-do"><button class="btn primary" type="submit">Add</button></div>
+    <div class="row wrapflex" style="gap:10px">${tPriPick(S.tnew.pri, "tnpri")}<label class="tdate">Due<input class="in" type="date" data-tn="due" value="${esc(S.tnew.due)}"></label>${S.tnew.due ? `<button type="button" class="linkbtn small" data-act="tnclear">No date</button>` : ""}</div></form>`;
+  if (!items.length) return html + `<div class="card empty">${I.list.replace("<svg", '<svg width="44" height="44"')}<h3>Nothing on your list yet</h3><p>Add your first to-do above. Pick how important it is and, if it needs doing by a certain day, give it a due date. Dated items show on the Month calendar.</p></div>`;
+  const left = items.filter((x) => !x.done), late = left.filter((x) => x.due && x.due < today()).length;
+  html += `<div class="tsum"><span><b>${left.length}</b> to do</span><span><b>${items.length - left.length}</b> done</span>${late ? `<span class="late"><b>${late}</b> overdue</span>` : ""}</div>`;
+  html += `<section class="card"><ul class="tlist">${items.map(tRow).join("")}</ul></section>`;
+  if (items.some((x) => x.done)) html += `<p class="hint" style="text-align:center">Finished with a completed item? Tap Edit to remove it.</p>`;
+  return html;
+}
+
+function tMonth() {
+  const mo = S.tmo || tMonthNow(), cur = mo === tMonthNow(), t = today();
+  const [y, m] = mo.split("-").map(Number), first = new Date(y, m - 1, 1), count = new Date(y, m, 0).getDate(), off = (first.getDay() + 6) % 7;
+  const by = {};
+  for (const x of tSorted()) if (x.due && x.due.startsWith(mo)) (by[x.due] ||= []).push(x);
+  for (const k in by) by[k].sort((a, b) => !!a.done - !!b.done || TPRIS.indexOf(tPri(a)) - TPRIS.indexOf(tPri(b)));
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="tmonth" data-n="-1" aria-label="Previous month">${I.left}</button>
+    <div class="grow"><div class="eyebrow">${esc(monthLabel(mo, true))}</div><h2 class="ov-title">${cur ? "This month" : esc(monthLabel(mo))}</h2></div>
+    ${cur ? "" : `<button class="btn sm" data-act="tmonth" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="tmonth" data-n="1" aria-label="Next month">${I.right}</button></div>`;
+  let cells = KWEEK.map((d) => `<span class="wd">${DOW[d].slice(0, 1)}</span>`).join("");
+  for (let i = 0; i < off; i++) cells += `<span class="tcell blank"></span>`;
+  for (let d = 1; d <= count; d++) {
+    const ds = `${mo}-${pad(d)}`, list = by[ds] || [];
+    const lbl = `${shortD(ds, { weekday: "long", day: "numeric", month: "long" })}${list.length ? `, ${plural(list.length, "to-do")}` : ""}`;
+    cells += `<button class="tcell ${ds === t ? "today" : ""} ${ds < t ? "past" : ""}" data-act="tday" data-d="${ds}" aria-pressed="${S.tday === ds}" aria-label="${esc(lbl)}"><span class="dn">${d}</span>${list.length ? `<span class="tmk">${list.slice(0, 4).map((x) => `<i class="p-${tPri(x)} ${x.done ? "done" : ""}"></i>`).join("")}${list.length > 4 ? `<b>+${list.length - 4}</b>` : ""}</span>` : ""}</button>`;
+  }
+  html += `<section class="card"><div class="tleg">${TPRIS.map((p) => `<span class="p-${p}"><i></i>${TPRI[p]}</span>`).join("")}<span><i class="hollow"></i>Done</span></div><div class="tcal">${cells}</div></section>`;
+  const sel = S.tday && S.tday.startsWith(mo) ? S.tday : null;
+  if (sel) {
+    const list = by[sel] || [];
+    html += `<section class="card"><div class="tdayhd"><div><div class="eyebrow">${sel === t ? "Today" : "Due on"}</div><h3 class="ov-tlabel">${esc(shortD(sel, { weekday: "long", day: "numeric", month: "long" }))}</h3></div><button class="btn sm" data-act="taddday">Add for this day</button></div>
+      ${list.length ? `<ul class="tlist">${list.map(tRow).join("")}</ul>` : `<p class="small muted" style="margin:0">Nothing due this day.</p>`}</section>`;
+  } else html += `<p class="hint" style="text-align:center">Tap a day to see what’s due.</p>`;
+  const all = Object.keys(by).sort().flatMap((k) => by[k]);
+  if (all.length) html += `<section class="card"><div class="eyebrow" style="margin-bottom:6px">Due in ${esc(monthLabel(mo, true))}</div><ul class="tlist">${all.map(tRow).join("")}</ul></section>`;
+  else html += `<div class="card empty"><p>Nothing due in ${esc(monthLabel(mo, true))}. Give a to-do a due date and it shows up here.</p></div>`;
+  const undated = S.td.items.filter((x) => !x.due && !x.done).length;
+  if (undated) html += `<p class="hint" style="text-align:center">${plural(undated, "to-do")} without a due date ${undated === 1 ? "is" : "are"} only on the List.</p>`;
+  return html;
+}
+
+/* "Running out" on a supplement or skincare product adds a to-do to get more. One open to-do per item. */
+const tRunTodo = (kind, id) => S.td.items.find((t) => t.src === kind + ":" + id && !t.done);
+function tRunBtn(kind, x) { const on = !!tRunTodo(kind, x.id); return `<button class="btn sm krun" data-act="runout" data-kind="${kind}" data-id="${x.id}" aria-pressed="${on}" aria-label="${on ? `${esc(x.name)} is on your to-do list` : `Running out of ${esc(x.name)}: add it to your to-do list`}">${on ? I.check + "<span>On to-do</span>" : "Running out"}</button>`; }
+async function tRunOut(kind, id) {
+  const x = (kind === "supp" ? S.supps : S.sk.products).find((y) => y.id === id); if (!x) return;
+  if (tRunTodo(kind, id)) { toast("Already on your to-do list"); return; }
+  const nm = x.brand && !x.name.toLowerCase().includes(x.brand.toLowerCase()) ? `${x.brand} ${x.name}` : x.name;
+  const urgent = kind === "supp" ? stockInfo(x).level === "crit" : kLow(x) || (kLeft(x) != null && kLeft(x) <= 0);
+  const t = { id: uid(), text: `Get more ${nm}`, pri: urgent ? "high" : "med", due: "", done: false, order: S.td.items.reduce((m, y) => Math.max(m, num(y.order) + 1), 0), created: new Date().toISOString(), src: kind + ":" + id };
+  const p = tsave(t); render(); toast(`Added “Get more ${nm}” to your to-do list`); await p;
+}
+
+/* ---------- Events ---------- */
+function tSetPressed(b) { b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
+async function todoClick(a, b) {
+  switch (a) {
+    case "runout": await tRunOut(b.dataset.kind, b.dataset.id); return true;
+    case "ttab": S.ttab = b.dataset.tab; S.tedit = null; try { localStorage.setItem("planner.ttab", S.ttab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "ttoggle": { const x = S.td.items.find((y) => y.id === b.dataset.id); if (!x) return true; const n = { ...x, done: !x.done, doneAt: x.done ? "" : today() }; const p = tsave(n); render(); toast(n.done ? "Done. Nice work." : "Marked as not done"); await p; return true; }
+    case "tnpri": S.tnew.pri = b.dataset.v; tSetPressed(b); return true;
+    case "tnclear": S.tnew.due = ""; render(); return true;
+    case "tedit": S.tedit = cjson(tSorted()); render(); return true;
+    case "tecancel": S.tedit = null; render(); return true;
+    case "temove": { const E = S.tedit, i = Number(b.dataset.i), j = i + Number(b.dataset.d); if (!E || j < 0 || j >= E.length) return true; [E[i], E[j]] = [E[j], E[i]]; render(); return true; }
+    case "tepri": { const x = S.tedit?.find((y) => y.id === b.dataset.id); if (!x) return true; x.pri = b.dataset.v; render(); return true; }
+    case "tedone": { const x = S.tedit?.find((y) => y.id === b.dataset.id); if (!x) return true; x.done = !x.done; x.doneAt = x.done ? today() : ""; render(); return true; }
+    case "tedel": if (S.tedit) { S.tedit = S.tedit.filter((y) => y.id !== b.dataset.id); render(); } return true;
+    case "teclear": if (S.tedit) { S.tedit = S.tedit.filter((y) => !y.done); render(); } return true;
+    case "tesave": {
+      const E = S.tedit; if (!E) return true;
+      if (E.some((x) => !String(x.text || "").trim())) { toast("Each to-do needs some words. Type something or remove it."); return true; }
+      const old = new Map(S.td.items.map((x) => [x.id, x]));
+      const next = E.map((x, i) => ({ ...x, text: x.text.trim(), order: i }));
+      const changed = next.filter((x) => JSON.stringify(cjson(x)) !== JSON.stringify(cjson(old.get(x.id) || {})));
+      const gone = S.td.items.filter((x) => !E.some((y) => y.id === x.id)).map((x) => x.id);
+      S.tedit = null; render(); toast(changed.length || gone.length ? "Saved" : "No changes");
+      for (const x of changed) await tsave(x);
+      for (const id of gone) await tdel(id);
+      render(); return true;
+    }
+    case "tmonth": { const n = Number(b.dataset.n); if (n === 0) { S.tmo = null; S.tday = today(); } else { S.tmo = bMonthAdd(S.tmo || tMonthNow(), n); if (S.tmo === tMonthNow()) S.tmo = null; } render(); return true; }
+    case "tday": S.tday = b.dataset.d; render(); return true;
+    case "taddday": S.tnew.due = S.tday || ""; S.ttab = "tlist"; S.tedit = null; try { localStorage.setItem("planner.ttab", S.ttab); } catch {} render(); window.scrollTo(0, 0); document.getElementById("tnewtext")?.focus(); return true;
+  }
+  return false;
+}
+function tInput(e) {
+  const t = e.target;
+  if (t.dataset.tn) S.tnew[t.dataset.tn] = t.value;
+  else if (t.dataset.te && S.tedit) { const x = S.tedit.find((y) => y.id === t.dataset.id); if (x) x[t.dataset.te] = t.value; }
+}
+document.addEventListener("input", tInput);
+document.addEventListener("change", (e) => { tInput(e); if (e.target.dataset.tn === "due" && S.module === "todo") { const a = document.activeElement; render(); if (a?.id === "tnewtext") document.getElementById("tnewtext")?.focus(); } });
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "taddform") return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const text = S.tnew.text.trim(); if (!text) { toast("Type what needs doing."); document.getElementById("tnewtext")?.focus(); return; }
+  const x = { id: uid(), text, pri: S.tnew.pri, due: S.tnew.due || "", done: false, order: S.td.items.reduce((m, y) => Math.max(m, num(y.order) + 1), 0), created: new Date().toISOString() };
+  S.tnew = { text: "", pri: S.tnew.pri, due: "" };
+  const p = tsave(x); render(); document.getElementById("tnewtext")?.focus(); toast(x.due ? `Added, due ${shortD(x.due)}` : "Added"); await p;
+}, true);
+
 /* ---------- Cardio ---------- */
 const CTYPES = ["Run", "Walk", "Cycle", "Row", "Swim", "Stairs", "HIIT", "Elliptical", "Hike", "Sport", "Other"];
 S.cdForm = { type: "Run", date: today(), mins: "", km: "", kcal: "", hr: "", notes: "" }; S.cdImp = { busy: false, msg: "", kind: "", list: null };
@@ -3601,6 +3773,7 @@ document.addEventListener("click", async (e) => {
   if (await progressClick(a, b)) return;
   if (await skinClick(a, b)) return;
   if (await budgetClick(a, b)) return;
+  if (await todoClick(a, b)) return;
   const sp = (x) => S.supps.find((s) => s.id === x);
   switch (a) {
     case "tab": if (b.dataset.tab === "add" && S.tab !== "add" && !S.form) S.form = blankForm(); setTab(b.dataset.tab); break;
