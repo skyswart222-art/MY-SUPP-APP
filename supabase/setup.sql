@@ -120,7 +120,7 @@ create policy "avatar delete own folder" on storage.objects for delete to authen
 -- ---------- Private photos (supplement labels, blood test pages, skincare products) ----------
 -- Private bucket: nobody can open these without being logged in as the owner.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('uploads', 'uploads', false, 8388608, array['image/jpeg', 'image/png', 'image/webp'])
+values ('uploads', 'uploads', false, 8388608, array['image/jpeg', 'image/png', 'image/webp', 'audio/mp4', 'audio/aac', 'audio/x-m4a', 'audio/webm', 'audio/ogg', 'audio/mpeg'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "uploads read own folder" on storage.objects;

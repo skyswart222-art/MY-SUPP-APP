@@ -772,6 +772,32 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 .tmk i { width: 7px; height: 7px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 6px var(--pc); }
 .tmk i.done { background: none; box-shadow: none; border: 1.5px solid var(--pc); opacity: .75; }
 .tmk b { font-size: 9.5px; line-height: 7px; color: var(--muted); font-weight: 600; }
+.vrec { display: flex; align-items: center; gap: 18px; padding: 18px; }
+.vrecbtn { flex: none; position: relative; width: 76px; height: 76px; border-radius: 50%; border: 0; background: var(--crit); color: #fff; display: grid; place-items: center; box-shadow: 0 0 0 6px color-mix(in srgb, var(--crit) 18%, transparent), 0 8px 22px color-mix(in srgb, var(--crit) 35%, transparent); transition: transform .15s ease, border-radius .2s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.vrecbtn svg { width: 32px; height: 32px; transition: opacity .15s; }
+.vrecbtn:active { transform: scale(.94); }
+.vrecbtn .vdot { position: absolute; width: 26px; height: 26px; border-radius: 6px; background: #fff; opacity: 0; transform: scale(.4); transition: opacity .15s, transform .2s ease; }
+.vrecbtn.on svg { opacity: 0; }
+.vrecbtn.on .vdot { opacity: 1; transform: scale(1); }
+.vrecbtn.on { animation: vpulse 1.4s ease-in-out infinite; }
+@keyframes vpulse { 0%, 100% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--crit) 22%, transparent), 0 8px 22px color-mix(in srgb, var(--crit) 35%, transparent); } 50% { box-shadow: 0 0 0 16px color-mix(in srgb, var(--crit) 6%, transparent), 0 8px 22px color-mix(in srgb, var(--crit) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .vrecbtn.on { animation: none; } }
+.vrecinfo { display: flex; flex-direction: column; gap: 2px; }
+.vrecinfo b { font-size: 30px; font-weight: 500; line-height: 1.1; }
+.vrow { align-items: flex-start; }
+.vplay { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; padding: 0; }
+.vplay svg { width: 18px; height: 18px; }
+.vplay.on { background: var(--accent); color: var(--accent-ink); }
+.vbar { height: 4px; border-radius: 2px; background: var(--track); margin-top: 6px; overflow: hidden; }
+.vbar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 2px; }
+.vrow .tmv { flex-direction: row; }
+.tfilt { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--sunk); border-radius: 12px; padding: 4px; }
+.tfilt button { border: 0; background: transparent; border-radius: 9px; padding: 7px 4px; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; }
+.tfilt button i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 6px color-mix(in srgb, var(--pc) 60%, transparent); }
+.tfilt button b { font-size: 11px; font-weight: 500; color: var(--muted); }
+.tfilt button[aria-selected="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+.tfilt button.p-high[aria-selected="true"], .tfilt button.p-med[aria-selected="true"], .tfilt button.p-low[aria-selected="true"] { box-shadow: inset 0 0 0 1.5px var(--pc); }
+.sheet.tadd { gap: 14px; }
 .tdayhd { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .kprow { display: flex; align-items: center; gap: 8px; }
 .kprow .khead { flex: 1; min-width: 0; }
