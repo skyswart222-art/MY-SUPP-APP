@@ -655,6 +655,17 @@ const SUN = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke=
 const MOON = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
 const GEAR = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 const MODSHORT = { supplements: "Supps" };
+const CHUP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
+const CHDN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+S.hdrMin = false; try { S.hdrMin = localStorage.getItem("planner.hdrmin") === "1"; } catch {}
+function paintHdrTog() {
+  document.documentElement.classList.toggle("hdr-min", S.hdrMin);
+  const t = $("#hdrtog"); if (!t) return;
+  const m = MODULES.find((x) => x.id === S.module);
+  t.setAttribute("aria-expanded", String(!S.hdrMin));
+  t.setAttribute("aria-label", S.hdrMin ? `Show sections (now in ${m?.name || ""})` : "Hide sections");
+  t.innerHTML = S.hdrMin ? `<span class="ic">${MODICON[S.module] || ""}</span><span>${esc(m?.name || "")}</span>${CHDN}` : CHUP;
+}
 const MODICON = { supplements: I.stock, workouts: I.dumbbell, meals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 7v3H17"/></svg>', progress: I.scale, skincare: I.drop, cycle: I.vial, budget: I.wallet, todo: I.list };
 function renderChrome() {
   document.documentElement.setAttribute("data-mod", S.module);
@@ -663,6 +674,7 @@ function renderChrome() {
   /* Sections as an icon grid: two even rows of four, scrolling sideways if there are ever more than eight. */
   const mods = modOrdered(), cols = Math.max(4, Math.ceil(mods.length / 2));
   const tile = (m) => `<button class="mt" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" aria-label="${esc(m.name)}">${MODICON[m.id] || I.list}<span>${esc(MODSHORT[m.id] || m.name)}</span></button>`;
+  paintHdrTog();
   $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - 18px) / 4), 1fr))">${mods.map(tile).join("")}</div><button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button>`;
   if (S.module === "todo") {
     const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar]];
@@ -3986,6 +3998,7 @@ document.addEventListener("click", async (e) => {
     case "goday": S.date = b.dataset.date; S.todayView = "full"; try { localStorage.setItem("planner.todayView", "full"); } catch {} render(); if (S.date === today()) scrollToNow(); break;
     case "theme": S.theme = S.theme === "dark" ? "light" : "dark"; try { localStorage.setItem("planner.theme", S.theme); } catch {} applyTheme(); renderChrome(); break;
     case "settings": S.settingsOpen = true; renderSettings(); break;
+    case "hdrtog": S.hdrMin = !S.hdrMin; try { localStorage.setItem("planner.hdrmin", S.hdrMin ? "1" : "0"); } catch {} paintHdrTog(); break;
     case "close-settings": S.settingsOpen = false; renderSettings(); break;
     case "settheme": S.theme = b.dataset.v === "light" ? "light" : "dark"; try { localStorage.setItem("planner.theme", S.theme); } catch {} applyTheme(); renderChrome(); renderSettings(); break;
     case "setaccent": if (ACCENTS.some((x) => x.id === b.dataset.v)) { S.accent = b.dataset.v; try { localStorage.setItem("planner.accent", S.accent); } catch {} applyTheme(); renderSettings(); } break;
