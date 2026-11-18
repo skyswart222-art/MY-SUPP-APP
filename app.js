@@ -125,6 +125,9 @@ function renderSettings() {
     <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Colour</span>
       <div class="setgrid">${ACCENTS.map((x) => `<button type="button" class="swatch" data-act="setaccent" data-v="${x.id}" aria-pressed="${S.accent === x.id}"><i style="background:${S.theme === "dark" ? x.d : x.l};color:${S.theme === "dark" ? x.d : x.l}"></i>${x.name}</button>`).join("")}</div>
       <p class="small muted" style="margin:0">Used for buttons, progress rings and the selected tab.</p></div>
+    <div class="col" style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Notifications</span>
+      <div class="ntog">${modOrdered().filter((m) => NMODS.includes(m.id)).map((m) => { const on = nModOn(m.id); return `<button type="button" data-act="nmodtog" data-mod="${m.id}" aria-pressed="${on}"><span class="tk">${on ? I.check : ""}</span>${MODICON[m.id] || ""}<span class="grow">${esc(m.name)}</span></button>`; }).join("")}</div>
+      <p class="small muted" style="margin:0">Pick which tabs can add notifications to the bell at the top.</p></div>
     <div class="col setbtns"><span class="eyebrow">Tabs and account</span>
       <button type="button" class="btn" data-act="modorder"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg><span class="grow">Arrange tabs</span>${I.right}</button>
       ${acct ? `<button type="button" class="btn" data-act="set-profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span class="grow">Your profile and log out</span>${I.right}</button>` : ""}
@@ -664,7 +667,9 @@ function paintHdrTog() {
   const m = MODULES.find((x) => x.id === S.module);
   t.setAttribute("aria-expanded", String(!S.hdrMin));
   t.setAttribute("aria-label", S.hdrMin ? `Show sections (now in ${m?.name || ""})` : "Hide sections");
-  t.innerHTML = S.hdrMin ? `<span class="ic">${MODICON[S.module] || ""}</span><span>${esc(m?.name || "")}</span>${CHDN}` : CHUP;
+  const nu = S.hdrMin && S.mode !== "loading" ? nUnread().length : 0;
+  t.innerHTML = S.hdrMin ? `<span class="ic">${MODICON[S.module] || ""}</span><span>${esc(m?.name || "")}</span>${nu ? `<i class="nbdot"></i>` : ""}${CHDN}` : CHUP;
+  if (nu) t.setAttribute("aria-label", `Show sections (now in ${m?.name || ""}). ${plural(nu, "new notification")}`);
 }
 const MODICON = { supplements: I.stock, workouts: I.dumbbell, meals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 7v3H17"/></svg>', progress: I.scale, skincare: I.drop, cycle: I.vial, budget: I.wallet, todo: I.list };
 function renderChrome() {
@@ -675,7 +680,7 @@ function renderChrome() {
   const mods = modOrdered(), cols = Math.max(4, Math.ceil(mods.length / 2));
   const tile = (m) => `<button class="mt" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" aria-label="${esc(m.name)}">${MODICON[m.id] || I.list}<span>${esc(MODSHORT[m.id] || m.name)}</span></button>`;
   paintHdrTog();
-  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - 18px) / 4), 1fr))">${mods.map(tile).join("")}</div><button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button>`;
+  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - 18px) / 4), 1fr))">${mods.map(tile).join("")}</div><div class="mside">${nBellBtn()}<button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button></div>`;
   if (S.module === "todo") {
     const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar]];
     $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
@@ -726,7 +731,7 @@ function renderChrome() {
   $("#tabs").innerHTML = tabs.map(([id, label, ic]) => `<button class="tab" data-act="tab" data-tab="${id}" ${S.tab === id || (id === "add" && S.tab === "simport") ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "stock" && low ? `<span class="dot">${low}</span>` : ""}</button>`).join("");
 }
 function render() {
-  renderChrome();
+  renderChrome(); if (S.notifOpen) renderNotif();
   const v = $("#view");
   if (S.mode === "loading") return;
   if (S.mode === "error") { v.innerHTML = `<div class="card empty"><h3>Your saved data didn't load</h3><p>Reload the page to try again.</p></div>`; return; }
@@ -1242,7 +1247,7 @@ function bindPinch() {
   area.addEventListener("wheel", (e) => { if (!e.ctrlKey) return; e.preventDefault(); const r = area.getBoundingClientRect(); setZoom(S.zoom.z * (e.deltaY < 0 ? 1.1 : 0.9), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
   area.style.touchAction = "pan-x pan-y";
 }
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (S.mealAdd) { S.mealAdd = null; renderOverlay(); } else if (S.zoom) { S.zoom = null; renderOverlay(); } else if (S.detail) { S.detail = null; renderOverlay(); } } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.notifOpen) { S.notifOpen = false; renderNotif(); renderChrome(); return; } if (e.key === "Escape") { if (S.mealAdd) { S.mealAdd = null; renderOverlay(); } else if (S.zoom) { S.zoom = null; renderOverlay(); } else if (S.detail) { S.detail = null; renderOverlay(); } } });
 
 /* ====================== MEALS MODULE ====================== */
 const MDEFAULT = {
@@ -3803,6 +3808,201 @@ async function tRunOut(kind, id) {
   const p = tsave(t); render(); toast(`Added “Get more ${nm}” to your to-do list`); await p;
 }
 
+/* ====================== NOTIFICATIONS ====================== */
+/* An in-app inbox. Everything here is worked out from the person's own data each time the app draws,
+   so nothing is sent anywhere. Each notification has a key that changes when its situation changes
+   (e.g. "due soon" becomes "due today"), so a fresh state shows up as new again.
+   Read and dismissed keys are saved with the settings so they follow the person across devices. */
+const NMODS = ["todo", "supplements", "skincare", "cycle", "budget", "progress", "workouts"];
+const NSEV = [["warn", "Needs attention"], ["soon", "Coming up"], ["good", "Progress"]];
+const BELL = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>';
+S.notifOpen = false; S.notifShowDis = false;
+function nState() { const n = S.settings.notif || {}; return { read: n.read || {}, dis: n.dis || {}, off: Array.isArray(n.off) ? n.off : [] }; }
+const nModOn = (m) => !nState().off.includes(m);
+const nWhen = (d) => { const t = today(), n = dDiff(t, d); return n === 0 ? "today" : n === 1 ? "tomorrow" : n === -1 ? "yesterday" : n > 1 && n < 7 ? DOW[parseD(d).getDay()] : shortD(d, { day: "numeric", month: "short" }); };
+const nIn = (n) => (n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${plural(n, "day")}`);
+const nDisp = (x) => (x.brand && !x.name.toLowerCase().includes(String(x.brand).toLowerCase()) ? `${x.brand} ${x.name}` : x.name);
+
+function nList() {
+  if (S.mode === "loading" || S.mode === "error") return [];
+  const t = today(), out = [], add = (o) => out.push(o);
+
+  /* To-do: overdue, due today, due in the next three days, and "Running out" flags */
+  for (const x of S.td.items) {
+    if (x.done) continue;
+    if (x.due) {
+      const n = dDiff(t, x.due);
+      const go = { mod: "todo", tab: "tmonth", day: x.due };
+      if (n < 0) add({ key: `td:${x.id}:${x.due}:late`, mod: "todo", sev: "warn", title: x.text, body: `Overdue. It was due ${nWhen(x.due)}.`, sort: x.due, go });
+      else if (n === 0) add({ key: `td:${x.id}:${x.due}:today`, mod: "todo", sev: "warn", title: x.text, body: "Due today", sort: x.due, go });
+      else if (n <= 3) add({ key: `td:${x.id}:${x.due}:soon`, mod: "todo", sev: "soon", title: x.text, body: `Due ${nWhen(x.due)}`, sort: x.due, go });
+    }
+  }
+
+  /* Supplements running low or out */
+  const flagged = (kind, id) => (tRunTodo(kind, id) ? " It’s on your to-do list." : "");
+  for (const { s, i } of lowItems()) {
+    const out0 = i.rem <= 0;
+    add({ key: `sl:${s.id}:${out0 ? "out" : i.level}`, mod: "supplements", sev: "warn", title: out0 ? `${s.name} has run out` : `${s.name} is running low`,
+      body: (out0 ? "Restock it or move it to the cupboard." : `About ${plural(Math.max(0, Math.floor(i.daysLeft ?? 0)), "day")} left${i.outDate ? `, runs out ${nWhen(dstr(i.outDate))}` : ""}.`) + flagged("supp", s.id), sort: t, go: { mod: "supplements", tab: "stock" } });
+  }
+
+  /* Skincare products running low (uses left) */
+  for (const x of kActive().filter(kLow)) {
+    const l = kLeft(x), wl = kWeeksLeft(x);
+    add({ key: `kl:${x.id}:${l <= 0 ? "out" : "low"}`, mod: "skincare", sev: "warn", title: l <= 0 ? `${nDisp(x)} is finished` : `${nDisp(x)} is running low`,
+      body: (l <= 0 ? "No uses left. Tap New bottle when you open another." : `${plural(l, "use")} left${wl != null ? `, about ${wl < 2 ? plural(Math.max(1, Math.round(wl * 7)), "day") : plural(Math.round(wl), "week")}` : ""}.`) + flagged("skin", x.id), sort: t, go: { mod: "skincare", tab: "kproducts" } });
+  }
+
+  /* Running out flags that don't already show above */
+  for (const x of S.td.items) {
+    if (x.done || !x.src || x.due) continue;
+    const [kind, id] = x.src.split(":");
+    if (out.some((o) => o.key.startsWith((kind === "supp" ? "sl:" : "kl:") + id + ":"))) continue;
+    add({ key: `tr:${x.id}`, mod: "todo", sev: "soon", title: x.text, body: "You flagged this as running out. It’s waiting on your to-do list.", sort: t, go: { mod: "todo", tab: "tlist" } });
+  }
+
+  /* Cycle: doses, stock, and dates starting or ending */
+  const comps = S.cy.compounds;
+  if (comps.length) {
+    const y = addDays(t, -1);
+    const dueNow = comps.filter((c) => cDue(c, t) && !cTaken(c.id, t));
+    if (dueNow.length) add({ key: `cd:${t}`, mod: "cycle", sev: "soon", title: dueNow.length === 1 ? `${dueNow[0].name} is due today` : `${plural(dueNow.length, "dose")} due today`, body: dueNow.map((c) => `${c.name} ${fmtN(num(c.dose), 1)} ${cU(c)}${c.time ? ` at ${c.time}` : ""}`).join(", "), sort: t, go: { mod: "cycle", tab: "ctoday", date: t } });
+    const missed = comps.filter((c) => cDue(c, y) && !cTaken(c.id, y));
+    if (missed.length) add({ key: `cm:${y}`, mod: "cycle", sev: "warn", title: `${plural(missed.length, "dose")} not logged yesterday`, body: `${missed.map((c) => c.name).join(", ")}. Log ${missed.length === 1 ? "it" : "them"} if you took ${missed.length === 1 ? "it" : "them"}.`, sort: y, go: { mod: "cycle", tab: "ctoday", date: y } });
+    for (const c of comps) {
+      if (cLow(c)) { const n = cDosesLeft(c); add({ key: `cl:${c.id}:${n <= 0 ? "out" : "low"}`, mod: "cycle", sev: "warn", title: n <= 0 ? `${c.name} has run out` : `${c.name} is running low`, body: `${plural(Math.max(0, n), "dose")} left in stock.`, sort: t, go: { mod: "cycle", tab: "cstock" } }); }
+      if (c.end && !cEnded(c)) { const f = cForecast(c); if (f.short > 0) add({ key: `cs:${c.id}:${c.end}`, mod: "cycle", sev: "warn", title: `Not enough ${c.name} to finish`, body: `You’re ${plural(f.short, "dose")} short before it ends ${nWhen(c.end)}${f.outOn ? `. Runs out ${nWhen(f.outOn)}` : ""}.`, sort: f.outOn || c.end, go: { mod: "cycle", tab: "cstock" } }); }
+      if (c.start && c.start > t && dDiff(t, c.start) <= 3) add({ key: `cst:${c.id}:${c.start}`, mod: "cycle", sev: "soon", title: `${c.name} starts ${nWhen(c.start)}`, body: `${fmtN(num(c.dose), 1)} ${cU(c)} ${schedTxt(c)}.`, sort: c.start, go: { mod: "cycle", tab: "ccycle" } });
+      if (c.end && c.end >= t && dDiff(t, c.end) <= 3) add({ key: `cen:${c.id}:${c.end}`, mod: "cycle", sev: "soon", title: `${c.name} finishes ${nWhen(c.end)}`, body: dDiff(t, c.end) === 0 ? "Today is the last day on your plan." : `Last dose on your plan is ${shortD(c.end)}.`, sort: c.end, go: { mod: "cycle", tab: "ccycle" } });
+    }
+  }
+  for (const cy of S.cy.settings.cycles || []) {
+    if (cy.example) continue;
+    const nm = cy.name || cy.phase || "Your cycle";
+    if (cy.start > t && dDiff(t, cy.start) <= 7) add({ key: `cyn:${cy.id}:${cy.start}`, mod: "cycle", sev: "soon", title: `${nm} starts ${nWhen(cy.start)}`, body: `${cy.phase ? cy.phase + " · " : ""}${shortD(cy.start)}${cy.end ? ` to ${shortD(cy.end)}` : ""}.`, sort: cy.start, go: { mod: "cycle", tab: "ccycle" } });
+    if (cy.end && cy.start <= t && cy.end >= t && dDiff(t, cy.end) <= 7) add({ key: `cye:${cy.id}:${cy.end}`, mod: "cycle", sev: "soon", title: `${nm} ends ${nIn(dDiff(t, cy.end))}`, body: `Last day is ${shortD(cy.end)}.`, sort: cy.end, go: { mod: "cycle", tab: "ccycle" } });
+  }
+
+  /* Budget: this month's limits, and savings goals */
+  if (S.bg.cats.length) {
+    const mo = bMonthNow(), byC = bByCat(mo), groups = bGroups(), byG = bByGroup(mo);
+    const spendG = groups.filter((g) => !bIsSave(g.k));
+    const planned = spendG.reduce((a, g) => a + bPlannedGroup(g.k), 0), spent = spendG.reduce((a, g) => a + byG[g.k], 0) + (byG.none || 0);
+    const go = { mod: "budget", tab: "btoday", month: mo };
+    if (planned > 0 && spent > planned * 1.001) add({ key: `bt:${mo}`, mod: "budget", sev: "warn", title: `Over budget for ${monthLabel(mo, true)}`, body: `${money(spent)} spent of ${money(planned)}. That’s ${money(spent - planned)} over.`, sort: t, go });
+    for (const c of bCats()) {
+      if (bIsSave(bGroupOf(c))) continue;
+      const p = num(c.amount), sp = byC[c.id] || 0;
+      if (!(p > 0)) continue;
+      if (sp > p * 1.001) add({ key: `bo:${c.id}:${mo}`, mod: "budget", sev: "warn", title: `${c.name} is over its limit`, body: `${money(sp)} of ${money(p)} this month, ${money(sp - p)} over.`, sort: t, go });
+      else if (sp >= p * 0.9) add({ key: `b9:${c.id}:${mo}`, mod: "budget", sev: "soon", title: `${c.name} is nearly used up`, body: `${money(sp)} of ${money(p)} spent. ${money(p - sp)} left this month.`, sort: t, go });
+    }
+  }
+  for (const g of S.bg.goals) {
+    const tg = num(g.target), sv = bGoalSaved(g); if (!(tg > 0)) continue;
+    const go = { mod: "budget", tab: "bgoals" };
+    if (sv >= tg) { add({ key: `bgd:${g.id}:${tg}`, mod: "budget", sev: "good", title: `You reached your ${g.name} goal`, body: `${money(sv)} saved of ${money(tg)}. Nice work.`, sort: t, go }); continue; }
+    const pct = [75, 50, 25].find((m) => sv / tg >= m / 100);
+    if (pct) add({ key: `bgm:${g.id}:${tg}:${pct}`, mod: "budget", sev: "good", title: `${g.name} is ${pct}% saved`, body: `${money(sv)} of ${money(tg)}. ${money(tg - sv)} to go.`, sort: t, go });
+    if (g.by) { const n = dDiff(t, g.by);
+      if (n < 0) add({ key: `bgl:${g.id}:${g.by}`, mod: "budget", sev: "warn", title: `${g.name} passed its date`, body: `It was due ${shortD(g.by, { day: "numeric", month: "short", year: "numeric" })} with ${money(tg - sv)} still to save. Pick a new date or top it up.`, sort: g.by, go });
+      else if (n <= 30) add({ key: `bgs:${g.id}:${g.by}`, mod: "budget", sev: "soon", title: `${g.name} is due ${nIn(n)}`, body: `${money(tg - sv)} still to save by ${shortD(g.by, { day: "numeric", month: "short" })}.`, sort: g.by, go }); }
+  }
+
+  /* Progress: weigh-ins and goal milestones */
+  const ws = pseries("weight"), G = S.pg.settings.goals || {};
+  if (ws.length && pWeighDue(t)) add({ key: `pw:${t}`, mod: "progress", sev: "soon", title: "Weigh-in due today", body: "Log it on Progress to keep your trend line up to date.", sort: t, go: { mod: "progress", tab: "ptoday" } });
+  if (ws.length && has(G.weight)) {
+    const goal = num(G.weight), start = ws[0], cur = ws[ws.length - 1];
+    if (start.v !== goal) {
+      const frac = (start.v - cur.v) / (start.v - goal), go = { mod: "progress", tab: "ptoday" };
+      if (frac >= 1) add({ key: `pg:${goal}:100`, mod: "progress", sev: "good", title: "You reached your goal weight", body: `${fmtN(cur.v, 1)} kg against a goal of ${fmtN(goal, 1)} kg.`, sort: cur.date, go });
+      else { const m = [75, 50, 25].find((x) => frac >= x / 100); if (m) add({ key: `pg:${goal}:${m}`, mod: "progress", sev: "good", title: `${m}% of the way to your goal weight`, body: `${fmtN(cur.v, 1)} kg now, ${fmtN(Math.abs(cur.v - goal), 1)} kg to go.`, sort: cur.date, go }); }
+      if (frac < 1 && G.by && G.by >= t && dDiff(t, G.by) <= 14) add({ key: `pgd:${G.by}`, mod: "progress", sev: "soon", title: `Goal date is ${nIn(dDiff(t, G.by))}`, body: `${fmtN(Math.abs(cur.v - goal), 1)} kg to go to reach ${fmtN(goal, 1)} kg by ${shortD(G.by, { day: "numeric", month: "short" })}.`, sort: G.by, go });
+    }
+  }
+
+  /* Workouts: today's planned session, if it hasn't started */
+  const wp = wplansFor(t), wst = wstats(t);
+  if (wp.length && wst.planned && !wst.done) add({ key: `wt:${t}`, mod: "workouts", sev: "soon", title: `Today: ${wp.map((p) => p.name).join(", ")}`, body: `${plural(wst.planned, "set")} planned. Nothing logged yet.`, sort: t, go: { mod: "workouts", tab: "wtoday", date: t } });
+
+  const off = nState().off;
+  return out.filter((o) => !off.includes(o.mod));
+}
+function nVisible() { const st = nState(); return nList().filter((o) => !st.dis[o.key]); }
+function nUnread() { const st = nState(); return nVisible().filter((o) => !st.read[o.key]); }
+function nBellBtn() {
+  const n = S.mode === "loading" ? 0 : nUnread().length;
+  return `<button class="mgear mbell ${n ? "has-new" : ""}" data-act="nopen" aria-haspopup="dialog" aria-expanded="${!!S.notifOpen}" aria-label="Notifications${n ? `, ${n} new` : ""}" title="Notifications">${BELL}${n ? `<span class="nbadge">${n > 99 ? "99+" : n}</span>` : ""}</button>`;
+}
+/* Save read / dismissed keys. Entries older than 60 days are dropped so the settings stay small. */
+async function nSave(mut) {
+  const st = nState(), cut = addDays(today(), -60);
+  mut(st);
+  for (const k of ["read", "dis"]) for (const key of Object.keys(st[k])) if (!(st[k][key] >= cut)) delete st[k][key];
+  S.settings = { ...S.settings, notif: { read: st.read, dis: st.dis, off: st.off } };
+  renderChrome(); renderNotif();
+  try { await saveSettings(); } catch {}
+}
+const MODNAME = (id) => MODULES.find((m) => m.id === id)?.name || "";
+function nItem(o, st, dis) {
+  const unread = !st.read[o.key] && !dis;
+  return `<li class="nitem sev-${o.sev} ${unread ? "unread" : ""} ${dis ? "is-dis" : ""}">
+    <button class="nmain" data-act="ngo" data-k="${esc(o.key)}"><span class="nic">${MODICON[o.mod] || BELL}</span>
+      <span class="ntxt"><span class="nmod">${esc(MODNAME(o.mod))}</span><b>${esc(o.title)}</b><span class="small muted">${esc(o.body)}</span></span></button>
+    <span class="nside">${dis ? `<button class="btn sm" data-act="nrestore" data-k="${esc(o.key)}">Restore</button>` : `<button class="iconbtn" data-act="ndis" data-k="${esc(o.key)}" aria-label="Dismiss: ${esc(o.title)}" title="Dismiss">${I.x}</button>
+      <button class="nread" data-act="nread" data-k="${esc(o.key)}" aria-pressed="${!unread}" aria-label="${unread ? "Mark as read" : "Mark as unread"}: ${esc(o.title)}" title="${unread ? "Mark as read" : "Mark as unread"}"><i></i></button>`}</span></li>`;
+}
+function renderNotif() {
+  const el = $("#notesheet"); if (!el) return;
+  if (!S.notifOpen) { el.innerHTML = ""; if (!S.settingsOpen && !$("#overlay")?.innerHTML) document.body.style.overflow = ""; return; }
+  const st = nState(), all = nList(), vis = all.filter((o) => !st.dis[o.key]), dis = all.filter((o) => st.dis[o.key]);
+  const unread = vis.filter((o) => !st.read[o.key]).length;
+  const order = (a, b) => (!!st.read[a.key] - !!st.read[b.key]) || String(a.sort || "").localeCompare(String(b.sort || "")) || a.title.localeCompare(b.title);
+  let body = "";
+  if (!vis.length) body = `<div class="nempty">${BELL}<h3>You’re all caught up</h3><p class="small muted">Things that need your attention show up here: to-dos coming due, products running low, cycle doses, budget limits and goal milestones.</p></div>`;
+  else body = NSEV.map(([sev, name]) => { const xs = vis.filter((o) => o.sev === sev).sort(order); return xs.length ? `<section class="ngroup"><span class="eyebrow">${name} · ${xs.length}</span><ul class="nlist">${xs.map((o) => nItem(o, st, false)).join("")}</ul></section>` : ""; }).join("");
+  if (S.notifShowDis && dis.length) body += `<section class="ngroup"><span class="eyebrow">Dismissed · ${dis.length}</span><ul class="nlist">${dis.map((o) => nItem(o, st, true)).join("")}</ul></section>`;
+  const foot = [dis.length ? `<button class="linkbtn" data-act="nshowdis">${S.notifShowDis ? "Hide dismissed" : `Show dismissed (${dis.length})`}</button>` : "", vis.length ? `<button class="linkbtn" data-act="ndisall">Dismiss all</button>` : "", `<button class="linkbtn" data-act="nsettings">Choose tabs</button>`].filter(Boolean).join("");
+  el.innerHTML = `<div class="sheet-bg" data-act="nclose"><div class="sheet nsheet" role="dialog" aria-modal="true" aria-label="Notifications" data-stop>
+    <div class="grab"></div>
+    <div class="nhead"><h2>Notifications</h2>${unread ? `<button class="btn sm" data-act="nreadall">Mark all read</button>` : ""}<button class="btn sm" data-act="nclose">Done</button></div>
+    ${vis.length ? `<p class="small muted nsum">${unread ? `${plural(unread, "new notification")}. ` : "Nothing new. "}Tap one to go straight to it.</p>` : ""}
+    ${body}
+    <div class="nfoot small">${foot}</div></div></div>`;
+  document.body.style.overflow = "hidden";
+}
+function nGo(o) {
+  const g = o.go || { mod: o.mod };
+  S.module = g.mod; S.detail = null; S.mealAdd = null; S.kview = null; S.wexpage = null; S.bopen = null;
+  try { localStorage.setItem("planner.module", g.mod); } catch {}
+  const TABVAR = { supplements: ["tab", "planner.tab"], workouts: ["wtab", "planner.wtab"], cycle: ["ctab", "planner.ctab"], progress: ["ptab", "planner.ptab"], skincare: ["ktab", "planner.ktab"], budget: ["btab", "planner.btab"], todo: ["ttab", "planner.ttab"] };
+  const tv = TABVAR[g.mod];
+  if (tv && g.tab) { S[tv[0]] = g.tab; try { localStorage.setItem(tv[1], g.tab); } catch {} }
+  if (g.mod === "todo" && g.day) { S.tmo = g.day.slice(0, 7); S.tday = g.day; }
+  if (g.date) S.date = g.date;
+  if (g.month) S.bmonth = g.month;
+  S.notifOpen = false; renderNotif(); render(); window.scrollTo(0, 0);
+}
+async function notifClick(a, b) {
+  const k = b.dataset.k, find = () => nList().find((o) => o.key === k);
+  switch (a) {
+    case "nopen": S.notifOpen = true; S.settingsOpen = false; renderSettings(); renderNotif(); renderChrome(); return true;
+    case "nclose": S.notifOpen = false; renderNotif(); renderChrome(); return true;
+    case "ngo": { const o = find(); if (!o) return true; const st = nState(); if (!st.read[k]) nSave((s) => { s.read[k] = today(); }); nGo(o); return true; }
+    case "nread": { const on = nState().read[k]; await nSave((s) => { if (on) delete s.read[k]; else s.read[k] = today(); }); return true; }
+    case "nreadall": { const keys = nVisible().map((o) => o.key); await nSave((s) => { for (const x of keys) s.read[x] = today(); }); return true; }
+    case "ndis": await nSave((s) => { s.dis[k] = today(); s.read[k] = today(); }); toast("Dismissed. It comes back if anything changes."); return true;
+    case "ndisall": { const keys = nVisible().map((o) => o.key); await nSave((s) => { for (const x of keys) { s.dis[x] = today(); s.read[x] = today(); } }); return true; }
+    case "nrestore": await nSave((s) => { delete s.dis[k]; }); return true;
+    case "nshowdis": S.notifShowDis = !S.notifShowDis; renderNotif(); return true;
+    case "nsettings": S.notifOpen = false; renderNotif(); S.settingsOpen = true; renderSettings(); return true;
+    case "nmodtog": { const m = b.dataset.mod; await nSave((s) => { s.off = s.off.includes(m) ? s.off.filter((x) => x !== m) : [...s.off, m]; }); renderSettings(); return true; }
+  }
+  return false;
+}
+
 /* ---------- Events ---------- */
 function tSetPressed(b) { b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
 async function todoClick(a, b) {
@@ -3986,6 +4186,7 @@ document.addEventListener("click", async (e) => {
   if (await skinClick(a, b)) return;
   if (await budgetClick(a, b)) return;
   if (await todoClick(a, b)) return;
+  if (await notifClick(a, b)) return;
   if (S.module === "supplements" && suppImpClick(a, b)) return;
   const sp = (x) => S.supps.find((s) => s.id === x);
   switch (a) {
