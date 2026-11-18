@@ -2246,6 +2246,8 @@ async function csaveSettings() { if (store.kind === "db" && cstore.settings) ret
 /* ---------- Cycle maths ---------- */
 function niceAxis(lo, hi, n = 3) { const raw = (hi - lo) / n || 1, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag, step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag; const a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step; const ticks = []; for (let v = a; v <= b + step / 2; v += step) ticks.push(+v.toFixed(6)); return { y0: a, y1: b, ticks }; }
 const dDiff = (a, b) => Math.round((parseD(b) - parseD(a)) / 86400000);
+/* Dose unit per compound: mg (default) or IU. Each compound keeps its own unit, so mg and IU are never added together. */
+const cU = (c) => (c?.unit === "iu" ? "IU" : "mg");
 const cAmt = (c) => (num(c.conc) > 0 ? num(c.dose) / num(c.conc) : 0);
 const cAmtTxt = (c, amt = cAmt(c)) => (c.kind === "oral" ? plural(+amt.toFixed(2), "tab") : fmtN(amt, 2) + " mL");
 const cUnitTxt = (c, v) => (c.kind === "oral" ? plural(+num(v).toFixed(1), "tab") : fmtN(num(v), 2) + " mL");
@@ -2330,7 +2332,7 @@ function cToday() {
   for (const c of due) {
     const t = cTaken(c.id, date);
     html += `<section class="card cdose ${t ? "is-done" : ""}"><div class="grow"><div class="row" style="gap:8px"><h3 class="ov-tlabel">${esc(c.name)}</h3>${cLow(c) ? '<span class="chip warn">Low</span>' : ""}</div>
-      <div class="small muted num">${fmtN(num(t ? t.mg : c.dose), 1)} mg · ${cAmtTxt(c, t ? num(t.amt) : cAmt(c))}${c.time ? " · " + esc(c.time) : ""}</div>
+      <div class="small muted num">${fmtN(num(t ? t.mg : c.dose), 1)} ${cU(c)} · ${cAmtTxt(c, t ? num(t.amt) : cAmt(c))}${c.time ? " · " + esc(c.time) : ""}</div>
       ${t ? `<div class="small" style="color:var(--accent)">Logged ${esc(new Date(t.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }))}</div>` : c.notes ? `<div class="small muted">${esc(c.notes)}</div>` : ""}</div>
       <button class="wset ${t ? "done" : ""}" data-act="ctake" data-id="${c.id}" aria-pressed="${!!t}" aria-label="${t ? `${esc(c.name)} logged. Tap to undo` : `Log ${esc(c.name)}`}">${t ? `${I.check}<span>Done</span>` : "<span>Log dose</span>"}</button></section>`;
   }
@@ -2355,8 +2357,8 @@ function cCyclePage() {
   html += `<div class="eyebrow">Compounds</div>`;
   if (!S.cy.compounds.length) html += `<div class="card empty"><p>No compounds yet. Add one with its strength, dose and days.</p><button class="btn primary" data-act="cnewcomp">Add a compound</button></div>`;
   html += S.cy.compounds.slice().sort((a, b) => !!cEnded(a) - !!cEnded(b) || a.name.localeCompare(b.name)).map((c) => `<div class="card sitem ${cEnded(c) ? "is-past" : ""}"><div class="row between"><h3>${esc(c.name)}</h3><span class="chip">${c.kind === "oral" ? "Oral" : "Injectable"}</span></div>
-    <div class="small"><b class="num">${fmtN(num(c.dose), 1)} mg</b> ${esc(schedTxt(c))}${c.time ? ` at ${esc(c.time)}` : ""} · <span class="num">${fmtN(num(c.dose) * cPerWeek(c), 0)} mg</span> a week</div>
-    <div class="small muted">${c.kind === "oral" ? `${fmtN(num(c.conc), 1)} mg per tab` : `${fmtN(num(c.conc), 1)} mg/mL`} · ${cAmtTxt(c)} per dose · ${c.start ? esc(shortD(c.start, { day: "numeric", month: "short" })) : "?"} to ${c.end ? esc(shortD(c.end, { day: "numeric", month: "short" })) : "ongoing"}</div>
+    <div class="small"><b class="num">${fmtN(num(c.dose), 1)} ${cU(c)}</b> ${esc(schedTxt(c))}${c.time ? ` at ${esc(c.time)}` : ""} · <span class="num">${fmtN(num(c.dose) * cPerWeek(c), 0)} ${cU(c)}</span> a week</div>
+    <div class="small muted">${c.kind === "oral" ? `${fmtN(num(c.conc), 1)} ${cU(c)} per tab` : `${fmtN(num(c.conc), 1)} ${cU(c)}/mL`} · ${cAmtTxt(c)} per dose · ${c.start ? esc(shortD(c.start, { day: "numeric", month: "short" })) : "?"} to ${c.end ? esc(shortD(c.end, { day: "numeric", month: "short" })) : "ongoing"}</div>
     <div class="actions"><button class="btn sm" data-act="ceditcomp" data-id="${c.id}">Edit</button></div></div>`).join("");
   const past = (S.cy.settings.cycles || []).filter((x) => x !== cy).sort((a, b) => b.start.localeCompare(a.start));
   html += `<div class="row between"><span class="eyebrow">Cycle history</span><button class="linkbtn" data-act="cnewcyc">Add cycle dates</button></div>`;
@@ -2370,8 +2372,9 @@ function cCompForm() {
   <form class="f card" id="cfform" novalidate><fieldset><legend>Compound</legend>
     <label class="fl">Name<input class="in" data-cf="name" value="${esc(f.name)}" placeholder="e.g. Testosterone enanthate"></label>
     <div class="fgrid"><label class="fl">Type<select class="in" data-cf="kind"><option value="inj" ${oral ? "" : "selected"}>Injectable</option><option value="oral" ${oral ? "selected" : ""}>Oral</option></select></label>
-      <label class="fl">${oral ? "mg per tablet" : "Strength (mg/mL)"}<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cf="conc" value="${esc(f.conc)}" placeholder="${oral ? "10" : "250"}"></label>
-      <label class="fl">Dose (mg)<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cf="dose" value="${esc(f.dose)}"></label>
+      <label class="fl">Dose unit<select class="in" data-cf="unit"><option value="mg" ${f.unit === "iu" ? "" : "selected"}>Milligrams (mg)</option><option value="iu" ${f.unit === "iu" ? "selected" : ""}>International units (IU)</option></select></label>
+      <label class="fl">${oral ? `${cU(f)} per tablet` : `Strength (${cU(f)}/mL)`}<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cf="conc" value="${esc(f.conc)}" placeholder="${oral ? "10" : "250"}"></label>
+      <label class="fl">Dose (${cU(f)})<input class="in num" type="number" inputmode="decimal" step="any" min="0" data-cf="dose" value="${esc(f.dose)}"></label>
       <label class="fl">Time<input class="in" type="time" data-cf="time" value="${esc(f.time)}"></label></div>
     <div class="hint" id="cf-calc">${amt ? `${cAmtTxt(tmp, amt)} per dose` : "Enter strength and dose to see how much to draw."}</div></fieldset>
   <fieldset><legend>Schedule</legend>
@@ -2617,7 +2620,7 @@ async function bsample() {
 }
 
 /* ---------- Cycle events ---------- */
-function blankComp() { return { isNew: true, id: uid(), name: "", kind: "inj", conc: "", dose: "", time: "", freq: "days", days: [], every: "3.5", start: today(), end: "", container: "10", open: "10", spare: "0", lowDoses: "4", notes: "" }; }
+function blankComp() { return { isNew: true, id: uid(), name: "", kind: "inj", unit: "mg", conc: "", dose: "", time: "", freq: "days", days: [], every: "3.5", start: today(), end: "", container: "10", open: "10", spare: "0", lowDoses: "4", notes: "" }; }
 async function cycleClick(a, b) {
   switch (a) {
     case "ctab": S.ctab = b.dataset.tab; S.cform = null; S.cycForm = null; S.bopen = null; S.bdel = false; if (S.ctab !== "cbloods" && !S.bimp.busy) S.bimp.form = null; try { localStorage.setItem("planner.ctab", S.ctab); } catch {} render(); window.scrollTo(0, 0); return true;
@@ -2661,7 +2664,7 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("change", (e) => {
   const t = e.target;
-  if (S.cform && (t.dataset.cf === "kind" || t.dataset.cf === "freq")) render();
+  if (S.cform && (t.dataset.cf === "kind" || t.dataset.cf === "freq" || t.dataset.cf === "unit")) render();
   else if (t.dataset.bimport && t.files?.length) { const fs = [...t.files]; t.value = ""; brunImport(fs); }
 });
 document.addEventListener("submit", async (e) => {
@@ -2672,7 +2675,7 @@ document.addEventListener("submit", async (e) => {
     if (!(num(f.conc) > 0) || !(num(f.dose) > 0)) { toast("Add the strength and the dose."); return; }
     if (f.freq !== "every" && !f.days.length) { toast("Pick at least one day."); return; }
     if (f.end && f.start && f.end < f.start) { toast("The end date is before the start."); return; }
-    const c = { id: f.id, name: f.name.trim(), kind: f.kind, conc: num(f.conc), dose: num(f.dose), time: f.time || "", freq: f.freq, days: [...f.days].sort(), every: num(f.every, 7) || 7, start: f.start || today(), end: f.end || "", container: num(f.container), open: num(f.open), spare: Math.max(0, Math.round(num(f.spare))), lowDoses: Math.max(0, Math.round(num(f.lowDoses, 4))), notes: f.notes || "" };
+    const c = { id: f.id, name: f.name.trim(), kind: f.kind, unit: f.unit === "iu" ? "iu" : "mg", conc: num(f.conc), dose: num(f.dose), time: f.time || "", freq: f.freq, days: [...f.days].sort(), every: num(f.every, 7) || 7, start: f.start || today(), end: f.end || "", container: num(f.container), open: num(f.open), spare: Math.max(0, Math.round(num(f.spare))), lowDoses: Math.max(0, Math.round(num(f.lowDoses, 4))), notes: f.notes || "" };
     S.cform = null; render(); toast(`Saved ${c.name}`); await csaveComp(c);
   } else if (id === "cyform") {
     e.preventDefault(); e.stopImmediatePropagation();
