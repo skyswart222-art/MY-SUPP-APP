@@ -363,7 +363,8 @@ textarea.in { min-height: 64px; resize: vertical; }
 .mwday { position: absolute; bottom: -20px; font-size: 11px; color: var(--muted); }
 .mwday.is-today { color: var(--accent); font-weight: 600; }
 .mtarget { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--muted); opacity: .6; pointer-events: none; }
-.mwrow .r, .mwhead .r { min-width: 0; }
+.ingrid.mwrow, .ingrid.mwhead { column-gap: 10px; }
+.ingrid.mwrow .r, .ingrid.mwhead .r { min-width: 0; }
 .mwrow { width: 100%; white-space: nowrap; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); text-align: left; font-size: 14px; }
 .mwrow:last-child { border-bottom: 0; }
 /* Whole-day view */
