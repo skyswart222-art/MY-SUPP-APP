@@ -497,7 +497,7 @@ function renderChrome() {
     const kt = [["ktoday", "Today", I.today], ["kweek", "Week", I.calendar], ["kproducts", "Products", I.stock], ["kadd", S.kform?.id ? "Edit" : "Add", I.add]];
     const lowk = kActive().filter(kLow).length;
     $("#tabs").style.gridTemplateColumns = "repeat(4, 1fr)";
-    $("#tabs").innerHTML = kt.map(([id, label, ic]) => `<button class="tab" data-act="ktab" data-tab="${id}" ${S.ktab === id && !S.kview ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "kproducts" && lowk ? `<span class="dot">${lowk}</span>` : ""}</button>`).join("");
+    $("#tabs").innerHTML = kt.map(([id, label, ic]) => `<button class="tab" data-act="ktab" data-tab="${id}" ${(S.ktab === id || (id === "kadd" && S.ktab === "kimport")) && !S.kview ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "kproducts" && lowk ? `<span class="dot">${lowk}</span>` : ""}</button>`).join("");
     return;
   }
   if (S.module === "progress") {
@@ -2655,9 +2655,11 @@ document.addEventListener("submit", async (e) => {
 
 /* ====================== SKINCARE MODULE ====================== */
 S.ktab = "ktoday";
-try { const t = localStorage.getItem("planner.ktab"); if (["ktoday", "kweek", "kproducts", "kadd"].includes(t)) S.ktab = t; } catch {}
+try { const t = localStorage.getItem("planner.ktab"); if (["ktoday", "kweek", "kproducts", "kadd", "kimport"].includes(t)) S.ktab = t; } catch {}
 S.sk = { products: [], days: {} };
 S.kform = null; S.kphotos = { front: null, back: null }; S.kai = { busy: false, msg: "", kind: "" }; S.kview = null;
+const kImpBlank = () => ({ busy: false, msg: "", kind: "", text: "", files: [], result: null, summary: "", shelveRest: false });
+S.kimp = kImpBlank();
 const kstore = {};
 const KLS = "planner.skincare.v1";
 function klsLoad() { try { const d = JSON.parse(localStorage.getItem(KLS) || "{}"); if (d.products) S.sk.products = d.products; if (d.days) S.sk.days = d.days; } catch {} }
@@ -2710,6 +2712,7 @@ function skinView() {
   if (S.ktab === "kweek") return kWeek();
   if (S.ktab === "kproducts") return kProducts();
   if (S.ktab === "kadd") return kAdd();
+  if (S.ktab === "kimport") return kImport();
   return kToday();
 }
 function kSlotCard(date, slot) {
@@ -2728,7 +2731,7 @@ function kToday() {
     <div class="grow"><div class="eyebrow">${esc(shortD(date))}</div><h2 class="ov-title">${title}</h2></div>
     ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
     <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
-  if (!S.sk.products.length) return html + `<div class="card empty"><h3>Build your routine</h3><p>Snap a photo of each product. Claude reads it, suggests morning or night and how often, and slots it into your routine in the right order.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="ktab" data-tab="kadd">Add a product</button><button class="btn" data-act="kexample">Try a sample routine</button></div></div>`;
+  if (!S.sk.products.length) return html + `<div class="card empty"><h3>Build your routine</h3><p>Snap a photo of each product. Claude reads it, suggests morning or night and how often, and slots it into your routine in the right order.</p><p class="small muted" style="margin:0">Already researched a routine? Paste it in or attach the file and Claude sets it all up.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="ktab" data-tab="kimport">Import / autofill</button><button class="btn" data-act="ktab" data-tab="kadd">Add a product</button><button class="btn" data-act="kexample">Try a sample routine</button></div></div>`;
   const am = kRoutine(date, "am"), pm = kRoutine(date, "pm"), all = am.length + pm.length;
   const done = am.filter((x) => kDone(date, x.id, "am")).length + pm.filter((x) => kDone(date, x.id, "pm")).length;
   const low = kActive().filter(kLow), C = 2 * Math.PI * 68, frac = all ? done / all : 0;
@@ -2744,6 +2747,7 @@ function kToday() {
   const cf = kConflicts(date); if (cf.length) html += `<div class="alerts">${cf.map((t) => `<div class="alert"><span class="pip"></span><div>${esc(t)}</div></div>`).join("")}</div>`;
   html += kSlotCard(date, "am") + kSlotCard(date, "pm");
   if (!all) html += `<div class="card"><p class="small muted" style="margin:0">Nothing scheduled for this day.</p></div>`;
+  html += `<div><button class="btn sm kimpbtn" data-act="ktab" data-tab="kimport">${I.upload}<span>Import / autofill routine</span></button></div>`;
   return html;
 }
 function kWeek() {
@@ -2761,7 +2765,7 @@ function kWeek() {
   return html;
 }
 function kProducts() {
-  let html = `<div class="row between"><h2 style="font-size:22px">Products</h2><button class="btn sm" data-act="ktab" data-tab="kadd">Add product</button></div>`;
+  let html = `<div class="row between"><h2 style="font-size:22px">Products</h2><span class="row" style="gap:6px"><button class="btn sm" data-act="ktab" data-tab="kimport">Import</button><button class="btn sm" data-act="ktab" data-tab="kadd">Add product</button></span></div>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><p>No products yet.</p><button class="btn primary" data-act="ktab" data-tab="kadd">Add a product</button></div>`;
   const low = kActive().filter(kLow);
   if (low.length) html += `<div class="alerts">${low.map((x) => `<div class="alert ${kLeft(x) <= 2 ? "crit" : ""}"><span class="pip"></span><div><b>${esc(x.name)}</b> has ${plural(kLeft(x), "use")} left${kWeeksLeft(x) != null ? `, about ${kWeeksLeft(x) < 2 ? plural(Math.round(kWeeksLeft(x) * 7), "day") : plural(Math.round(kWeeksLeft(x)), "week")}` : ""}.</div></div>`).join("")}</div>`;
@@ -2790,6 +2794,7 @@ function kAdd() {
   const ph = (side) => { const p = S.kphotos[side], src = p?.url || (f.photos?.[side] ? storedSrc(f.photos[side]) : null); return `<label class="photo" for="kph-${side}"><span class="tag">${side === "front" ? "Front" : "Back"}</span>${src ? `<img src="${esc(src)}" alt="${side} of product">` : `<span class="ph">${I.cam}<span>Take or choose<br>a photo</span></span>`}<input id="kph-${side}" type="file" accept="image/*" data-kphoto="${side}"></label>`; };
   const fd = f.days || [];
   return `<div class="row between"><h2 style="font-size:22px">${editing ? "Edit " + esc(f.name || "product") : "Add a product"}</h2>${editing || f.name ? `<button class="btn sm ghost" data-act="kdiscard">${editing ? "Cancel" : "Clear"}</button>` : ""}</div>
+  ${editing ? "" : `<button class="card kimpcta" data-act="ktab" data-tab="kimport">${I.upload}<span class="grow"><b>Import / autofill a whole routine</b><span class="small muted">Paste what you researched, or attach a text file, PDF or screenshots</span></span>${I.right}</button>`}
   <div class="card" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">${editing ? "Photos" : "Step 1 · Photograph the product"}</div><p class="small muted" style="margin:0">Front for the name, back for the directions and ingredients. Claude fills in the form and suggests when and how often to use it.</p>
     <div class="photos">${ph("front")}${ph("back")}</div>
     ${S.canPhoto === false || !S.sample ? `<div class="status">Photo reading needs the Claude app or claude.ai, signed in. You can fill the form in by hand.</div>` : `<button class="btn ${editing ? "" : "primary"}" data-act="kautofill" ${A.busy || !(S.kphotos.front || S.kphotos.back) ? "disabled" : ""}>${A.busy ? '<span class="spin"></span> Reading the label…' : "Fill in from photos"}</button>`}
@@ -2831,6 +2836,89 @@ async function kautofill() {
   } catch (e) { A.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : "Couldn't read the label. Try a clearer photo, or fill it in by hand."; A.kind = "err"; }
   A.busy = false; render();
 }
+
+/* ---------- Import / autofill a whole routine from pasted text or files ---------- */
+const KDAYS = [1, 2, 3, 4, 5, 6, 0];
+function kImport() {
+  const K = S.kimp, R = K.result, canAI = !(S.canPhoto === false || !S.sample);
+  let html = `<div class="row between"><button class="btn sm ghost" data-act="ktab" data-tab="${S.sk.products.length ? "kproducts" : "ktoday"}">${I.left}<span>Back</span></button>${R ? `<button class="btn sm ghost" data-act="kiclear">Start over</button>` : ""}</div>
+    <h2 style="font-size:22px">Import / autofill</h2>`;
+  if (!R) {
+    html += `<div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="small muted" style="margin:0">Paste a routine you’ve researched (notes, an article, a chat with a dermatologist, anything), or attach it as a file. Claude pulls out each step and product, morning or night, and how often, and you check it before anything is added.</p>
+      <label class="fl">Paste your routine<textarea class="in kimptext" data-kimp="text" placeholder="e.g.&#10;AM: gentle cleanser, vitamin C serum, moisturiser, SPF 50&#10;PM: double cleanse, retinol 0.3% Mon/Wed/Fri, BHA on Tue/Sat, moisturiser&#10;Weekly: clay mask on Sunday">${esc(K.text)}</textarea></label>
+      <div class="row wrapflex" style="gap:8px"><label class="btn sm kimpbtn">${I.upload}<span>${K.files.length ? "Add another file" : "Attach a file"}</span><input type="file" hidden accept=".txt,.md,.rtf,.csv,text/*,application/pdf,image/*" multiple data-kimpfile="1"></label><span class="small muted">Text, PDF, photos or screenshots</span></div>
+      ${K.files.length ? `<div class="kfiles">${K.files.map((f, i) => `<span class="chip">${esc(f.name)}<button type="button" class="kfx" data-act="kirmfile" data-i="${i}" aria-label="Remove ${esc(f.name)}">${I.x}</button></span>`).join("")}</div>` : ""}
+      ${canAI ? `<button class="btn primary" data-act="kirun" ${K.busy || !(K.text.trim() || K.files.length) ? "disabled" : ""}>${K.busy ? `<span class="spin"></span> ${esc(K.msg || "Reading your routine…")}` : "Autofill my routine"}</button>` : `<div class="status">Autofill needs you to be signed in. You can still add products by hand.</div>`}
+      ${!K.busy && K.msg ? `<div class="status ${K.kind}">${esc(K.msg)}</div>` : ""}</div>
+      <p class="hint">Prefer doing it yourself? <button class="linkbtn" data-act="ktab" data-tab="kadd">Add products one at a time</button>.</p>`;
+    return html;
+  }
+  const keep = R.filter((x) => x.keep), upd = keep.filter((x) => x.match).length, others = kActive().filter((y) => !keep.some((x) => x.match === y.id));
+  html += `<div class="status ok">Found ${plural(R.length, "step")}. Check them, change anything that’s off, then add them.</div>`;
+  if (K.summary) html += `<div class="card"><div class="eyebrow">From your notes</div><p class="small" style="margin:6px 0 0;white-space:pre-line">${esc(K.summary)}</p></div>`;
+  const order = R.map((x, i) => [x, i]).sort(([a], [b]) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99));
+  html += `<div class="card kimpsum">${["am", "pm"].map((slot) => { const l = order.filter(([x]) => x.keep && kSlots(x).includes(slot)); return `<div class="row" style="gap:8px;align-items:flex-start">${slot === "am" ? SUN : MOON}<div><b>${slot === "am" ? "Morning" : "Night"}</b><div class="small muted">${l.length ? l.map(([x]) => esc(x.name) + (x.days.length < 7 ? ` <span class="kimpfreq">${x.days.length}×/wk</span>` : "")).join(" → ") : "Nothing"}</div></div></div>`; }).join("")}</div>`;
+  html += order.map(([x, i]) => `<div class="card sitem kimpitem ${x.keep ? "" : "off"}"><div class="row" style="gap:10px;align-items:flex-start"><input type="checkbox" data-kikeep="${i}" ${x.keep ? "checked" : ""} aria-label="Include ${esc(x.name)}" style="margin-top:14px">
+        <div class="grow" style="display:flex;flex-direction:column;gap:8px;min-width:0">
+          <input class="in" data-kif="${i}" data-k="name" value="${esc(x.name)}" aria-label="Name">
+          <div class="row" style="gap:8px;flex-wrap:wrap"><select class="in" data-kif="${i}" data-k="type" aria-label="Type" style="flex:1;min-width:120px">${KTYPES.map(([k, l]) => `<option value="${k}" ${x.type === k ? "selected" : ""}>${l}</option>`).join("")}</select>${x.match ? `<span class="chip">Updates your ${esc(S.sk.products.find((y) => y.id === x.match)?.name || "product")}</span>` : ""}</div>
+          <div class="seg" role="group" aria-label="When">${[["am", "Morning"], ["pm", "Night"], ["both", "Both"]].map(([v, l]) => `<button type="button" data-act="kiwhen" data-i="${i}" data-v="${v}" aria-pressed="${x.when === v}">${l}</button>`).join("")}</div>
+          <div class="daypick">${KDAYS.map((dd) => `<button type="button" data-act="kidow" data-i="${i}" data-d="${dd}" aria-pressed="${x.days.includes(dd)}">${DOW[dd].slice(0, 2)}</button>`).join("")}</div>
+          <input class="in" data-kif="${i}" data-k="howTo" value="${esc(x.howTo)}" placeholder="How to use" aria-label="How to use">
+          ${x.notes ? `<div class="small muted">${esc(x.notes)}</div>` : ""}</div></div></div>`).join("");
+  if (others.length) html += `<label class="card row" style="gap:10px;align-items:flex-start"><input type="checkbox" data-kishelve="1" ${K.shelveRest ? "checked" : ""} style="margin-top:3px"><span><b>Replace my current routine</b><span class="small muted" style="display:block">Moves ${plural(others.length, "product")} not in this list (${esc(others.slice(0, 4).map((y) => y.name).join(", "))}${others.length > 4 ? "…" : ""}) to the shelf. Nothing is deleted.</span></span></label>`;
+  html += `<div class="sticky-save"><button class="btn" data-act="kiclear">Discard</button><button class="btn primary" data-act="kisave" ${keep.length ? "" : "disabled"}>${keep.length ? `Add ${plural(keep.length, "step")}${upd ? ` (${upd} updated)` : ""}` : "Nothing selected"}</button></div>`;
+  return html;
+}
+const KIPROMPT = `You are reading a skincare routine someone has researched or written down. Turn it into the steps of their routine. Answer with ONLY a JSON object:
+{"steps": [{"name": the product name if one is given (e.g. "CeraVe Hydrating Cleanser"), otherwise a short name for the step (e.g. "Gentle cleanser", "Retinol 0.3%"), "brand": brand or "", "type": one of ${KTYPES.map(([k]) => `"${k}"`).join(",")}, "when": "am", "pm" or "both", "days": the weekdays it is used, as an array of "Mon","Tue","Wed","Thu","Fri","Sat","Sun" (all seven if daily), "howTo": one short sentence on how to apply it (amount, wait times, which order), "ingredients": key actives as a comma-separated string or "", "notes": any caution or progression for this step (e.g. "Start 2× a week, build up to nightly") or ""}], "summary": up to 3 short lines of general advice from the text that isn't tied to one step, or ""}
+Rules: one entry per product or step. If the same product is used morning and night, use one entry with "when": "both". If the text gives a frequency but no days (e.g. "3 times a week"), spread them out (Mon, Wed, Fri; twice a week: Tue, Fri; once a week: Sun). If it says to start slowly and build up, use the starting frequency and put the build-up in notes. Don't invent steps that aren't in the text.`;
+async function kreadFile(f, maxImg) {
+  const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+  if (isPdf) return pdfToInputs(f, maxImg);
+  if (f.type.startsWith("image/")) return { text: "", images: maxImg > 0 ? [await shrink(f)] : [] };
+  return { text: `\n--- ${f.name} ---\n` + (await f.text()).slice(0, 60000), images: [] };
+}
+async function krunImport() {
+  const K = S.kimp; if (!S.sample || K.busy) return;
+  K.busy = true; K.msg = K.files.length ? "Reading your files…" : "Reading your routine…"; K.kind = ""; render();
+  try {
+    const maxImg = S.imgLimits?.maxCount || 5;
+    let text = K.text.trim(), images = [];
+    for (const f of K.files) { const r = await kreadFile(f, maxImg - images.length); text += r.text; images.push(...r.images); }
+    if (!text.trim() && !images.length) throw new Error("empty");
+    K.msg = "Claude is building your routine…"; render();
+    const opts = { modelTier: "default" }; if (images.length) opts.images = images.slice(0, maxImg);
+    const out = await S.sample.json(KIPROMPT + (text.trim() ? `\n\nThe routine:\n${text.slice(0, 100000)}` : "\n\nThe routine is in the images."), opts);
+    const byName = (n) => { const k = n.trim().toLowerCase(); return S.sk.products.find((y) => y.name.trim().toLowerCase() === k)?.id || null; };
+    const list = (out?.steps || []).filter((x) => x && x.name).map((x) => {
+      const days = (Array.isArray(x.days) ? x.days : []).map((d) => DAYIDX[String(d).slice(0, 3).toLowerCase()]).filter((d) => d != null);
+      const name = String(x.name).trim();
+      return { keep: true, match: byName(name), name, brand: String(x.brand || ""), type: KTYPE[x.type] ? x.type : "other", when: ["am", "pm", "both"].includes(x.when) ? x.when : "am", days: days.length ? [...new Set(days)] : [...ALLD], howTo: String(x.howTo || ""), ingredients: String(x.ingredients || ""), notes: String(x.notes || "") };
+    });
+    if (!list.length) throw new Error("none");
+    K.result = list; K.summary = String(out?.summary || "").trim(); K.msg = ""; K.kind = "ok";
+  } catch (e) {
+    K.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : e?.code === "not_granted" ? "Reading is turned off for this page." : e?.message === "none" ? "Couldn't find any skincare steps in that. Try adding a bit more detail, like which products and when." : "Couldn't read that. Try pasting the text instead, or a clearer file.";
+    K.kind = "err";
+  }
+  K.busy = false; render(); window.scrollTo(0, 0);
+}
+async function ksaveImport() {
+  const K = S.kimp, keep = (K.result || []).filter((x) => x.keep && x.name.trim()); if (!keep.length) return;
+  const now = new Date().toISOString(), saves = [];
+  for (const x of keep) {
+    const old = x.match && S.sk.products.find((y) => y.id === x.match);
+    const base = old ? cjson(old) : { ...kBlank(), id: uid(), uses: "", usesLeft: "", lowAt: 10, price: "", photos: {}, addedAt: now };
+    const p = { ...base, name: x.name.trim(), brand: x.brand.trim() || base.brand || "", type: x.type, when: x.when, days: [...x.days].sort(), howTo: x.howTo.trim(), ingredients: x.ingredients.trim() || base.ingredients || "", notes: [base.notes, x.notes].filter(Boolean).join("\n") || "", status: "active", importedAt: now };
+    if (!p.days.length) p.days = [...ALLD];
+    delete p.example; saves.push(p);
+  }
+  if (K.shelveRest) for (const y of kActive()) if (!saves.some((p) => p.id === y.id)) saves.push({ ...cjson(y), status: "shelf" });
+  const n = keep.length; S.kimp = kImpBlank(); S.ktab = "ktoday"; S.date = today();
+  for (const p of saves) await ksaveProd(p);
+  render(); window.scrollTo(0, 0); toast(`Added ${plural(n, "step")} to your routine`);
+}
 async function kexample() {
   const mk = (name, type, when, days, howTo, uses, left) => ({ id: "ex_" + uid(), name, brand: "Example", type, when, days, howTo, ingredients: "", uses, usesLeft: left, lowAt: 10, price: "", status: "active", notes: "", photos: {}, example: true, addedAt: new Date().toISOString() });
   for (const x of [mk("Gentle cleanser", "cleanser", "both", [...ALLD], "Massage onto damp skin, rinse", 200, 140), mk("Vitamin C serum", "serum", "am", [...ALLD], "3 drops after cleansing", 120, 18), mk("Moisturiser", "moisturiser", "both", [...ALLD], "Pea-sized amount over serum", 160, 95), mk("SPF 50 sunscreen", "sunscreen", "am", [...ALLD], "Two finger lengths, last step", 60, 9), mk("Retinol 0.5%", "retinoid", "pm", [1, 3, 5], "Pea-sized on dry skin, avoid eyes", 90, 70), mk("BHA exfoliant", "exfoliant", "pm", [2, 6], "Swipe over face after cleansing", 100, 64), mk("Clay mask", "mask", "pm", [0], "10 minutes, then rinse", 25, 20)]) await ksaveProd(x);
@@ -2853,14 +2941,26 @@ async function skinClick(a, b) {
     case "kautofill": kautofill(); return true;
     case "kdelete": { const f = S.kform; S.kform = kBlank(); S.ktab = "kproducts"; await kdelProd(f.id); render(); toast(`Deleted ${f.name || "product"}`); return true; }
     case "krestock": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; x.usesLeft = num(x.uses) || kLeft(x) || 0; render(); toast(`New bottle of ${x.name}: ${plural(x.usesLeft, "use")}`); await ksaveProd(x); return true; }
+    case "kirun": krunImport(); return true;
+    case "kiclear": S.kimp = { ...kImpBlank(), text: S.kimp.text, files: S.kimp.files }; render(); window.scrollTo(0, 0); return true;
+    case "kirmfile": S.kimp.files.splice(Number(b.dataset.i), 1); render(); return true;
+    case "kiwhen": { const x = S.kimp.result?.[Number(b.dataset.i)]; if (x) { x.when = b.dataset.v; render(); } return true; }
+    case "kidow": { const x = S.kimp.result?.[Number(b.dataset.i)], d = Number(b.dataset.d); if (x) { x.days = x.days.includes(d) ? x.days.filter((v) => v !== d) : [...x.days, d]; if (!x.days.length) x.days = [d]; render(); } return true; }
+    case "kisave": ksaveImport(); return true;
     case "kexample": kexample(); return true;
     case "kclearex": for (const x of S.sk.products.filter((y) => y.example)) await kdelProd(x.id); render(); toast("Sample products removed"); return true;
   }
   return false;
 }
-document.addEventListener("input", (e) => { const t = e.target; if (t.dataset.kf && S.kform) S.kform[t.dataset.kf] = t.value; });
+document.addEventListener("input", (e) => { const t = e.target; if (t.dataset.kf && S.kform) S.kform[t.dataset.kf] = t.value;
+  else if (t.dataset.kimp === "text") { const had = !!S.kimp.text.trim(); S.kimp.text = t.value; if (had !== !!t.value.trim()) { const btn = document.querySelector('[data-act="kirun"]'); if (btn && !S.kimp.busy) btn.disabled = !(t.value.trim() || S.kimp.files.length); } }
+  else if (t.dataset.kif != null && S.kimp.result && t.tagName === "INPUT") { const x = S.kimp.result[Number(t.dataset.kif)]; if (x) x[t.dataset.k] = t.value; } });
 document.addEventListener("change", async (e) => {
   const t = e.target;
+  if (t.dataset.kimpfile && t.files?.length) { S.kimp.files.push(...t.files); S.kimp.msg = ""; t.value = ""; render(); return; }
+  if (t.dataset.kikeep != null && S.kimp.result) { S.kimp.result[Number(t.dataset.kikeep)].keep = t.checked; render(); return; }
+  if (t.dataset.kishelve) { S.kimp.shelveRest = t.checked; render(); return; }
+  if (t.dataset.kif != null && S.kimp.result && t.tagName === "SELECT") { const x = S.kimp.result[Number(t.dataset.kif)]; if (x) { x[t.dataset.k] = t.value; render(); } return; }
   if (t.dataset.kphoto && t.files?.[0]) { const blob = await shrink(t.files[0]); const old = S.kphotos[t.dataset.kphoto]; if (old) URL.revokeObjectURL(old.url); S.kphotos[t.dataset.kphoto] = { blob, url: URL.createObjectURL(blob) }; render(); }
 });
 document.addEventListener("submit", async (e) => {
