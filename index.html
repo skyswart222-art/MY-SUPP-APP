@@ -351,9 +351,14 @@ textarea.in { min-height: 64px; resize: vertical; }
 .madd.solid { border-style: solid; background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .mfood { display: flex; gap: 8px; align-items: baseline; width: 100%; border: 0; background: none; padding: 5px 0; text-align: left; font-size: 13px; color: var(--ink); border-bottom: 1px dashed var(--line); }
 .mfood:last-child { border-bottom: 0; }
-.mfmac { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
-.mfmac span { display: inline-flex; align-items: center; gap: 4px; }
-.mfmac i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.mfood { align-items: center !important; }
+.mfname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mfserv { color: var(--muted); font-size: .9em; }
+.mfmac { flex: none; display: inline-flex; gap: 2px; font-size: 11.5px; color: var(--muted); }
+.mfmac b { font-weight: 600; margin-left: 5px; }
+.mfmac b:first-child { margin-left: 0; }
+.mfkcal { flex: none; min-width: 52px; text-align: right; color: var(--muted); }
+.mfkcal small { font-size: 10.5px; }
 .madd { margin-top: auto; align-self: flex-start; border: 1px dashed var(--line); background: none; color: var(--accent); border-radius: 10px; padding: 6px 10px; font-size: 13px; font-weight: 600; }
 .mweek { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; height: 170px; margin-top: 12px; padding-bottom: 20px; }
 .mwcol { position: relative; border: 0; background: none; padding: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
