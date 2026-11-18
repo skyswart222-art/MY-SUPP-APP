@@ -560,6 +560,29 @@ textarea.in.kimptext { height: 220px; min-height: 220px; resize: vertical; line-
 .kimpcta > svg { width: 22px; height: 22px; flex: none; color: var(--accent); }
 .kimpcta b { display: block; }
 .kimpitem.off { opacity: .5; }
+.klist { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; }
+.krow { border-top: 1px solid var(--line); }
+.krow:first-child { border-top: 0; }
+.khead { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 8px 0; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.khead .kt { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.krow.open .khead .kt { white-space: normal; }
+.kn { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: 12px; color: var(--muted); }
+.kchev { flex: none; color: var(--muted); transition: transform .2s ease; }
+.krow.open .kchev { transform: rotate(180deg); }
+.kexp-body { display: flex; flex-direction: column; gap: 8px; padding: 0 0 12px 34px; animation: kslide .22s ease; }
+ul.klist .kexp-body { padding-left: 0; }
+@keyframes kslide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .kexp-body { animation: none; } .kchev { transition: none; } }
+.kwdpick { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.kwdpick button { width: auto; }
+.kweek { padding: 12px; }
+.kweek .kgrid { grid-template-columns: minmax(0, 1fr) repeat(7, 26px); gap: 5px 4px; }
+.kwh { font-size: 13px; }
+.kwh svg { width: 16px; height: 16px; color: var(--muted); }
+.kweek .kday { font-size: 11px; font-weight: 600; justify-content: center; }
+.kweek .kcell { width: 26px; height: 26px; max-width: none; aspect-ratio: auto; border: 1.5px solid var(--line); border-radius: 7px; background: none; cursor: pointer; }
+.kweek .kcell.on { background: var(--accent); border-color: var(--accent); }
+.kweek .kcell svg { width: 13px; height: 13px; }
 .mimeal .in { min-width: 0; }
 .mifood { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px dashed var(--line); }
 .mimac { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-items: end; }
