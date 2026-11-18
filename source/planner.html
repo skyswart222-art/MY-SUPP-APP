@@ -3352,7 +3352,7 @@ function pToday() {
       <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
       <circle cx="80" cy="80" r="68" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
       <div class="ov-ringtxt">${cur ? `<span class="ov-big" style="font-size:34px">${esc(fmtN(cur.v, 1))}<span>kg</span></span><span class="small muted">${goal != null ? `${Math.round(frac * 100)}% to goal` : "latest"}</span>` : `<span class="ov-big" style="font-size:22px">No data</span><span class="small muted">log a weigh-in</span>`}</div></div>
-    <div class="ov-stats"><div><span class="small muted">Goal</span><b>${goal != null ? `${esc(fmtN(goal, 1))} kg${G.by ? " by " + esc(shortD(G.by, { day: "numeric", month: "short" })) : ""}` : `<button class="ov-low linkbtn" data-act="ptab" data-tab="pgoals">Set a goal</button>`}</b></div>
+    <div class="ov-stats"><div><span class="small muted">Goal</span><b>${goal != null ? `${esc(fmtN(goal, 1))} kg${G.by ? " by " + esc(shortD(G.by, { day: "numeric", month: "short", year: "numeric" })) : ""}` : `<button class="ov-low linkbtn" data-act="ptab" data-tab="pgoals">Set a goal</button>`}</b></div>
       <div><span class="small muted">This week</span><b>${rate != null ? `${rate > 0 ? "+" : rate < 0 ? "−" : "±"}${esc(fmtN(Math.abs(rate), 2))} kg` : cur && start && cur !== start ? `${cur.v - start.v > 0 ? "+" : "−"}${esc(fmtN(Math.abs(cur.v - start.v), 1))} kg total` : "Not enough data"}</b></div>
       <div><span class="small muted">Body fat</span><b>${bfl ? esc(pfmt("bodyFat", bfl.v)) : "Not logged"}</b></div></div></div>`;
   html += pWeighCard();
@@ -3364,7 +3364,7 @@ function pToday() {
     ${pChart(S.pmetric)}</section>`;
   if (goal != null && cur && G.by && G.by > today()) {
     const wksLeft = dDiff(today(), G.by) / 7, need = (goal - (wk ?? cur.v)) / Math.max(0.5, wksLeft);
-    html += `<div class="card small"><b>To reach ${esc(fmtN(goal, 1))} kg by ${esc(shortD(G.by, { day: "numeric", month: "short" }))}</b><br><span class="muted">That’s ${need > 0 ? "+" : "−"}${esc(fmtN(Math.abs(need), 2))} kg a week for ${plural(Math.ceil(wksLeft), "week")}${rate != null ? `. You’re at ${rate > 0 ? "+" : rate < 0 ? "−" : "±"}${esc(fmtN(Math.abs(rate), 2))} kg a week now.` : "."}</span></div>`;
+    html += `<div class="card small"><b>To reach ${esc(fmtN(goal, 1))} kg by ${esc(shortD(G.by, { day: "numeric", month: "short", year: "numeric" }))}</b><br><span class="muted">That’s ${need > 0 ? "+" : "−"}${esc(fmtN(Math.abs(need), 2))} kg a week for ${plural(Math.ceil(wksLeft), "week")}${rate != null ? `. You’re at ${rate > 0 ? "+" : rate < 0 ? "−" : "±"}${esc(fmtN(Math.abs(rate), 2))} kg a week now.` : "."}</span></div>`;
   }
   if (Object.values(S.pg.entries).some((e) => e.example)) html += `<div><button class="btn sm ghost danger" data-act="pclearex">Remove sample data</button></div>`;
   return html;
