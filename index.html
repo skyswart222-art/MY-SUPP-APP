@@ -691,6 +691,21 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 .berow .full { grid-column: 1 / -1; margin-top: -4px; }
 .btx { align-items: center !important; }
 .bbill { align-items: baseline; gap: 12px !important; }
+.bview { width: auto; flex: none; }
+.bview button { padding: 7px 10px; font-size: 13px; }
+.bsum { display: flex; flex-direction: column; gap: 12px; }
+.bsum3 { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 8px; }
+.bsum3 > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bsum3 b { font-family: var(--font-data); font-weight: 500; font-size: 18px; overflow-wrap: anywhere; }
+.bleftbox { background: color-mix(in srgb, var(--ok) 14%, transparent); border-radius: 12px; padding: 6px 10px; margin: -6px 0; }
+.bleftbox span { color: var(--ok); } .bleftbox b { color: var(--ok); font-size: 20px !important; }
+.bleftbox.neg { background: var(--warn-soft); } .bleftbox.neg span, .bleftbox.neg b { color: var(--warn); }
+.bfree { background: color-mix(in srgb, var(--ok) 35%, var(--sunk)) !important; }
+.bchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chipbtn { border: 1px dashed var(--line); background: transparent; color: var(--muted); border-radius: 999px; padding: 5px 10px; font-size: 12.5px; }
+.chipbtn:hover { color: var(--ink); border-color: var(--muted); }
+.ghostbtn { border-color: transparent !important; background: transparent !important; color: var(--muted); }
+:root { --g5: #2f7fc8; --g6: #7d8a2a; } :root[data-theme="dark"] { --g5: #4f9be6; --g6: #a3ad45; }
 .bbody { padding-left: 0 !important; }
 .bgname-in { font-weight: 600; padding: 4px 6px !important; margin-left: -6px; background: transparent !important; border-color: transparent !important; min-width: 0; flex: 1; }
 .bgname-in:hover, .bgname-in:focus { border-color: var(--line) !important; background: var(--sunk) !important; }
