@@ -495,26 +495,38 @@ function bridge(prompt, images) {
       <ol class="br-steps">
         <li><b>Copy the request.</b><button class="au-primary br-btn" type="button" id="br-copy">Copy request</button><textarea id="br-code" class="br-code" readonly hidden></textarea><span class="au-dim" id="br-copied"></span></li>
         <li><span><b>Open the reader</b>, paste it in, tap <b>Read with Claude</b>, then <b>Copy result</b>.</span><a class="au-out br-btn br-link" href="${esc(READER_URL)}" target="_blank" rel="noopener">Open the reader on Claude</a></li>
-        <li><b>Paste the result here.</b><textarea id="br-res" class="br-code" placeholder="PLANNER-RESULT:…" spellcheck="false" autocapitalize="off"></textarea><div class="au-msg" id="br-msg" role="status"></div></li>
+        <li><b>Paste the result here.</b><button class="au-primary br-btn" type="button" id="br-paste">Paste result</button><textarea id="br-res" class="br-code" placeholder="PLANNER-RESULT:…" spellcheck="false" autocapitalize="off"></textarea><div class="au-msg" id="br-msg" role="status"></div></li>
       </ol>
       <p class="au-dim" style="margin:0">Uses your Claude plan, so it costs nothing extra.</p>
     </div></div>`;
     const onClick = (e) => {
       if (e.target.closest("#br-x")) finish(reject, Object.assign(new Error("cancelled"), { code: "cancelled" }));
+      if (e.target.closest("#br-paste")) {
+        navigator.clipboard.readText().then((t) => { $("#br-res").value = t; take(t); },
+          () => { $("#br-msg").textContent = "Couldn't read the clipboard. Long-press the box below and tap Paste."; $("#br-msg").className = "au-msg"; $("#br-res").focus(); });
+      }
       if (e.target.closest("#br-copy")) {
         navigator.clipboard.writeText(code).then(() => { $("#br-copied").textContent = "Copied. Now open the reader."; },
           () => { const t = $("#br-code"); t.value = code; t.hidden = false; t.focus(); t.select(); $("#br-copied").textContent = "Copy the selected text above."; });
       }
     };
-    const onInput = async (e) => {
-      if (e.target.id !== "br-res") return;
-      const raw = e.target.value.replace(/\s+/g, ""), msg = $("#br-msg");
-      if (!raw) { msg.textContent = ""; msg.className = "au-msg"; return; }
-      const at = raw.lastIndexOf(RES); // the last result pasted, even if an older one is still in the box
-      if (at < 0) { msg.textContent = raw.includes(REQ) ? "That's the request. Paste it into the reader, then copy the result from there." : "That's not a result from the reader. Tap Copy result there and paste again."; msg.className = "au-msg err"; return; }
-      try { const j = JSON.parse(await inflate(raw.slice(at + RES.length).replace(/[^A-Za-z0-9+/=]/g, ""))); finish(resolve, j.data); }
-      catch { msg.textContent = "Part of the result is missing. Copy it again from the reader."; msg.className = "au-msg err"; }
+    /* Reads whatever was pasted: with or without its label, after older text, or the request pasted back by mistake. */
+    const decodeAny = async (raw) => {
+      const tries = [];
+      for (const tag of [RES, REQ]) { const at = raw.lastIndexOf(tag); if (at >= 0) tries.push(raw.slice(at + tag.length)); }
+      tries.push(raw.replace(/^[A-Z-]+:/, ""), raw.slice(raw.lastIndexOf(":") + 1));
+      for (const t of tries) { try { const j = JSON.parse(await inflate(t.replace(/[^A-Za-z0-9+/=]/g, ""))); if (j && typeof j === "object") return j; } catch {} }
+      return null;
     };
+    const take = async (text) => {
+      const raw = String(text || "").replace(/\s+/g, ""), msg = $("#br-msg");
+      if (!raw) { msg.textContent = ""; msg.className = "au-msg"; return; }
+      const j = await decodeAny(raw);
+      if (j && "data" in j) { finish(resolve, j.data); return; }
+      msg.className = "au-msg err";
+      msg.textContent = j && typeof j.prompt === "string" ? "That's the request you copied from here. In the reader, tap Copy result (step 3), then come back and tap Paste result." : "That result is cut off or isn't from the reader. In the reader, tap Copy result again, then tap Paste result here.";
+    };
+    const onInput = (e) => { if (e.target.id === "br-res") take(e.target.value); };
     pop.addEventListener("click", onClick); pop.addEventListener("input", onInput);
   });
 }
