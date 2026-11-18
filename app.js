@@ -12,6 +12,23 @@ const MODULES = [
   { id: "cycle", name: "Cycle", ready: true },
   { id: "budget", name: "Budget", ready: true },
 ];
+/* The person's own order for the tabs at the top, saved with their settings (and on the phone for a fast start). */
+function modOrdered() {
+  let o = S.settings?.modOrder; if (!Array.isArray(o)) { try { o = JSON.parse(localStorage.getItem("planner.modorder") || "null"); } catch { o = null; } }
+  const ids = (Array.isArray(o) ? o : []).filter((id) => MODULES.some((m) => m.id === id));
+  return [...ids, ...MODULES.map((m) => m.id).filter((id) => !ids.includes(id))].map((id) => MODULES.find((m) => m.id === id));
+}
+function modOrderSheet() {
+  const list = S.modEdit.map((id) => MODULES.find((m) => m.id === id)), n = list.length;
+  return `<div class="sheet-bg" data-act="modcancel"><div class="sheet" role="dialog" aria-modal="true" aria-label="Arrange tabs" data-stop>
+    <div class="grab"></div>
+    <div class="row between"><h2 style="font-size:22px">Arrange tabs</h2><button class="iconbtn" data-act="modcancel" aria-label="Close">${I.x}</button></div>
+    <p class="small muted" style="margin:0">Use the arrows to put the tabs in the order you want. The top one shows first.</p>
+    <ol class="modord">${list.map((m, i) => `<li><span class="num muted">${i + 1}</span><b class="grow">${esc(m.name)}</b>
+      <button class="iconbtn" data-act="modmove" data-i="${i}" data-d="-1" ${i ? "" : "disabled"} aria-label="Move ${esc(m.name)} up"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+      <button class="iconbtn" data-act="modmove" data-i="${i}" data-d="1" ${i < n - 1 ? "" : "disabled"} aria-label="Move ${esc(m.name)} down"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></li>`).join("")}</ol>
+    <div class="actions"><button class="btn" data-act="modcancel">Cancel</button><button class="btn primary" data-act="modsave" style="margin-left:auto">Save</button></div></div></div>`;
+}
 
 /* ---------- Icons ---------- */
 const I = {
@@ -479,7 +496,7 @@ function renderChrome() {
   document.documentElement.setAttribute("data-mod", S.module);
   const tb = $("#themebtn");
   if (tb) { tb.innerHTML = S.theme === "dark" ? SUN : MOON; tb.setAttribute("aria-label", S.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"); }
-  $("#modules").innerHTML = MODULES.map((m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`).join("");
+  $("#modules").innerHTML = modOrdered().map((m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`).join("") + `<button class="mod modarr" data-act="modorder" aria-label="Arrange tabs" title="Arrange tabs"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>`;
   if (S.module === "budget") {
     const bt = [["btoday", "Overview", I.today], ["bplan", "Plan", I.wallet], ["blog", "Log", I.list], ["bgoals", "Goals", I.target], ["btrends", "Trends", I.trend]];
     $("#tabs").style.gridTemplateColumns = "repeat(5, 1fr)";
@@ -975,6 +992,7 @@ async function storePhoto(blob) {
 function renderOverlay() {
   let host = $("#overlay");
   if (!host) { host = document.createElement("div"); host.id = "overlay"; document.body.appendChild(host); }
+  if (S.modEdit) { host.innerHTML = modOrderSheet(); document.body.style.overflow = "hidden"; return; }
   if (S.mealAdd) { host.innerHTML = mealSheet(); document.body.style.overflow = "hidden"; return; }
   if (S.reminders) { host.innerHTML = reminderSheet(); document.body.style.overflow = "hidden"; return; }
   const s = S.detail && S.supps.find((x) => x.id === S.detail);
@@ -1467,6 +1485,10 @@ async function mealClick(a, b) {
     case "mirmmeal": { const D = S.mimp.result?.days[S.mimp.day]; if (D) { D.meals.splice(Number(b.dataset.m), 1); render(); } return true; }
     case "mirmfood": { const m = S.mimp.result?.days[S.mimp.day]?.meals[Number(b.dataset.m)]; if (m) { m.foods.splice(Number(b.dataset.f), 1); render(); } return true; }
     case "misave": msaveImport(); return true;
+    case "modorder": S.modEdit = modOrdered().map((m) => m.id); renderOverlay(); return true;
+    case "modmove": { const i = Number(b.dataset.i), j = i + Number(b.dataset.d), a = S.modEdit; if (j < 0 || j >= a.length) return true; [a[i], a[j]] = [a[j], a[i]]; renderOverlay(); return true; }
+    case "modcancel": S.modEdit = null; renderOverlay(); return true;
+    case "modsave": { const o = S.modEdit; S.modEdit = null; S.settings = { ...S.settings, modOrder: o }; try { localStorage.setItem("planner.modorder", JSON.stringify(o)); } catch {} renderOverlay(); renderChrome(); toast("Tab order saved"); await saveSettings(); return true; }
     case "module": { const m = b.dataset.mod; if (m === S.module) return true; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
     case "mtab": S.mtab = b.dataset.tab; S.mtargetsForm = null; try { localStorage.setItem("planner.mtab", S.mtab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "madd": mopenAdd(b.dataset.meal || nextSlot(), { save: !!b.dataset.save, plan: !!b.dataset.plan }); return true;
@@ -2824,8 +2846,15 @@ function skinView() {
 /* Routine views: a schedule to look at, not a checklist. Each product shows its name; tap it to open the details. */
 S.kexp = null; S.kwd = null; S.kwedit = null; /* while editing the week: { [productId]: days[] } */
 const KWEEK = [1, 2, 3, 4, 5, 6, 0];
+const KDAYHUE = { 1: 210, 2: 160, 3: 45, 4: 330, 5: 270, 6: 15, 0: 185 }; /* a gentle colour per day so the columns are easy to follow */
+const kdc = (d) => `--dc:hsl(${KDAYHUE[d]} 70% 58%)`;
 const kOn = (x, wd, slot) => x.status !== "shelf" && kSlots(x).includes(slot) && (x.days?.length ? x.days : ALLD).includes(wd);
 const kSorted = (list) => list.slice().sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99) || a.name.localeCompare(b.name));
+/* The person's own step order for morning or night (x.order.am / x.order.pm); products without one keep the usual thin-to-thick order after them. */
+const kSlotSorted = (list, slot) => kSorted(list).map((x, i) => [x, x.order?.[slot] ?? 1000 + i]).sort((a, b) => a[1] - b[1]).map(([x]) => x);
+const kSlotList = (slot) => S.kredit ? S.kredit[slot].map((id) => S.sk.products.find((x) => x.id === id)).filter(Boolean) : kSlotSorted(kActive().filter((x) => kSlots(x).includes(slot)), slot);
+const UPI = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
+const DNI = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 const CHEV = '<svg class="kchev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 function kExpBody(x) {
   const l = kLeft(x), tot = num(x.uses), pct = l != null && tot ? Math.min(100, (l / tot) * 100) : null, wl = kWeeksLeft(x);
@@ -2842,12 +2871,16 @@ function kRow(x, key, n) {
   return `<li class="krow ${open ? "open" : ""}"><button class="khead" data-act="kexp" data-k="${esc(key)}" aria-expanded="${open}">${n != null ? `<span class="kn num">${n}</span>` : ""}<span class="grow kt">${esc(x.name)}</span>${kLow(x) ? '<span class="chip warn">Low</span>' : ""}${CHEV}</button>${open ? kExpBody(x) : ""}</li>`;
 }
 function kSlotCard(slot) {
-  const list = kSorted(kActive().filter((x) => kSlots(x).includes(slot)));
+  const list = kSlotList(slot);
+  if (S.kredit) return `<section class="card kslot"><div class="row" style="gap:8px">${slot === "am" ? SUN : MOON}<h3 class="ov-tlabel">${slot === "am" ? "Morning" : "Night"}</h3></div>
+    <ol class="klist">${list.map((x, i) => `<li class="krow"><div class="khead"><span class="kn num">${i + 1}</span><span class="grow kt">${esc(x.name)}</span>
+      <button class="iconbtn" data-act="krmove" data-slot="${slot}" data-i="${i}" data-d="-1" ${i ? "" : "disabled"} aria-label="Move ${esc(x.name)} up">${UPI}</button><button class="iconbtn" data-act="krmove" data-slot="${slot}" data-i="${i}" data-d="1" ${i < list.length - 1 ? "" : "disabled"} aria-label="Move ${esc(x.name)} down">${DNI}</button></div></li>`).join("")}</ol></section>`;
   return `<section class="card kslot"><div class="row" style="gap:8px">${slot === "am" ? SUN : MOON}<h3 class="ov-tlabel">${slot === "am" ? "Morning" : "Night"}</h3><span class="small muted" style="margin-left:auto">${plural(list.length, "step")}</span></div>
     ${list.length ? `<ol class="klist">${list.map((x, i) => kRow(x, `${slot}|${x.id}`, i + 1)).join("")}</ol>` : `<p class="small muted" style="margin:6px 0 0">No ${slot === "am" ? "morning" : "night"} products yet.</p>`}</section>`;
 }
 function kToday() {
-  let html = `<h2 class="ov-title">Routine</h2>`;
+  const R = S.kredit;
+  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">Routine</h2>${S.sk.products.length ? (R ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="krcancel">Cancel</button><button class="btn sm primary" data-act="krsave">Save</button></span>` : `<button class="btn sm" data-act="kredit">${PENCIL}<span>Edit</span></button>`) : ""}</div>${R ? `<p class="small muted" style="margin:-6px 0 0">Use the arrows to change the order of your steps, then tap Save.</p>` : ""}`;
   if (!S.sk.products.length) return html + `<div class="card empty"><h3>Build your routine</h3><p>Snap a photo of each product. Claude reads it, suggests morning or night and how often, and slots it into your routine in the right order.</p><p class="small muted" style="margin:0">Already researched a routine? Paste it in or attach the file and Claude sets it all up.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="ktab" data-tab="kimport">Import / autofill</button><button class="btn" data-act="ktab" data-tab="kadd">Add a product</button><button class="btn" data-act="kexample">Try a sample routine</button></div></div>`;
   html += kSlotCard("am") + kSlotCard("pm");
   html += `<div><button class="btn sm kimpbtn" data-act="ktab" data-tab="kimport">${I.upload}<span>Import / autofill routine</span></button></div>`;
@@ -2860,10 +2893,10 @@ function kWeek() {
     <p class="small muted" style="margin:-6px 0 0">${E ? "Tap the squares to change which days you use each product, then tap Save." : "Ticks show the days you use each product. Tap Edit to change them."}</p>`;
   if (!S.sk.products.length) return html + `<div class="card empty"><p>Add products to see your week.</p></div>`;
   for (const slot of ["am", "pm"]) {
-    const prods = kSorted(kActive().filter((x) => kSlots(x).includes(slot)));
+    const prods = kSlotSorted(kActive().filter((x) => kSlots(x).includes(slot)), slot);
     if (!prods.length) continue;
-    html += `<section class="card kweek"><div class="kgrid"><span class="row kwh" style="gap:6px">${slot === "am" ? SUN : MOON}<b>${slot === "am" ? "Morning" : "Night"}</b></span>${KWEEK.map((d) => `<span class="kday">${DOW[d].slice(0, 1)}</span>`).join("")}
-      ${prods.map((x) => `<button class="kpname" data-act="kweekopen" data-id="${x.id}">${esc(x.name)}</button>${KWEEK.map((d) => { const v = on(x, d, slot); return E ? `<button class="kcell editing ${v ? "on" : ""}" data-act="kwdow" data-id="${x.id}" data-d="${d}" aria-pressed="${v}" aria-label="${esc(x.name)} on ${DOW[d]}">${v ? I.check : ""}</button>` : `<span class="kcell ${v ? "on" : ""}" role="img" aria-label="${esc(x.name)} ${v ? "used" : "not used"} on ${DOW[d]}">${v ? I.check : ""}</span>`; }).join("")}`).join("")}</div></section>`;
+    html += `<section class="card kweek"><div class="kgrid"><span class="row kwh" style="gap:6px">${slot === "am" ? SUN : MOON}<b>${slot === "am" ? "Morning" : "Night"}</b></span>${KWEEK.map((d) => `<span class="kday" style="${kdc(d)}">${DOW[d].slice(0, 1)}</span>`).join("")}
+      ${prods.map((x) => `<button class="kpname" data-act="kweekopen" data-id="${x.id}">${esc(x.name)}</button>${KWEEK.map((d) => { const v = on(x, d, slot); return E ? `<button class="kcell editing ${v ? "on" : ""}" style="${kdc(d)}" data-act="kwdow" data-id="${x.id}" data-d="${d}" aria-pressed="${v}" aria-label="${esc(x.name)} on ${DOW[d]}">${v ? I.check : ""}</button>` : `<span class="kcell ${v ? "on" : ""}" style="${kdc(d)}" role="img" aria-label="${esc(x.name)} ${v ? "used" : "not used"} on ${DOW[d]}">${v ? I.check : ""}</span>`; }).join("")}`).join("")}</div></section>`;
   }
   if (kActive().some((x) => x.when === "both")) html += `<p class="hint">Products used morning and night share one set of days, so changing one changes both.</p>`;
   return html;
@@ -3026,7 +3059,7 @@ async function kexample() {
 }
 async function skinClick(a, b) {
   switch (a) {
-    case "ktab": S.ktab = b.dataset.tab; S.kview = null; S.kwedit = null; if (S.ktab === "kadd" && !S.kform) S.kform = kBlank(); try { localStorage.setItem("planner.ktab", S.ktab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "ktab": S.ktab = b.dataset.tab; S.kview = null; S.kwedit = null; S.kredit = null; if (S.ktab === "kadd" && !S.kform) S.kform = kBlank(); try { localStorage.setItem("planner.ktab", S.ktab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "ktick": ktoggle(b.dataset.id, b.dataset.slot, S.date); return true;
     case "kweektick": ktoggle(b.dataset.id, b.dataset.slot, b.dataset.date); return true;
     case "kall": { const slot = b.dataset.slot; for (const x of kRoutine(S.date, slot)) if (!kDone(S.date, x.id, slot)) await ktoggle(x.id, slot, S.date); return true; }
@@ -3043,6 +3076,12 @@ async function skinClick(a, b) {
     case "krestock": { const x = S.sk.products.find((y) => y.id === b.dataset.id); if (!x) return true; x.usesLeft = num(x.uses) || kLeft(x) || 0; render(); toast(`New bottle of ${x.name}: ${plural(x.usesLeft, "use")}`); await ksaveProd(x); return true; }
     case "kexp": S.kexp = S.kexp === b.dataset.k ? null : b.dataset.k; render(); return true;
     case "kweekopen": S.kexp = "p|" + b.dataset.id; S.ktab = "kproducts"; render(); requestAnimationFrame(() => document.querySelector(".krow.open")?.scrollIntoView({ block: "center" })); return true;
+    case "kredit": S.kexp = null; S.kredit = { am: kSlotList("am").map((x) => x.id), pm: kSlotList("pm").map((x) => x.id) }; render(); return true;
+    case "krmove": { const a = S.kredit?.[b.dataset.slot], i = Number(b.dataset.i), j = i + Number(b.dataset.d); if (!a || j < 0 || j >= a.length) return true; [a[i], a[j]] = [a[j], a[i]]; render(); return true; }
+    case "krcancel": S.kredit = null; render(); return true;
+    case "krsave": { const R = S.kredit; S.kredit = null; const changed = [];
+      for (const x of S.sk.products) { const o = { ...(x.order || {}) }; for (const sl of ["am", "pm"]) { const i = R[sl].indexOf(x.id); if (i >= 0) o[sl] = i; } if (JSON.stringify(o) !== JSON.stringify(x.order || {})) { x.order = o; changed.push(x); } }
+      render(); toast("Routine order saved"); for (const x of changed) await ksaveProd(x); return true; }
     case "kwedit": S.kwedit = {}; render(); return true;
     case "kwcancel": S.kwedit = null; render(); return true;
     case "kwsave": { const E = S.kwedit || {}; S.kwedit = null; const changed = S.sk.products.filter((x) => E[x.id] && E[x.id].join() !== (x.days?.length ? x.days : ALLD).slice().sort().join()); for (const x of changed) x.days = E[x.id]; render(); toast(changed.length ? `Saved ${plural(changed.length, "product")}` : "No changes"); for (const x of changed) await ksaveProd(x); return true; }
