@@ -679,7 +679,7 @@ function renderChrome() {
   if (S.module === "todo") {
     const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar]];
     $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
-    $("#tabs").innerHTML = tt.map(([id, label, ic]) => `<button class="tab" data-act="ttab" data-tab="${id}" ${S.ttab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+    $("#tabs").innerHTML = tt.map(([id, label, ic]) => `<button class="tab" data-act="ttab" data-tab="${id}" ${S.ttab === id || (id === "tlist" && S.ttab === "timport") ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
     return;
   }
   if (S.module === "budget") {
@@ -3707,7 +3707,7 @@ function tinitDb(db, id) {
   tstore.items = db.collection(`data/users/${id}/todo/items`);
   tstore.items.onSnapshot((snap) => { S.td.items = snap.docs.map((d) => ({ ...d.data(), id: d.id })); tsoft(); }, () => {});
 }
-function tsoft() { if (S.module !== "todo") return; const a = document.activeElement; if (S.tedit || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+function tsoft() { if (S.module !== "todo") return; const a = document.activeElement; if (S.tedit || (S.ttab === "timport" && S.timp?.result) || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
 async function tsave(x) { const i = S.td.items.findIndex((y) => y.id === x.id); if (i >= 0) S.td.items[i] = x; else S.td.items.push(x); if (store.kind === "db" && tstore.items) return queued("td/" + x.id, () => tstore.items.doc(x.id).set(cjson(x))); tlsSave(); }
 async function tdel(id) { S.td.items = S.td.items.filter((x) => x.id !== id); if (store.kind === "db" && tstore.items) return queued("td/" + id, () => tstore.items.doc(id).delete()); tlsSave(); }
 
@@ -3732,11 +3732,11 @@ function tRow(x) {
     <div class="grow"><div class="tt">${esc(x.text)}</div><div class="tmeta"><span class="tpl">${TPRI[p]}</span>${x.due ? `<span class="${late ? "late" : ""}">${esc(tDueTxt(x))}</span>` : ""}</div></div>
     ${x.done ? `<span class="tdone">${I.check}<span>Done</span></span>` : ""}</li>`;
 }
-function todoView() { return S.ttab === "tmonth" ? tMonth() : tList(); }
+function todoView() { return S.ttab === "tmonth" ? tMonth() : S.ttab === "timport" ? tImport() : tList(); }
 
 function tList() {
   const E = S.tedit, items = E || tSorted();
-  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">To-do</h2>${S.td.items.length ? (E ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="tecancel">Cancel</button><button class="btn sm primary" data-act="tesave">Save</button></span>` : `<button class="btn sm" data-act="tedit">${PENCIL}<span>Edit</span></button>`) : ""}</div>`;
+  let html = `<div class="row between" style="align-items:center"><h2 class="ov-title">To-do</h2>${S.td.items.length ? (E ? `<span class="row" style="gap:6px"><button class="btn sm" data-act="tecancel">Cancel</button><button class="btn sm primary" data-act="tesave">Save</button></span>` : `<span class="row" style="gap:6px"><button class="btn sm kimpbtn" data-act="ttab" data-tab="timport">${I.upload}<span>Import</span></button><button class="btn sm" data-act="tedit">${PENCIL}<span>Edit</span></button></span>`) : `<button class="btn sm kimpbtn" data-act="ttab" data-tab="timport">${I.upload}<span>Import / autofill</span></button>`}</div>`;
   if (E) {
     html += `<p class="small muted" style="margin:-6px 0 0">Use the arrows to change the order. Change the wording, importance or date, or remove items, then tap Save.</p>`;
     if (!E.length) html += `<div class="card empty"><p>Everything’s been removed. Tap Save to clear the list, or Cancel to keep it.</p></div>`;
@@ -3751,7 +3751,7 @@ function tList() {
   }
   html += `<form class="card tadd" id="taddform" autocomplete="off"><div class="row" style="gap:8px"><input class="in grow" id="tnewtext" data-tn="text" value="${esc(S.tnew.text)}" placeholder="Add a to-do" maxlength="200" aria-label="New to-do"><button class="btn primary" type="submit">Add</button></div>
     <div class="row wrapflex" style="gap:10px">${tPriPick(S.tnew.pri, "tnpri")}<label class="tdate">Due<input class="in" type="date" data-tn="due" value="${esc(S.tnew.due)}"></label>${S.tnew.due ? `<button type="button" class="linkbtn small" data-act="tnclear">No date</button>` : ""}</div></form>`;
-  if (!items.length) return html + `<div class="card empty">${I.list.replace("<svg", '<svg width="44" height="44"')}<h3>Nothing on your list yet</h3><p>Add your first to-do above. Pick how important it is and, if it needs doing by a certain day, give it a due date. Dated items show on the Month calendar.</p></div>`;
+  if (!items.length) return html + `<div class="card empty">${I.list.replace("<svg", '<svg width="44" height="44"')}<h3>Nothing on your list yet</h3><p>Add your first to-do above. Pick how important it is and, if it needs doing by a certain day, give it a due date. Dated items show on the Month calendar.</p><p class="small muted" style="margin:0">Got a list already? Snap a photo of it, even handwritten, or a screenshot, and Claude fills it in.</p><button class="btn" data-act="ttab" data-tab="timport">${I.upload}<span>Import / autofill</span></button></div>`;
   const left = items.filter((x) => !x.done), late = left.filter((x) => x.due && x.due < today()).length;
   html += `<div class="tsum"><span><b>${left.length}</b> to do</span><span><b>${items.length - left.length}</b> done</span>${late ? `<span class="late"><b>${late}</b> overdue</span>` : ""}</div>`;
   html += `<section class="card"><ul class="tlist">${items.map(tRow).join("")}</ul></section>`;
@@ -3803,9 +3803,102 @@ async function tRunOut(kind, id) {
   const p = tsave(t); render(); toast(`Added “Get more ${nm}” to your to-do list`); await p;
 }
 
+
+/* ---------- Import / autofill a list from a photo, screenshot, file or pasted text ---------- */
+const tImpBlank = () => ({ busy: false, msg: "", kind: "", text: "", files: [], result: null });
+S.timp = tImpBlank();
+const TIPROMPT = () => `You are reading someone's to-do list: a photo of a handwritten list, a screenshot from another app, notes or pasted text. Today is ${today()} (${DOW[new Date().getDay()]}). Turn every task into structured data. Answer with ONLY a JSON object:
+{"items": [{"text": the task in a short, clear line, keeping their wording (fix obvious spelling only),
+ "priority": "high" if it is marked urgent or important (a star, !, underlined, circled, "ASAP", "urgent", in red, or in a high-priority group), "low" if marked low, optional or "someday", otherwise "medium",
+ "due": the date it is due as "YYYY-MM-DD" if the list gives one (turn "Friday", "tomorrow", "by the 21st", "end of month" into the next matching date from today), otherwise null,
+ "done": true if it is ticked, checked or crossed out, otherwise false}]}
+Rules: one entry per task, in the order they appear. Skip headings, dates on their own and doodles. Split a line that holds two clearly separate tasks. Don't invent tasks.`;
+function tImport() {
+  const K = S.timp, R = K.result, canAI = !(S.canPhoto === false || !S.sample);
+  let html = `<div class="row between"><button class="btn sm ghost" data-act="ttab" data-tab="tlist">${I.left}<span>To-do</span></button>${R ? `<button class="btn sm ghost" data-act="ticlear">Start over</button>` : ""}</div>
+    <h2 style="font-size:22px">Import / autofill</h2>`;
+  if (!R) {
+    html += `<div class="card" style="display:flex;flex-direction:column;gap:10px"><p class="small muted" style="margin:0">Take a photo of a list you’ve written by hand, add a screenshot from another app, or paste the text. Claude picks out each task with its importance and any due date, and you can change each one before it’s added.</p>
+      <div class="row wrapflex" style="gap:8px"><label class="btn primary kimpbtn">${I.cam}<span>${K.files.length ? "Add another photo" : "Take or choose a photo"}</span><input type="file" hidden accept="image/*" multiple data-timpfile="1"></label><label class="btn sm kimpbtn">${I.upload}<span>Attach a file</span><input type="file" hidden accept=".txt,.md,.rtf,.csv,text/*,application/pdf,image/*" multiple data-timpfile="1"></label></div>
+      ${K.files.length ? `<div class="kfiles">${K.files.map((f, i) => `<span class="chip">${esc(f.name)}<button type="button" class="kfx" data-act="tirmfile" data-i="${i}" aria-label="Remove ${esc(f.name)}">${I.x}</button></span>`).join("")}</div>` : ""}
+      <label class="fl">Or paste your list<textarea class="in kimptext" data-timp="text" placeholder="e.g.&#10;- Book dentist (urgent!)&#10;- Pay rego by Friday&#10;- Call Mum&#10;- Clean out the garage, someday">${esc(K.text)}</textarea></label>
+      ${canAI ? `<button class="btn primary" data-act="tirun" ${K.busy || !(K.text.trim() || K.files.length) ? "disabled" : ""}>${K.busy ? `<span class="spin"></span> ${esc(K.msg || "Reading your list…")}` : "Autofill my to-do list"}</button>` : `<div class="status">Autofill needs you to be signed in. You can still add to-dos by hand on the List.</div>`}
+      ${!K.busy && K.msg ? `<div class="status ${K.kind}">${esc(K.msg)}</div>` : ""}</div>`;
+    return html;
+  }
+  const L = R.list;
+  html += `<div class="status ok">Found ${plural(L.length, "to-do")}. Change anything you like, then add them to your list.</div>`;
+  html += `<section class="card"><ol class="tlist">${L.map((x, i) => `<li class="trow edit p-${x.pri}"><span class="kn num">${i + 1}</span>
+    <div class="grow tedit"><input class="in" data-tif="${i}" data-k="text" value="${esc(x.text)}" maxlength="200" aria-label="To-do ${i + 1}">
+      <div class="row wrapflex" style="gap:8px">${tPriPick(x.pri, "tipri", String(i))}<input class="in tdin" type="date" data-tif="${i}" data-k="due" value="${esc(x.due)}" aria-label="Due date">
+      <button type="button" class="tdtog" data-act="tidone" data-i="${i}" aria-pressed="${!!x.done}">${x.done ? I.check + "<span>Done</span>" : "<span>Not done</span>"}</button></div></div>
+    <div class="tmv"><button class="iconbtn sm danger" data-act="tirm" data-i="${i}" aria-label="Remove ${esc(x.text)}">${I.x}</button></div></li>`).join("")}</ol></section>`;
+  html += `<div class="sticky-save"><button class="btn" data-act="ticlear">Discard</button><button class="btn primary" data-act="tisave" ${L.length ? "" : "disabled"}>Add ${plural(L.length, "to-do")}</button></div>`;
+  return html;
+}
+async function trunImport() {
+  const K = S.timp; if (!S.sample || K.busy) return;
+  K.busy = true; K.msg = K.files.length ? "Reading your photo…" : "Reading your list…"; K.kind = ""; render();
+  try {
+    const maxImg = S.imgLimits?.maxCount || 5;
+    let text = K.text.trim(), images = [];
+    for (const f of K.files) { const r = await kreadFile(f, maxImg - images.length); text += r.text; images.push(...r.images); }
+    if (!text.trim() && !images.length) throw new Error("empty");
+    K.msg = "Claude is writing out your list…"; render();
+    const opts = { modelTier: "default" }; if (images.length) opts.images = images.slice(0, maxImg);
+    const out = await S.sample.json(TIPROMPT() + (text.trim() ? `\n\nThe to-do list:\n${text.slice(0, 50000)}` : "\n\nThe to-do list is in the images."), opts);
+    const list = (out?.items || []).filter((x) => x && String(x.text || "").trim()).map((x) => ({
+      text: String(x.text).trim().slice(0, 200),
+      pri: x.priority === "high" ? "high" : x.priority === "low" ? "low" : "med",
+      due: /^\d{4}-\d{2}-\d{2}$/.test(String(x.due || "")) ? String(x.due) : "",
+      done: x.done === true }));
+    if (!list.length) throw new Error("none");
+    K.result = { list }; K.msg = ""; K.kind = "ok";
+  } catch (e) {
+    K.msg = e?.code === "rate_limited" ? "Too many requests in a row. Wait a minute and try again." : e?.code === "not_granted" ? "Reading is turned off for this page." : e?.code === "cancelled" ? "" : e?.message === "none" ? "Couldn't find any tasks in that. Try a clearer photo, or paste the text." : "Couldn't read that. Try a clearer photo, or paste the text instead.";
+    K.kind = "err";
+  }
+  K.busy = false; render(); window.scrollTo(0, 0);
+}
+async function tsaveImport() {
+  const K = S.timp, L = K.result?.list; if (!L) return;
+  const items = L.filter((x) => x.text.trim());
+  if (!items.length) { toast("Each to-do needs some words."); return; }
+  let order = S.td.items.reduce((m, y) => Math.max(m, num(y.order) + 1), 0);
+  const now = new Date().toISOString();
+  const add = items.map((x) => ({ id: uid(), text: x.text.trim(), pri: TPRI[x.pri] ? x.pri : "med", due: x.due || "", done: !!x.done, doneAt: x.done ? today() : "", order: order++, created: now }));
+  S.timp = tImpBlank(); S.ttab = "tlist"; try { localStorage.setItem("planner.ttab", "tlist"); } catch {}
+  for (const x of add) { const i = S.td.items.findIndex((y) => y.id === x.id); if (i < 0) S.td.items.push(x); }
+  render(); window.scrollTo(0, 0); toast(`Added ${plural(add.length, "to-do")}`);
+  for (const x of add) await tsave(x);
+}
+function tImpClick(a, b) {
+  const K = S.timp, L = K.result?.list, i = Number(b.dataset.i);
+  switch (a) {
+    case "tirun": trunImport(); return true;
+    case "ticlear": S.timp = { ...tImpBlank(), text: K.text, files: K.files }; render(); window.scrollTo(0, 0); return true;
+    case "tirmfile": K.files.splice(i, 1); render(); return true;
+    case "tirm": if (L) { L.splice(i, 1); render(); } return true;
+    case "tipri": { const x = L?.[Number(b.dataset.id)]; if (x) { x.pri = b.dataset.v; render(); } return true; }
+    case "tidone": if (L?.[i]) { L[i].done = !L[i].done; render(); } return true;
+    case "tisave": tsaveImport(); return true;
+  }
+  return false;
+}
+document.addEventListener("input", (e) => {
+  const t = e.target, K = S.timp;
+  if (t.dataset.timp === "text") { K.text = t.value; const btn = document.querySelector('[data-act="tirun"]'); if (btn && !K.busy) btn.disabled = !(t.value.trim() || K.files.length); }
+  else if (t.dataset.tif != null && K.result) { const x = K.result.list[Number(t.dataset.tif)]; if (x) x[t.dataset.k] = t.value; }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target, K = S.timp;
+  if (t.dataset.timpfile && t.files?.length) { K.files.push(...t.files); K.msg = ""; t.value = ""; render(); }
+});
+
 /* ---------- Events ---------- */
 function tSetPressed(b) { b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
 async function todoClick(a, b) {
+  if (tImpClick(a, b)) return true;
   switch (a) {
     case "runout": await tRunOut(b.dataset.kind, b.dataset.id); return true;
     case "ttab": S.ttab = b.dataset.tab; S.tedit = null; try { localStorage.setItem("planner.ttab", S.ttab); } catch {} render(); window.scrollTo(0, 0); return true;
