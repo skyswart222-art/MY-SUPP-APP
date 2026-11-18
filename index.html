@@ -87,6 +87,10 @@ header.top .wrap { padding-block: 12px 10px; display: flex; flex-direction: colu
 .mod { flex: none; border: 1px solid transparent; background: var(--sunk); border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
 .mod[aria-current="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
 .mod[disabled] { opacity: .55; cursor: default; }
+.modarr { display: inline-flex; align-items: center; padding: 4px 10px; }
+.modord { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.modord li { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.modord .iconbtn[disabled] { opacity: .3; }
 .syncnote { font-size: 12px; color: var(--muted); }
 
 main .wrap { padding-block: 16px calc(var(--tabbar-h) + 28px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 18px; }
@@ -584,6 +588,9 @@ ul.klist .kexp-body { padding-left: 0; }
 .kweek .kcell.editing { cursor: pointer; border-style: dashed; }
 .kweek .kcell.editing.on { border-style: solid; }
 .kweek .kcell.off::after { content: none; }
+.kweek .kday { height: 22px; border-radius: 6px; display: grid; place-items: center; color: var(--ink); background: color-mix(in srgb, var(--dc) 28%, transparent); }
+.kweek .kcell:not(.on) { background: color-mix(in srgb, var(--dc) 14%, transparent); border-color: color-mix(in srgb, var(--dc) 38%, transparent); }
+.kweek .kcell.on { box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--dc) 85%, transparent); }
 .kweek .kcell.on { background: var(--accent); border-color: var(--accent); }
 .kweek .kcell svg { width: 13px; height: 13px; }
 .mimeal .in { min-width: 0; }

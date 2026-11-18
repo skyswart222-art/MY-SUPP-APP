@@ -12,6 +12,23 @@ const MODULES = [
   { id: "cycle", name: "Cycle", ready: true },
   { id: "budget", name: "Budget", ready: true },
 ];
+/* The person's own order for the tabs at the top, saved with their settings (and on the phone for a fast start). */
+function modOrdered() {
+  let o = S.settings?.modOrder; if (!Array.isArray(o)) { try { o = JSON.parse(localStorage.getItem("planner.modorder") || "null"); } catch { o = null; } }
+  const ids = (Array.isArray(o) ? o : []).filter((id) => MODULES.some((m) => m.id === id));
+  return [...ids, ...MODULES.map((m) => m.id).filter((id) => !ids.includes(id))].map((id) => MODULES.find((m) => m.id === id));
+}
+function modOrderSheet() {
+  const list = S.modEdit.map((id) => MODULES.find((m) => m.id === id)), n = list.length;
+  return `<div class="sheet-bg" data-act="modcancel"><div class="sheet" role="dialog" aria-modal="true" aria-label="Arrange tabs" data-stop>
+    <div class="grab"></div>
+    <div class="row between"><h2 style="font-size:22px">Arrange tabs</h2><button class="iconbtn" data-act="modcancel" aria-label="Close">${I.x}</button></div>
+    <p class="small muted" style="margin:0">Use the arrows to put the tabs in the order you want. The top one shows first.</p>
+    <ol class="modord">${list.map((m, i) => `<li><span class="num muted">${i + 1}</span><b class="grow">${esc(m.name)}</b>
+      <button class="iconbtn" data-act="modmove" data-i="${i}" data-d="-1" ${i ? "" : "disabled"} aria-label="Move ${esc(m.name)} up"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+      <button class="iconbtn" data-act="modmove" data-i="${i}" data-d="1" ${i < n - 1 ? "" : "disabled"} aria-label="Move ${esc(m.name)} down"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></li>`).join("")}</ol>
+    <div class="actions"><button class="btn" data-act="modcancel">Cancel</button><button class="btn primary" data-act="modsave" style="margin-left:auto">Save</button></div></div></div>`;
+}
 
 /* ---------- Icons ---------- */
 const I = {
@@ -479,7 +496,7 @@ function renderChrome() {
   document.documentElement.setAttribute("data-mod", S.module);
   const tb = $("#themebtn");
   if (tb) { tb.innerHTML = S.theme === "dark" ? SUN : MOON; tb.setAttribute("aria-label", S.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"); }
-  $("#modules").innerHTML = MODULES.map((m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`).join("");
+  $("#modules").innerHTML = modOrdered().map((m) => `<button class="mod" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" title="${m.ready ? "" : "Coming later"}">${esc(m.name)}${m.ready ? "" : " · soon"}</button>`).join("") + `<button class="mod modarr" data-act="modorder" aria-label="Arrange tabs" title="Arrange tabs"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>`;
   if (S.module === "budget") {
     const bt = [["btoday", "Overview", I.today], ["bplan", "Plan", I.wallet], ["blog", "Log", I.list], ["bgoals", "Goals", I.target], ["btrends", "Trends", I.trend]];
     $("#tabs").style.gridTemplateColumns = "repeat(5, 1fr)";
@@ -975,6 +992,7 @@ async function storePhoto(blob) {
 function renderOverlay() {
   let host = $("#overlay");
   if (!host) { host = document.createElement("div"); host.id = "overlay"; document.body.appendChild(host); }
+  if (S.modEdit) { host.innerHTML = modOrderSheet(); document.body.style.overflow = "hidden"; return; }
   if (S.mealAdd) { host.innerHTML = mealSheet(); document.body.style.overflow = "hidden"; return; }
   if (S.reminders) { host.innerHTML = reminderSheet(); document.body.style.overflow = "hidden"; return; }
   const s = S.detail && S.supps.find((x) => x.id === S.detail);
@@ -1467,6 +1485,10 @@ async function mealClick(a, b) {
     case "mirmmeal": { const D = S.mimp.result?.days[S.mimp.day]; if (D) { D.meals.splice(Number(b.dataset.m), 1); render(); } return true; }
     case "mirmfood": { const m = S.mimp.result?.days[S.mimp.day]?.meals[Number(b.dataset.m)]; if (m) { m.foods.splice(Number(b.dataset.f), 1); render(); } return true; }
     case "misave": msaveImport(); return true;
+    case "modorder": S.modEdit = modOrdered().map((m) => m.id); renderOverlay(); return true;
+    case "modmove": { const i = Number(b.dataset.i), j = i + Number(b.dataset.d), a = S.modEdit; if (j < 0 || j >= a.length) return true; [a[i], a[j]] = [a[j], a[i]]; renderOverlay(); return true; }
+    case "modcancel": S.modEdit = null; renderOverlay(); return true;
+    case "modsave": { const o = S.modEdit; S.modEdit = null; S.settings = { ...S.settings, modOrder: o }; try { localStorage.setItem("planner.modorder", JSON.stringify(o)); } catch {} renderOverlay(); renderChrome(); toast("Tab order saved"); await saveSettings(); return true; }
     case "module": { const m = b.dataset.mod; if (m === S.module) return true; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
     case "mtab": S.mtab = b.dataset.tab; S.mtargetsForm = null; try { localStorage.setItem("planner.mtab", S.mtab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "madd": mopenAdd(b.dataset.meal || nextSlot(), { save: !!b.dataset.save, plan: !!b.dataset.plan }); return true;
@@ -2824,6 +2846,8 @@ function skinView() {
 /* Routine views: a schedule to look at, not a checklist. Each product shows its name; tap it to open the details. */
 S.kexp = null; S.kwd = null; S.kwedit = null; /* while editing the week: { [productId]: days[] } */
 const KWEEK = [1, 2, 3, 4, 5, 6, 0];
+const KDAYHUE = { 1: 210, 2: 160, 3: 45, 4: 330, 5: 270, 6: 15, 0: 185 }; /* a gentle colour per day so the columns are easy to follow */
+const kdc = (d) => `--dc:hsl(${KDAYHUE[d]} 70% 58%)`;
 const kOn = (x, wd, slot) => x.status !== "shelf" && kSlots(x).includes(slot) && (x.days?.length ? x.days : ALLD).includes(wd);
 const kSorted = (list) => list.slice().sort((a, b) => (KORD[a.type] ?? 99) - (KORD[b.type] ?? 99) || a.name.localeCompare(b.name));
 const CHEV = '<svg class="kchev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
@@ -2862,8 +2886,8 @@ function kWeek() {
   for (const slot of ["am", "pm"]) {
     const prods = kSorted(kActive().filter((x) => kSlots(x).includes(slot)));
     if (!prods.length) continue;
-    html += `<section class="card kweek"><div class="kgrid"><span class="row kwh" style="gap:6px">${slot === "am" ? SUN : MOON}<b>${slot === "am" ? "Morning" : "Night"}</b></span>${KWEEK.map((d) => `<span class="kday">${DOW[d].slice(0, 1)}</span>`).join("")}
-      ${prods.map((x) => `<button class="kpname" data-act="kweekopen" data-id="${x.id}">${esc(x.name)}</button>${KWEEK.map((d) => { const v = on(x, d, slot); return E ? `<button class="kcell editing ${v ? "on" : ""}" data-act="kwdow" data-id="${x.id}" data-d="${d}" aria-pressed="${v}" aria-label="${esc(x.name)} on ${DOW[d]}">${v ? I.check : ""}</button>` : `<span class="kcell ${v ? "on" : ""}" role="img" aria-label="${esc(x.name)} ${v ? "used" : "not used"} on ${DOW[d]}">${v ? I.check : ""}</span>`; }).join("")}`).join("")}</div></section>`;
+    html += `<section class="card kweek"><div class="kgrid"><span class="row kwh" style="gap:6px">${slot === "am" ? SUN : MOON}<b>${slot === "am" ? "Morning" : "Night"}</b></span>${KWEEK.map((d) => `<span class="kday" style="${kdc(d)}">${DOW[d].slice(0, 1)}</span>`).join("")}
+      ${prods.map((x) => `<button class="kpname" data-act="kweekopen" data-id="${x.id}">${esc(x.name)}</button>${KWEEK.map((d) => { const v = on(x, d, slot); return E ? `<button class="kcell editing ${v ? "on" : ""}" style="${kdc(d)}" data-act="kwdow" data-id="${x.id}" data-d="${d}" aria-pressed="${v}" aria-label="${esc(x.name)} on ${DOW[d]}">${v ? I.check : ""}</button>` : `<span class="kcell ${v ? "on" : ""}" style="${kdc(d)}" role="img" aria-label="${esc(x.name)} ${v ? "used" : "not used"} on ${DOW[d]}">${v ? I.check : ""}</span>`; }).join("")}`).join("")}</div></section>`;
   }
   if (kActive().some((x) => x.when === "both")) html += `<p class="hint">Products used morning and night share one set of days, so changing one changes both.</p>`;
   return html;
