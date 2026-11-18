@@ -1380,14 +1380,13 @@ function mealToday() {
   let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
     <div class="grow"><div class="eyebrow">${esc(d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }))}</div><h2 class="ov-title">${title}</h2></div>
     ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
-    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>${mModeSeg()}`;
   html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${kc(tot.kcal)} of ${kc(T.kcal)} calories">
       <circle cx="80" cy="80" r="68" fill="none" stroke="var(--track)" stroke-width="14"/>
       <circle cx="80" cy="80" r="68" fill="none" stroke="${left < 0 ? "var(--warn)" : "var(--accent)"}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 80 80)" ${frac ? "" : 'opacity="0"'}/></svg>
       <div class="ov-ringtxt"><span class="ov-big" style="font-size:34px">${kc(tot.kcal)}</span><span class="small muted">of ${kc(T.kcal)} kcal</span></div></div>
     <div class="ov-stats" style="gap:10px"><div><span class="small ${left < 0 ? "warntxt" : "muted"}">${left < 0 ? "Over by" : "Left today"}</span><b class="num">${kc(Math.abs(left))} kcal</b></div>
       ${macroBar("Protein", tot.protein, T.protein, "p")}${macroBar("Carbs", tot.carbs, T.carbs, "c")}${macroBar("Fat", tot.fat, T.fat, "f")}</div></div>`;
-  if (!S.meals.settings.modeSeen) html += `<div class="card" style="display:flex;flex-direction:column;gap:8px"><div class="row between"><span class="eyebrow">How do you want to use Meals?</span><button class="iconbtn" data-act="mmodehide" aria-label="Hide">${I.x}</button></div>${mModeSeg()}<span class="small muted">Set meal plan just shows your plan every day, with nothing to tick off. You can change this on the Targets tab.</span></div>`;
   const slots = mslots();
   const known = new Set(slots.map((s) => s.id));
   const nx = isToday ? nextSlot() : null;
