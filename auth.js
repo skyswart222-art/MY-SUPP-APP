@@ -510,8 +510,9 @@ function bridge(prompt, images) {
       if (e.target.id !== "br-res") return;
       const raw = e.target.value.replace(/\s+/g, ""), msg = $("#br-msg");
       if (!raw) { msg.textContent = ""; msg.className = "au-msg"; return; }
-      if (!raw.startsWith(RES)) { msg.textContent = "That's not a result from the reader. Tap Copy result there and paste again."; msg.className = "au-msg err"; return; }
-      try { const j = JSON.parse(await inflate(raw.slice(RES.length))); finish(resolve, j.data); }
+      const at = raw.lastIndexOf(RES); // the last result pasted, even if an older one is still in the box
+      if (at < 0) { msg.textContent = raw.includes(REQ) ? "That's the request. Paste it into the reader, then copy the result from there." : "That's not a result from the reader. Tap Copy result there and paste again."; msg.className = "au-msg err"; return; }
+      try { const j = JSON.parse(await inflate(raw.slice(at + RES.length).replace(/[^A-Za-z0-9+/=]/g, ""))); finish(resolve, j.data); }
       catch { msg.textContent = "Part of the result is missing. Copy it again from the reader."; msg.className = "au-msg err"; }
     };
     pop.addEventListener("click", onClick); pop.addEventListener("input", onInput);
