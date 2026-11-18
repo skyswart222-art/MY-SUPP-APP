@@ -3354,7 +3354,7 @@ document.addEventListener("submit", async (e) => {
 S.btab = "btoday";
 try { const t = localStorage.getItem("planner.btab"); if (["btoday", "bplan", "blog", "bgoals", "btrends"].includes(t)) S.btab = t; } catch {}
 S.bg = { plan: { income: "", freq: "fortnightly", method: "503020" }, cats: [], tx: {}, goals: [] };
-S.bmonth = null; S.btx = null; S.bgoalForm = null; S.bconfirm = null; S.btrend = null;
+S.bexp = null; S.bedit = null; S.bmonth = null; S.btx = null; S.bgoalForm = null; S.bconfirm = null; S.btrend = null;
 const bstore = {};
 const BLS = "planner.budget.v1";
 function blsLoad() { try { const d = JSON.parse(localStorage.getItem(BLS) || "{}"); if (d.plan) S.bg.plan = { ...S.bg.plan, ...d.plan }; if (d.cats) S.bg.cats = d.cats; if (d.tx) S.bg.tx = d.tx; if (d.goals) S.bg.goals = d.goals; } catch {} }
@@ -3370,7 +3370,7 @@ function binitDb(db, id) {
   bstore.tx.onSnapshot((snap) => { const t = {}; snap.docs.forEach((d) => { t[d.id] = { ...d.data(), id: d.id }; }); S.bg.tx = t; bsoft(); }, () => {});
   bstore.goals.onSnapshot((snap) => { S.bg.goals = snap.docs.map((d) => ({ ...d.data(), id: d.id })); bsoft(); }, () => {});
 }
-function bsoft() { if (S.module !== "budget") return; const a = document.activeElement; if (S.btx?.dirty || S.bgoalForm || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+function bsoft() { if (S.module !== "budget") return; const a = document.activeElement; if (S.btx?.dirty || S.bgoalForm || S.bedit || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
 async function bsavePlan() { if (store.kind === "db" && bstore.plan) return queued("bplan", () => bstore.plan.set(cjson(S.bg.plan))); blsSave(); }
 async function bsaveCat(x) { const i = S.bg.cats.findIndex((y) => y.id === x.id); if (i >= 0) S.bg.cats[i] = x; else S.bg.cats.push(x); if (store.kind === "db" && bstore.cats) return queued("bc/" + x.id, () => bstore.cats.doc(x.id).set(cjson(x))); blsSave(); }
 async function bdelCat(id) { S.bg.cats = S.bg.cats.filter((x) => x.id !== id); if (store.kind === "db" && bstore.cats) return queued("bc/" + id, () => bstore.cats.doc(id).delete()); blsSave(); }
@@ -3471,45 +3471,73 @@ function bMonthHead(title) {
     ${cur ? "" : `<button class="btn sm" data-act="bmonth" data-n="0">This month</button>`}
     <button class="iconbtn" data-act="bmonth" data-n="1" aria-label="Next month" ${cur ? "disabled" : ""}>${I.right}</button></div>`;
 }
+/* ---------- Bills: how often each thing is paid, due dates and details ---------- */
+const BFREQ = [["weekly", "Weekly", 52 / 12], ["fortnightly", "Fortnightly", 26 / 12], ["monthly", "Monthly", 1], ["quarterly", "Quarterly", 1 / 3], ["yearly", "Yearly", 1 / 12]];
+const BFX = Object.fromEntries(BFREQ.map(([k, , f]) => [k, f])), BFN = Object.fromEntries(BFREQ.map(([k, n]) => [k, n]));
+const bBillFreq = (c) => (BFX[c.billFreq] ? c.billFreq : "monthly");
+const bBillAmt = (c) => (c.billAmt !== undefined && c.billAmt !== "" && BFX[c.billFreq] ? num(c.billAmt) : num(c.amount) / BFX[bBillFreq(c)]);
+function bStep(d, f, n) { const x = parseD(d); if (f === "weekly") x.setDate(x.getDate() + 7 * n); else if (f === "fortnightly") x.setDate(x.getDate() + 14 * n); else { const day = x.getDate(); x.setDate(1); x.setMonth(x.getMonth() + n * (f === "quarterly" ? 3 : f === "yearly" ? 12 : 1)); x.setDate(Math.min(day, new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate())); } return dstr(x); }
+function bNextDues(c, k = 3) {
+  if (!c.due) return []; const f = bBillFreq(c), t = today(); let i = 0, d = c.due;
+  while (d < t && i < 600) d = bStep(c.due, f, ++i);
+  const out = []; for (let j = 0; j < k; j++) out.push(bStep(c.due, f, i + j)); return out;
+}
+const bDueTxt = (d) => { const n = Math.round((parseD(d) - parseD(today())) / 864e5); return n === 0 ? "today" : n === 1 ? "tomorrow" : n < 7 ? `in ${n} days` : shortD(d, { weekday: "short", day: "numeric", month: "short" }); };
+function bBillRow(c) {
+  const open = S.bexp === c.id, f = bBillFreq(c), nx = bNextDues(c, 1)[0];
+  const head = `<button class="khead" data-act="bexp" data-id="${c.id}" aria-expanded="${open}"><span class="grow" style="min-width:0"><span class="kt" style="display:block">${esc(c.name)}</span><span class="small muted">${BFN[f]}${f !== "monthly" ? ` · ${money(bBillAmt(c))} each` : ""}${nx ? ` · due ${esc(bDueTxt(nx))}` : ""}</span></span>${c.link === "supps" ? '<span class="chip">Supps</span>' : ""}<span class="num">${money(num(c.amount))}</span>${CHEV}</button>`;
+  return `<li class="krow ${open ? "open" : ""}">${head}${open ? (S.bedit?.id === c.id ? bBillForm() : bBillBody(c)) : ""}</li>`;
+}
+function bBillBody(c) {
+  const f = bBillFreq(c), g = bGroups().find((x) => x.k === bGroupOf(c)), dues = bNextDues(c, 3);
+  const row = (k, v) => `<div class="bkv"><span class="muted">${k}</span><span>${v}</span></div>`;
+  return `<div class="kexp-body bbody">
+    ${row("Amount", `<b class="num">${money(bBillAmt(c), 2)}</b> ${f === "monthly" ? "a month" : BFN[f].toLowerCase()}`)}
+    ${f !== "monthly" ? row("Works out to", `<span class="num">${money(num(c.amount), 2)}</span> a month`) : ""}
+    ${S.bg.plan.freq !== "monthly" && num(S.bg.plan.income) ? row("Per pay", `<span class="num">${money(bPerPay(num(c.amount)), 2)}</span> ${PAYWORD[S.bg.plan.freq]}`) : ""}
+    ${row("Due", dues.length ? dues.map((d, i) => i ? esc(shortD(d, { day: "numeric", month: "short" })) : `<b>${esc(shortD(d, { weekday: "short", day: "numeric", month: "short" }))}</b>`).join(", ") : '<span class="muted">No date set</span>')}
+    ${c.account ? row("Paid from", esc(c.account)) : ""}
+    ${row("Group", `<span class="row" style="gap:6px;display:inline-flex"><i class="sw" style="background:${gcol(g.c)}"></i>${esc(g.name)}</span>`)}
+    ${c.link === "supps" ? '<div class="small muted">Supplement purchases from the Spend tab count here.</div>' : ""}
+    ${c.notes ? `<div class="small bnotes">${esc(c.notes)}</div>` : ""}
+    <div class="actions"><button class="btn sm" data-act="bbilledit" data-id="${c.id}">${PENCIL}Edit</button></div></div>`;
+}
+function bBillForm() {
+  const f = S.bedit;
+  return `<form class="kexp-body bbody" id="bbillform" autocomplete="off">
+    <label class="fl">Name<input class="in" data-bb="name" value="${esc(f.name)}" required></label>
+    <div class="fgrid"><label class="fl">Amount<input class="in num" type="number" inputmode="decimal" min="0" step="0.01" data-bb="billAmt" value="${esc(f.billAmt)}"></label>
+    <label class="fl">How often<select class="in" data-bb="billFreq">${BFREQ.map(([k, n]) => `<option value="${k}" ${f.billFreq === k ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    <label class="fl">Next payment<input class="in" type="date" data-bb="due" value="${esc(f.due)}"></label>
+    <label class="fl">Group<select class="in" data-bb="group">${bGroups().map((g) => `<option value="${g.k}" ${f.group === g.k ? "selected" : ""}>${esc(g.name)}</option>`).join("")}</select></label>
+    <label class="fl full">Paid from<input class="in" data-bb="account" value="${esc(f.account)}" placeholder="e.g. Bills account, credit card, direct debit"></label>
+    <label class="fl full">Notes<textarea class="in" data-bb="notes" placeholder="e.g. Lease ends June, ref number, who to call">${esc(f.notes)}</textarea></label></div>
+    <div class="row" style="gap:8px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" data-act="bbillcancel">Cancel</button><button class="btn danger" type="button" data-act="bdelcat" data-id="${f.id}" style="margin-left:auto">Delete</button></div></form>`;
+}
 function bOverview() {
-  const mo = bSelMonth(), cur = mo === bMonthNow();
-  let html = bMonthHead(cur ? "This month" : monthLabel(mo));
-  if (!S.bg.cats.length) return html + `<div class="card empty">${I.wallet.replace("<svg", '<svg width="44" height="44"')}<h3>Make your first budget</h3><p>Add your take-home pay, pick a way to split it, and Elevate fills in a starter budget you can tweak. Then log what you spend and watch it against the plan.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="btab" data-tab="bplan">Set up my budget</button><button class="btn" data-act="bgsample">Try a sample budget</button></div></div>`;
-  const groups = bGroups(), byG = bByGroup(mo), byC = bByCat(mo);
-  const spendG = groups.filter((g) => !bIsSave(g.k));
-  const plannedSpend = spendG.reduce((a, g) => a + bPlannedGroup(g.k), 0);
-  const spent = spendG.reduce((a, g) => a + byG[g.k], 0) + (byG.none || 0);
-  const savedCats = groups.filter((g) => bIsSave(g.k)).reduce((a, g) => a + byG[g.k], 0);
-  const saved = savedCats + bGoalSavedIn(mo);
-  const extra = bIncomeRows(mo).reduce((a, t) => a + num(t.amount), 0);
-  const income = bIncome() + extra;
-  const left = plannedSpend - spent, over = left < 0;
-  const [y, m] = mo.split("-").map(Number), dim = new Date(y, m, 0).getDate();
-  const daysLeft = cur ? dim - new Date().getDate() + 1 : 0;
-  html += `<div class="ov-top">${bRing(plannedSpend ? spent / plannedSpend : 0, over, `${money(spent)} spent of ${money(plannedSpend)}`, money(Math.abs(left)), over ? "over budget" : "left to spend")}
+  let html = `<div class="ov-head"><div class="grow"><div class="eyebrow">Monthly budget</div><h2 class="ov-title">Overview</h2></div>${S.bg.cats.length ? `<button class="btn sm" data-act="btab" data-tab="bplan">${PENCIL}Edit</button>` : ""}</div>`;
+  if (!S.bg.cats.length) return html + `<div class="card empty">${I.wallet.replace("<svg", '<svg width="44" height="44"')}<h3>Make your first budget</h3><p>Add your take-home pay and the things you pay for, like rent, your phone bill and your car. This page then shows what each one costs and what you have left over.</p><div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="btab" data-tab="bplan">Set up my budget</button><button class="btn" data-act="bgsample">Try a sample budget</button></div></div>`;
+  const groups = bGroups(), inc = bIncome(), total = bPlanned(), left = inc - total, freq = S.bg.plan.freq;
+  const perPay = freq !== "monthly" && num(S.bg.plan.income) > 0;
+  const gt = groups.map((g) => ({ ...g, v: bPlannedGroup(g.k) })).filter((g) => g.v > 0);
+  // Donut of the plan by group
+  const R = 64, C = 2 * Math.PI * R, gap = gt.length > 1 ? 3 : 0; let off = 0;
+  const arcs = gt.map((g) => { const len = Math.max(0, (g.v / (total || 1)) * C - gap); const el = `<circle cx="80" cy="80" r="${R}" fill="none" stroke="${gcol(g.c)}" stroke-width="16" stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 80 80)"><title>${esc(g.name)}: ${money(g.v)} (${Math.round((g.v / (total || 1)) * 100)}%)</title></circle>`; off += (g.v / (total || 1)) * C; return el; }).join("");
+  html += `<div class="ov-top"><div class="ov-ring"><svg viewBox="0 0 160 160" role="img" aria-label="${esc(money(total))} a month, split by group"><circle cx="80" cy="80" r="${R}" fill="none" stroke="var(--track)" stroke-width="16"/>${arcs}</svg>
+      <div class="ov-ringtxt"><span class="bbig num">${money(total)}</span><span class="small muted">a month</span></div></div>
     <div class="ov-stats">
-      <div><span class="small muted">Spent</span><b class="num">${money(spent)} <span class="muted small">of ${money(plannedSpend)}</span></b></div>
-      ${cur ? `<div><span class="small muted">Safe to spend a day</span><b class="num">${over ? "Nothing left" : money(left / Math.max(1, daysLeft))}</b></div>` : `<div><span class="small muted">Saved</span><b class="num">${money(saved)}</b></div>`}
-      ${cur ? `<div><span class="small muted">Days left</span><b class="num">${daysLeft} of ${dim}</b></div>` : `<div><span class="small muted">Income</span><b class="num">${money(income)}</b></div>`}
+      <div><span class="small muted">Take-home pay</span><b class="num">${inc ? money(inc) : "Not set"}</b></div>
+      <div><span class="small muted">Budgeted</span><b class="num">${money(total)}</b>${perPay ? `<span class="small muted num">${money(bPerPay(total))} ${PAYWORD[freq]}</span>` : ""}</div>
+      ${inc ? `<div><span class="small ${left < -0.5 ? "warntxt" : "muted"}">${left < -0.5 ? "Short by" : "Left over"}</span><b class="num">${Math.abs(left) < 0.5 ? "Nothing spare" : money(Math.abs(left))}</b>${perPay && Math.abs(left) >= 0.5 ? `<span class="small muted num">${money(bPerPay(Math.abs(left)))} ${PAYWORD[freq]}</span>` : ""}</div>` : ""}
     </div></div>`;
-  html += `<div class="statgrid"><div class="stat"><div class="v">${money(income)}</div><div class="k">income${extra ? ` (incl. ${money(extra)} extra)` : ""}</div></div>
-    <div class="stat"><div class="v">${money(saved)}</div><div class="k">saved this month</div></div>
-    <div class="stat"><div class="v">${income ? Math.round((saved / income) * 100) : 0}%</div><div class="k">savings rate</div></div></div>`;
-  // Groups: spent vs planned
-  html += `<section class="card bcard"><div class="row between"><div class="eyebrow">By ${esc(bMethod().name)} group</div><button class="linkbtn" data-act="btab" data-tab="bplan">Edit plan</button></div>
-    ${groups.map((g) => { const p = bPlannedGroup(g.k), s = byG[g.k], pct = p ? Math.min(100, (s / p) * 100) : 0, ov = p && s > p * 1.001 && !bIsSave(g.k);
-      return `<div class="bgrp"><div class="row between"><span class="row" style="gap:7px"><i class="sw" style="background:${gcol(g.c)}"></i><b>${esc(g.name)}</b></span><span class="small num"><b>${money(s)}</b><span class="muted"> / ${money(p)}</span></span></div>
-      <div class="mbar ${ov ? "over" : ""}"><i style="width:${pct}%;background:${ov ? "var(--warn)" : gcol(g.c)}"></i></div>
-      <div class="small muted">${bIsSave(g.k) ? (s >= p - 1 && p ? "Target reached" : `${money(Math.max(0, p - s))} still to put away`) : ov ? `<span class="warntxt">${money(s - p)} over</span>` : `${money(p - s)} left`}</div></div>`; }).join("")}</section>`;
-  // Categories
-  const rows = bCats().map((c) => ({ c, s: byC[c.id] || 0, p: num(c.amount) })).filter((r) => r.p || r.s);
-  html += `<section class="card bcard"><div class="eyebrow">Categories</div><div class="bcats">${rows.map(({ c, s, p }) => { const g = bGroups().find((x) => x.k === bGroupOf(c)); const ov = p ? s > p * 1.001 : s > 0; const sv = bIsSave(g.k);
-      return `<div class="bcat"><div class="row between"><span class="row" style="gap:7px;min-width:0"><i class="sw" style="background:${gcol(g.c)}"></i><span class="bname">${esc(c.name)}</span>${c.link === "supps" ? '<span class="chip">Supps</span>' : ""}</span><span class="small num">${money(s)}<span class="muted"> / ${money(p)}</span></span></div>
-      <div class="mbar thin ${ov && !sv ? "over" : ""}"><i style="width:${p ? Math.min(100, (s / p) * 100) : 100}%;background:${ov && !sv ? "var(--warn)" : gcol(g.c)}"></i></div></div>`; }).join("")}
-    ${byC.none ? `<div class="bcat"><div class="row between"><span class="bname muted">Not categorised</span><span class="small num">${money(byC.none)}</span></div></div>` : ""}</div></section>`;
-  const recent = bSpendRows(mo).slice(0, 5);
-  html += `<section class="card bcard"><div class="row between"><div class="eyebrow">Recent spending</div><button class="btn sm primary" data-act="btab" data-tab="blog">Log spending</button></div>
-    <div class="plist">${recent.length ? recent.map(bTxRow).join("") : '<div class="pi small muted">Nothing logged this month yet.</div>'}</div></section>`;
+  html += `<section class="card bcard"><div class="eyebrow">By ${esc(bMethod().name)} group</div>${bStack(gt, total, "Budget by group")}
+    <div class="bsplit">${gt.map((g) => `<div class="bsrow"><span class="row" style="gap:7px"><i class="sw" style="background:${gcol(g.c)}"></i>${esc(g.name)}</span><span class="small num"><b>${money(g.v)}</b>${inc ? ` <span class="muted">${Math.round((g.v / inc) * 100)}% of pay</span>` : ""}</span></div>`).join("")}</div></section>`;
+  for (const g of groups) {
+    const list = bCats().filter((c) => bGroupOf(c) === g.k && num(c.amount) > 0); if (!list.length) continue;
+    html += `<section class="card bcard"><div class="row between"><span class="row" style="gap:8px"><i class="sw" style="background:${gcol(g.c)}"></i><b>${esc(g.name)}</b></span><span class="small num"><b>${money(bPlannedGroup(g.k))}</b><span class="muted"> a month</span></span></div>
+      <ul class="klist">${list.sort((a, b) => num(b.amount) - num(a.amount)).map(bBillRow).join("")}</ul></section>`;
+  }
+  html += `<p class="hint" style="text-align:center">Amounts are per month. Tap anything to see its details or edit it.</p>`;
   return html;
 }
 function bTxRow(t, del) {
@@ -3642,6 +3670,9 @@ function bSample() {
     }
   }
   S.bg.tx = tx;
+  const nd = (n) => dstr(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + n));
+  const BILL = { "Rent or mortgage": ["fortnightly", 3, "Bills account", "Direct debit to the agent. Lease renews in June."], "Power, gas and water": ["quarterly", 24, "Credit card", ""], "Phone and internet": ["monthly", 9, "Bills account", "Phone plan and NBN"], Insurance: ["monthly", 12, "Bills account", "Health insurance, hospital and extras"], Subscriptions: ["monthly", 1, "Credit card", "Netflix, Spotify"], "Gym and sport": ["fortnightly", 6, "Everyday account", ""] };
+  for (const c of S.bg.cats) { const b = BILL[c.name]; if (!b) continue; c.billFreq = b[0]; c.billAmt = Math.round((num(c.amount) / BFX[b[0]]) * 100) / 100; c.due = nd(b[1]); c.account = b[2]; c.notes = b[3]; }
   S.bg.goals = [{ id: uid(), name: "Japan trip", target: 6000, by: dstr(new Date(new Date().getFullYear() + 1, 5, 30)), adds: [{ date: bMonthAdd(cur, -3) + "-01", amount: 1800 }, { date: cur + "-01", amount: 400 }] }, { id: uid(), name: "Emergency fund: 3 months", target: 12000, by: dstr(new Date(new Date().getFullYear() + 2, 0, 31)), adds: [{ date: bMonthAdd(cur, -5) + "-01", amount: 4200 }] }];
 }
 
@@ -3653,7 +3684,7 @@ async function budgetClick(a, b) {
     case "bmethod": { const from = S.bg.plan.method, to = b.dataset.v; if (!BMETHODS[to] || from === to) return true; S.bg.plan.method = to; const keys = BMETHODS[to].groups.map((g) => g[0]); const moved = S.bg.cats.filter((c) => !keys.includes(c.group)); for (const c of moved) c.group = bGroupOf(c); render(); await bsavePlan(); for (const c of moved) await bsaveCat(c); return true; }
     case "bstarter": { const list = bStarter(); if (!list.length) { toast("Add your take-home pay first."); return true; } for (const c of list) await bsaveCat(c); render(); toast(`Added ${list.length} categories`); return true; }
     case "baddcat": { const c = { id: uid(), name: "New category", group: b.dataset.g, amount: "", order: S.bg.cats.length }; await bsaveCat(c); render(); const el = document.querySelector(`[data-bc="${c.id}"][data-k="name"]`); if (el) { el.focus(); el.select(); } return true; }
-    case "bdelcat": { const c = S.bg.cats.find((x) => x.id === b.dataset.id); await bdelCat(b.dataset.id); render(); toast(`Removed ${c?.name || "category"}`); return true; }
+    case "bdelcat": { S.bedit = null; const c = S.bg.cats.find((x) => x.id === b.dataset.id); await bdelCat(b.dataset.id); render(); toast(`Removed ${c?.name || "category"}`); return true; }
     case "blink": { const cur = S.bg.cats.find((c) => c.link === "supps"); if (cur) { delete cur.link; await bsaveCat(cur); render(); toast("Supplement spending unlinked"); return true; } let c = S.bg.cats.find((x) => /health|supp|pharm|medic/i.test(x.name)); if (!c) c = { id: uid(), name: "Health and supplements", group: bGroups()[0].k, amount: "", order: S.bg.cats.length }; c.link = "supps"; await bsaveCat(c); render(); toast(`Supplement purchases now count in ${c.name}`); return true; }
     case "bresetask": S.bconfirm = "reset"; render(); return true;
     case "breset": S.bconfirm = null; for (const c of [...S.bg.cats]) await bdelCat(c.id); render(); toast("Categories removed"); return true;
@@ -3667,6 +3698,9 @@ async function budgetClick(a, b) {
     case "bgoalask": S.bconfirm = "add-" + b.dataset.id; render(); document.getElementById("bgadd-" + b.dataset.id)?.focus(); return true;
     case "bgoaladd": { const g = S.bg.goals.find((x) => x.id === b.dataset.id); const v = num(document.getElementById("bgadd-" + b.dataset.id)?.value); if (!g || !v) { toast("Enter an amount."); return true; } g.adds = [...(g.adds || []), { date: today(), amount: v }]; S.bconfirm = null; render(); toast(`${v > 0 ? "Added" : "Took out"} ${money(Math.abs(v), 2)}`); await bsaveGoal(g); return true; }
     case "btrend": S.btrend = b.dataset.m; render(); return true;
+    case "bexp": S.bexp = S.bexp === b.dataset.id ? null : b.dataset.id; S.bedit = null; render(); return true;
+    case "bbilledit": { const c = S.bg.cats.find((x) => x.id === b.dataset.id); if (!c) return true; S.bedit = { id: c.id, name: c.name, billAmt: Math.round(bBillAmt(c) * 100) / 100 || "", billFreq: bBillFreq(c), due: c.due || "", group: bGroupOf(c), account: c.account || "", notes: c.notes || "" }; render(); return true; }
+    case "bbillcancel": S.bedit = null; render(); return true;
     case "bgsample": bSample(); render(); if (store.kind === "db") { await bsavePlan(); for (const c of S.bg.cats) await bsaveCat(c); for (const t of Object.values(S.bg.tx)) await bsaveTx(t); for (const g of S.bg.goals) await bsaveGoal(g); } else blsSave(); toast("Sample budget loaded"); return true;
   }
   return false;
@@ -3675,14 +3709,23 @@ document.addEventListener("input", (e) => {
   const t = e.target;
   if (t.dataset.bt && S.btx) { S.btx[t.dataset.bt] = t.value; S.btx.dirty = true; }
   else if (t.dataset.bgf && S.bgoalForm) S.bgoalForm[t.dataset.bgf] = t.value;
+  else if (t.dataset.bb && S.bedit) S.bedit[t.dataset.bb] = t.value;
 });
 document.addEventListener("change", async (e) => {
   const t = e.target;
   if (t.dataset.bp) { S.bg.plan[t.dataset.bp] = t.value; render(); await bsavePlan(); return; }
-  if (t.dataset.bc) { const c = S.bg.cats.find((x) => x.id === t.dataset.bc); if (!c) return; c[t.dataset.k] = t.dataset.k === "amount" ? (t.value === "" ? "" : num(t.value)) : t.value.trim() || c.name; render(); await bsaveCat(c); return; }
+  if (t.dataset.bc) { const c = S.bg.cats.find((x) => x.id === t.dataset.bc); if (!c) return; c[t.dataset.k] = t.dataset.k === "amount" ? (t.value === "" ? "" : num(t.value)) : t.value.trim() || c.name; if (t.dataset.k === "amount" && BFX[c.billFreq]) c.billAmt = Math.round((num(c.amount) / BFX[c.billFreq]) * 100) / 100; render(); await bsaveCat(c); return; }
   if (t.dataset.bt === "cat" && S.btx) S.btx.cat = t.value;
 });
 document.addEventListener("submit", async (e) => {
+  if (e.target.id === "bbillform") {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const f = S.bedit, c = S.bg.cats.find((x) => x.id === f?.id); if (!c) return;
+    if (!f.name.trim()) { toast("Give it a name."); return; }
+    const freq = BFX[f.billFreq] ? f.billFreq : "monthly", amt = f.billAmt === "" ? 0 : num(f.billAmt);
+    Object.assign(c, { name: f.name.trim(), billAmt: amt, billFreq: freq, amount: Math.round(amt * BFX[freq] * 100) / 100, due: f.due || "", group: f.group || c.group, account: (f.account || "").trim(), notes: f.notes || "" });
+    S.bedit = null; render(); toast(`Saved ${c.name}`); await bsaveCat(c); return;
+  }
   if (e.target.id === "btxform") {
     e.preventDefault(); e.stopImmediatePropagation();
     const f = S.btx, amt = num(f.amount); if (!(amt > 0)) { toast("Enter an amount."); return; }
@@ -3884,20 +3927,10 @@ function nList() {
     if (cy.end && cy.start <= t && cy.end >= t && dDiff(t, cy.end) <= 7) add({ key: `cye:${cy.id}:${cy.end}`, mod: "cycle", sev: "soon", title: `${nm} ends ${nIn(dDiff(t, cy.end))}`, body: `Last day is ${shortD(cy.end)}.`, sort: cy.end, go: { mod: "cycle", tab: "ccycle" } });
   }
 
-  /* Budget: this month's limits, and savings goals */
-  if (S.bg.cats.length) {
-    const mo = bMonthNow(), byC = bByCat(mo), groups = bGroups(), byG = bByGroup(mo);
-    const spendG = groups.filter((g) => !bIsSave(g.k));
-    const planned = spendG.reduce((a, g) => a + bPlannedGroup(g.k), 0), spent = spendG.reduce((a, g) => a + byG[g.k], 0) + (byG.none || 0);
-    const go = { mod: "budget", tab: "btoday", month: mo };
-    if (planned > 0 && spent > planned * 1.001) add({ key: `bt:${mo}`, mod: "budget", sev: "warn", title: `Over budget for ${monthLabel(mo, true)}`, body: `${money(spent)} spent of ${money(planned)}. That’s ${money(spent - planned)} over.`, sort: t, go });
-    for (const c of bCats()) {
-      if (bIsSave(bGroupOf(c))) continue;
-      const p = num(c.amount), sp = byC[c.id] || 0;
-      if (!(p > 0)) continue;
-      if (sp > p * 1.001) add({ key: `bo:${c.id}:${mo}`, mod: "budget", sev: "warn", title: `${c.name} is over its limit`, body: `${money(sp)} of ${money(p)} this month, ${money(sp - p)} over.`, sort: t, go });
-      else if (sp >= p * 0.9) add({ key: `b9:${c.id}:${mo}`, mod: "budget", sev: "soon", title: `${c.name} is nearly used up`, body: `${money(sp)} of ${money(p)} spent. ${money(p - sp)} left this month.`, sort: t, go });
-    }
+  /* Budget: bills coming due, and savings goals */
+  for (const c of S.bg.cats) {
+    const nx = bNextDues(c, 1)[0]; if (!nx) continue; const n = dDiff(t, nx);
+    if (n >= 0 && n <= 3) add({ key: `bdue:${c.id}:${nx}`, mod: "budget", sev: "soon", title: `${c.name} is due ${n === 0 ? "today" : n === 1 ? "tomorrow" : "in " + n + " days"}`, body: `${money(bBillAmt(c), 2)}${c.account ? " from " + c.account : ""} on ${shortD(nx)}.`, sort: nx, go: { mod: "budget", tab: "btoday" } });
   }
   for (const g of S.bg.goals) {
     const tg = num(g.target), sv = bGoalSaved(g); if (!(tg > 0)) continue;
@@ -3961,7 +3994,7 @@ function renderNotif() {
   const unread = vis.filter((o) => !st.read[o.key]).length;
   const order = (a, b) => (!!st.read[a.key] - !!st.read[b.key]) || String(a.sort || "").localeCompare(String(b.sort || "")) || a.title.localeCompare(b.title);
   let body = "";
-  if (!vis.length) body = `<div class="nempty">${BELL}<h3>You’re all caught up</h3><p class="small muted">Things that need your attention show up here: to-dos coming due, products running low, cycle doses, budget limits and goal milestones.</p></div>`;
+  if (!vis.length) body = `<div class="nempty">${BELL}<h3>You’re all caught up</h3><p class="small muted">Things that need your attention show up here: to-dos coming due, products running low, cycle doses, bills coming due and savings goal milestones.</p></div>`;
   else body = NSEV.map(([sev, name]) => { const xs = vis.filter((o) => o.sev === sev).sort(order); return xs.length ? `<section class="ngroup"><span class="eyebrow">${name} · ${xs.length}</span><ul class="nlist">${xs.map((o) => nItem(o, st, false)).join("")}</ul></section>` : ""; }).join("");
   if (S.notifShowDis && dis.length) body += `<section class="ngroup"><span class="eyebrow">Dismissed · ${dis.length}</span><ul class="nlist">${dis.map((o) => nItem(o, st, true)).join("")}</ul></section>`;
   const foot = [dis.length ? `<button class="linkbtn" data-act="nshowdis">${S.notifShowDis ? "Hide dismissed" : `Show dismissed (${dis.length})`}</button>` : "", vis.length ? `<button class="linkbtn" data-act="ndisall">Dismiss all</button>` : "", `<button class="linkbtn" data-act="nsettings">Choose tabs</button>`].filter(Boolean).join("");
