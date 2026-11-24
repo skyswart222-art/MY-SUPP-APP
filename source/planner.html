@@ -853,6 +853,73 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 .ntog .tk { width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid var(--line); display: grid; place-items: center; flex: none; }
 .ntog button[aria-pressed="true"] .tk { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .ntog .tk svg { width: 10px; height: 10px; }
+/* ---------- Today timeline ---------- */
+:root { --d-meal: #1f9d5c; --d-supp: #c98400; --d-comp: #d63a5a; --d-train: #1668e3; --d-sleep: #7b3fe4; --d-habit: #138a96; --d-skin: #c2558f; }
+:root[data-theme="dark"] { --d-meal: #4fd18b; --d-supp: #ffb020; --d-comp: #ff5d7a; --d-train: #3d95ff; --d-sleep: #a66bff; --d-habit: #7fd6e0; --d-skin: #f08cc0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --d-meal: #4fd18b; --d-supp: #ffb020; --d-comp: #ff5d7a; --d-train: #3d95ff; --d-sleep: #a66bff; --d-habit: #7fd6e0; --d-skin: #f08cc0; } }
+.dweek { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.dwd { border: 1px solid transparent; background: var(--sunk); border-radius: 12px; padding: 6px 0 5px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 10px; color: var(--muted); min-width: 0; }
+.dwd b { font-size: 11px; color: var(--ink); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+.dwd i { width: 5px; height: 5px; border-radius: 50%; background: var(--d-comp); margin-top: 2px; }
+.dwd i.off { visibility: hidden; }
+.dwd.is-today span { color: var(--accent); font-weight: 700; }
+.dwd.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.dnow { border-radius: 22px; padding: 16px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, var(--surface)), var(--surface)); box-shadow: 0 0 34px color-mix(in srgb, var(--accent) 16%, transparent); display: flex; flex-direction: column; gap: 6px; }
+.dnow .eyebrow { color: var(--accent); }
+.dnow-tag { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--k); }
+.dnow h2 { font-size: 30px; line-height: 1.05; }
+.dnow p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.dnow-acts { display: flex; gap: 8px; margin-top: 6px; }
+.dnow-go { flex: 1; justify-content: center; padding: 11px 12px; font-weight: 600; }
+.dnow-go svg { width: 16px; height: 16px; }
+.dnow.is-clear { border-color: var(--line); box-shadow: none; background: var(--surface); }
+.dnow.is-clear .eyebrow { color: var(--ok); }
+.drule { align-self: flex-start; display: inline-block; font-size: 11.5px; background: var(--sunk); border-radius: 8px; padding: 3px 8px; margin-top: 2px; }
+.dchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.dchip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--sunk); border-radius: 999px; padding: 6px 11px 6px 7px; font-size: 13px; text-align: left; color: var(--ink); }
+.dchip svg { width: 15px; height: 15px; flex: none; padding: 2px; border-radius: 50%; border: 1.6px solid var(--muted); color: transparent; box-sizing: content-box; }
+.dchip i { font-style: normal; color: var(--muted); font-size: 12px; }
+.dchip.is-done { opacity: .6; }
+.dchip.is-done span { text-decoration: line-through; }
+.dchip.is-done svg { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+.dtodo { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.dstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dstat { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 9px 11px; min-width: 0; }
+.dstat .eyebrow { font-size: 9.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dstat b { font-size: 16px; display: block; margin-top: 2px; }
+.dstat b .muted { font-size: 12px; font-weight: 500; }
+.dbar { height: 4px; border-radius: 4px; background: var(--track); margin-top: 6px; overflow: hidden; }
+.dbar span { display: block; height: 100%; border-radius: 4px; }
+.dtl { position: relative; padding-left: 64px; display: flex; flex-direction: column; gap: 8px; }
+.dtl::before { content: ""; position: absolute; left: 56px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+.dit { position: relative; }
+.dt { position: absolute; left: -66px; width: 52px; top: 12px; text-align: right; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.ddot { position: absolute; left: -13.5px; top: 14px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--k); background: var(--bg); }
+.dit.is-done .ddot { background: var(--k); }
+.dcard { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--k); border-radius: 14px; padding: 9px 11px; display: flex; flex-direction: column; gap: 5px; }
+.dit.is-done .dcard, .dit.is-skip .dcard { opacity: .5; }
+.dit.is-cur .dcard { border-color: color-mix(in srgb, var(--accent) 60%, transparent); border-left-color: var(--k); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 14%, transparent); }
+.dit.is-cur .dt { color: var(--accent); font-weight: 600; }
+.dit.is-mark .dcard { background: transparent; border-style: dashed; border-left-style: solid; }
+.dbody { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.dbody[disabled] { cursor: default; }
+.dtag { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--k); }
+.dbody b { font-family: var(--font-head); font-weight: 400; font-size: 20px; line-height: 1.15; -webkit-text-stroke: 0.018em currentColor; }
+.dit.is-done .dbody b { text-decoration: line-through; text-decoration-thickness: 1px; }
+.dsub { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.dtick { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--muted); background: transparent; display: grid; place-items: center; color: transparent; padding: 0; }
+.dtick svg { width: 15px; height: 15px; }
+.dtick.is-done { background: var(--k); border-color: var(--k); color: var(--bg); }
+.dnowline { position: relative; height: 0; border-top: 2px solid var(--accent); margin: 2px 0 2px -10px; }
+.dnowline span { position: absolute; left: -56px; top: -9px; font-size: 10.5px; font-weight: 600; color: var(--accent); background: var(--bg); padding: 0 3px; border-radius: 4px; }
+.dleg { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.dleg span { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--muted); }
+.dleg i { width: 9px; height: 9px; border-radius: 3px; background: var(--k); }
+.danc, .dtog { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.danc:first-of-type, .dtog:first-of-type { border-top: 0; }
+.danc b, .dtog b { display: block; font-weight: 600; }
+.danc input[type=time] { font-family: var(--font-data); font-size: 15px; background: var(--sunk); border: 1px solid var(--line); border-radius: 10px; padding: 7px 9px; color: var(--ink); }
+.dtog input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 </style>
 
 <header class="top">
@@ -874,6 +941,7 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 
 /* ---------- Plans registry: new modules slot in here ---------- */
 const MODULES = [
+  { id: "day", name: "Today", ready: true },
   { id: "supplements", name: "Supplements", ready: true },
   { id: "workouts", name: "Workouts", ready: true },
   { id: "meals", name: "Meals", ready: true },
@@ -886,7 +954,7 @@ const MODULES = [
 /* The person's own order for the tabs at the top, saved with their settings (and on the phone for a fast start). */
 function modOrdered() {
   let o = S.settings?.modOrder; if (!Array.isArray(o)) { try { o = JSON.parse(localStorage.getItem("planner.modorder") || "null"); } catch { o = null; } }
-  const ids = (Array.isArray(o) ? o : []).filter((id) => MODULES.some((m) => m.id === id));
+  const ids = (Array.isArray(o) ? o : []).filter((id) => MODULES.some((m) => m.id === id)); if (!ids.includes("day")) ids.unshift("day");
   return [...ids, ...MODULES.map((m) => m.id).filter((id) => !ids.includes(id))].map((id) => MODULES.find((m) => m.id === id));
 }
 function modOrderSheet() {
@@ -1078,7 +1146,7 @@ async function initStore() {
   let id = null;
   if (db && user) { try { id = await user.id(); } catch { id = null; } }
   if (!db || !id) {
-    lsLoad(); mlsLoad(); wlsLoad(); clsLoad(); plsLoad(); klsLoad(); blsLoad(); tlsLoad(); vlsLoad(); S.mode = "local"; store.kind = "local";
+    lsLoad(); mlsLoad(); wlsLoad(); clsLoad(); plsLoad(); klsLoad(); blsLoad(); tlsLoad(); vlsLoad(); dlsLoad(); S.mode = "local"; store.kind = "local";
     setSync("Saved on this device only");
     render(); return;
   }
@@ -1095,6 +1163,7 @@ async function initStore() {
   binitDb(db, id);
   tinitDb(db, id);
   vinitDb(db, id);
+  dinitDb(db, id);
   store.settings.onSnapshot((snap) => { if (snap.exists) { S.settings = { ...S.settings, ...snap.data() }; softRender(); } }, () => {});
   let loaded = false;
   const timer = setTimeout(() => { if (!loaded) { setSync("Still connecting…"); } }, 10000);
@@ -1528,7 +1597,8 @@ async function removeExamples() { for (const s of S.supps.filter((x) => x.exampl
 const SUN = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
 const GEAR = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
-const MODSHORT = { supplements: "Supps" };
+const MODSHORT = { supplements: "Supps", workouts: "Gym", skincare: "Skin", progress: "Body" };
+const DAYICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
 const CHUP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
 const CHDN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 S.hdrMin = false; try { S.hdrMin = localStorage.getItem("planner.hdrmin") === "1"; } catch {}
@@ -1542,7 +1612,7 @@ function paintHdrTog() {
   t.innerHTML = S.hdrMin ? `<span class="ic">${MODICON[S.module] || ""}</span><span>${esc(m?.name || "")}</span>${nu ? `<i class="nbdot"></i>` : ""}${CHDN}` : CHUP;
   if (nu) t.setAttribute("aria-label", `Show sections (now in ${m?.name || ""}). ${plural(nu, "new notification")}`);
 }
-const MODICON = { supplements: I.stock, workouts: I.dumbbell, meals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 7v3H17"/></svg>', progress: I.scale, skincare: I.drop, cycle: I.vial, budget: I.wallet, todo: I.list };
+const MODICON = { day: DAYICON, supplements: I.stock, workouts: I.dumbbell, meals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 7v3H17"/></svg>', progress: I.scale, skincare: I.drop, cycle: I.vial, budget: I.wallet, todo: I.list };
 function renderChrome() {
   document.documentElement.setAttribute("data-mod", S.module);
   const tb = $("#themebtn");
@@ -1551,7 +1621,13 @@ function renderChrome() {
   const mods = modOrdered(), cols = Math.max(4, Math.ceil(mods.length / 2));
   const tile = (m) => `<button class="mt" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" aria-label="${esc(m.name)}">${MODICON[m.id] || I.list}<span>${esc(MODSHORT[m.id] || m.name)}</span></button>`;
   paintHdrTog();
-  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - 18px) / 4), 1fr))">${mods.map(tile).join("")}</div><div class="mside">${nBellBtn()}<button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button></div>`;
+  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - ${(Math.min(cols, 5) - 1) * 6}px) / ${Math.min(cols, 5)}), 1fr))">${mods.map(tile).join("")}</div><div class="mside">${nBellBtn()}<button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button></div>`;
+  if (S.module === "day") {
+    const dt = [["dday", "Today", I.today], ["dsetup", "My day", I.target]];
+    $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
+    $("#tabs").innerHTML = dt.map(([id, label, ic]) => `<button class="tab" data-act="dtab" data-tab="${id}" ${S.dtab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+    return;
+  }
   if (S.module === "todo") {
     const tt = [["tlist", "List", I.list], ["tmonth", "Month", I.calendar], ["tvoice", "Voice", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>']];
     $("#tabs").style.gridTemplateColumns = "repeat(3, 1fr)";
@@ -1606,6 +1682,7 @@ function render() {
   const v = $("#view");
   if (S.mode === "loading") return;
   if (S.mode === "error") { v.innerHTML = `<div class="card empty"><h3>Your saved data didn't load</h3><p>Reload the page to try again.</p></div>`; return; }
+  if (S.module === "day") { v.innerHTML = dayView(); renderOverlay(); return; }
   if (S.module === "meals") { v.innerHTML = mealView(); renderOverlay(); return; }
   if (S.module === "workouts") { v.innerHTML = workoutView(); renderOverlay(); return; }
   if (S.module === "cycle") { v.innerHTML = cycleView(); renderOverlay(); return; }
@@ -1616,7 +1693,7 @@ function render() {
   v.innerHTML = S.tab === "today" ? viewToday() : S.tab === "totals" ? viewTotals() : S.tab === "stock" ? viewStock() : S.tab === "spend" ? viewSpend() : S.tab === "simport" ? suppImport() : viewAdd();
   renderOverlay();
 }
-function softRender() { if (S.module === "todo") { tsoft(); return; } if (S.module === "budget") { bsoft(); return; } if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail || S.mtab === "mimport") { renderChrome(); return; } render(); return; } if ((S.tab === "add" && S.form) || S.tab === "simport") { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
+function softRender() { if (S.module === "day") { dsoft(); return; } if (S.module === "todo") { tsoft(); return; } if (S.module === "budget") { bsoft(); return; } if (S.module === "workouts") { wsoft(); return; } if (S.module === "cycle") { csoft(); return; } if (S.module === "progress") { psoft(); return; } if (S.module === "skincare") { ksoft(); return; } if (S.module === "meals") { if (S.mealAdd || S.mtargetsForm || S.detail || S.mtab === "mimport") { renderChrome(); return; } render(); return; } if ((S.tab === "add" && S.form) || S.tab === "simport") { renderChrome(); return; } if (S.zoom) { renderChrome(); return; } render(); }
 
 function emptyState() {
   return `<div class="card empty">${I.bottle}<h3>Your stack goes here</h3>
@@ -2175,8 +2252,8 @@ const MDEFAULT = {
     { id: "meal1", name: "Meal 1", time: "07:00" },
   ],
 };
-S.module = "supplements"; S.mtab = "mtoday";
-try { const m = localStorage.getItem("planner.module"); if (["meals", "workouts", "cycle", "progress", "skincare", "budget", "todo"].includes(m)) S.module = m; const t = localStorage.getItem("planner.mtab"); if (["mtoday", "mplan", "mweek", "mfoods", "mtargets", "mimport"].includes(t)) S.mtab = t; } catch {}
+S.module = "day"; S.mtab = "mtoday";
+try { const t = localStorage.getItem("planner.mtab"); if (["mtoday", "mplan", "mweek", "mfoods", "mtargets", "mimport"].includes(t)) S.mtab = t; } catch {}
 S.meals = { days: {}, foods: [], settings: JSON.parse(JSON.stringify(MDEFAULT)) };
 S.mealAdd = null; S.mtargetsForm = null;
 const mImpBlank = () => ({ busy: false, msg: "", kind: "", text: "", files: [], result: null, day: 0, saveDays: true, useTargets: true, summary: "" });
@@ -2195,7 +2272,7 @@ function minitDb(db, id) {
   mstore.foods.onSnapshot((snap) => { S.meals.foods = snap.docs.map((d) => ({ ...d.data(), id: d.id })); msoft(); }, () => {});
   mstore.settings.onSnapshot((snap) => { if (snap.exists) { S.meals.settings = { ...S.meals.settings, ...snap.data() }; msoft(); } }, () => {});
 }
-function msoft() { if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm || S.mrename || S.msave || S.mtab === "mimport") { renderChrome(); return; } render(); }
+function msoft() { if (S.module === "day") { dsoft(); return; } if (S.module !== "meals") return; if (S.mealAdd || S.mtargetsForm || S.mrename || S.msave || S.mtab === "mimport") { renderChrome(); return; } render(); }
 async function msaveDay(date) {
   const d = S.meals.days[date] || { date, entries: [] };
   if (store.kind === "db" && mstore.days) return queued("md/" + date, () => mstore.days.doc(date).set({ date, entries: JSON.parse(JSON.stringify(d.entries)) }));
@@ -2748,7 +2825,7 @@ function winitDb(db, id) {
   wstore.plans.onSnapshot((snap) => { S.wo.plans = snap.docs.map((d) => ({ ...d.data(), id: d.id })); wsoft(); }, () => {});
   wstore.sessions.orderBy("date", "desc").limit(90).onSnapshot((snap) => { const ss = {}; snap.docs.forEach((d) => { ss[d.id] = { ...d.data(), date: d.id }; }); S.wo.sessions = ss; wsoft(); }, () => {});
 }
-function wsoft() { if (S.module !== "workouts") return; const ae = document.activeElement?.dataset || {}; if (S.wplanForm || S.cdPlanForm || ae.cd != null || ae.cdp != null || ae.cdgoal != null || ae.wsk != null || ae.wmax != null || ae.w1 != null) { renderChrome(); return; } render(); }
+function wsoft() { if (S.module === "day") { dsoft(); return; } if (S.module !== "workouts") return; const ae = document.activeElement?.dataset || {}; if (S.wplanForm || S.cdPlanForm || ae.cd != null || ae.cdp != null || ae.cdgoal != null || ae.wsk != null || ae.wmax != null || ae.w1 != null) { renderChrome(); return; } render(); }
 async function wsavePlan(p) {
   const i = S.wo.plans.findIndex((x) => x.id === p.id); if (i >= 0) S.wo.plans[i] = p; else S.wo.plans.push(p);
   if (store.kind === "db" && wstore.plans) return queued("wp/" + p.id, () => wstore.plans.doc(p.id).set(JSON.parse(JSON.stringify(p))));
@@ -3200,7 +3277,7 @@ function cinitDb(db, id) {
   cstore.panels.onSnapshot((snap) => { S.cy.panels = snap.docs.map((d) => ({ ...d.data(), id: d.id })); csoft(); }, () => {});
   cstore.settings.onSnapshot((snap) => { if (snap.exists) { S.cy.settings = { cycles: [], review: null, ...snap.data() }; csoft(); } }, () => {});
 }
-function csoft() { if (S.module !== "cycle") return; const a = document.activeElement; if (S.cform || S.cycForm || S.bimp.form || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+function csoft() { if (S.module === "day") { dsoft(); return; } if (S.module !== "cycle") return; const a = document.activeElement; if (S.cform || S.cycForm || S.bimp.form || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
 const cjson = (o) => JSON.parse(JSON.stringify(o));
 async function csaveComp(c) { const i = S.cy.compounds.findIndex((x) => x.id === c.id); if (i >= 0) S.cy.compounds[i] = c; else S.cy.compounds.push(c); if (store.kind === "db" && cstore.compounds) return queued("cc/" + c.id, () => cstore.compounds.doc(c.id).set(cjson(c))); clsSave(); }
 async function cdelComp(id) { S.cy.compounds = S.cy.compounds.filter((x) => x.id !== id); if (store.kind === "db" && cstore.compounds) return queued("cc/" + id, () => cstore.compounds.doc(id).delete()); clsSave(); }
@@ -3945,7 +4022,7 @@ function kinitDb(db, id) {
   kstore.products.onSnapshot((snap) => { S.sk.products = snap.docs.map((d) => ({ ...d.data(), id: d.id })); ksoft(); }, () => {});
   kstore.days.orderBy("date", "desc").limit(120).onSnapshot((snap) => { const dd = {}; snap.docs.forEach((d) => { dd[d.id] = { done: {}, ...d.data(), date: d.id }; }); S.sk.days = dd; ksoft(); }, () => {});
 }
-function ksoft() { if (S.module !== "skincare") return; const a = document.activeElement; if (S.kform || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+function ksoft() { if (S.module === "day") { dsoft(); return; } if (S.module !== "skincare") return; const a = document.activeElement; if (S.kform || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
 async function ksaveProd(x) { const i = S.sk.products.findIndex((y) => y.id === x.id); if (i >= 0) S.sk.products[i] = x; else S.sk.products.push(x); if (store.kind === "db" && kstore.products) return queued("kp/" + x.id, () => kstore.products.doc(x.id).set(cjson(x))); klsSave(); }
 async function kdelProd(id) { S.sk.products = S.sk.products.filter((x) => x.id !== id); if (store.kind === "db" && kstore.products) return queued("kp/" + id, () => kstore.products.doc(id).delete()); klsSave(); }
 async function ksaveDay(date) { const d = S.sk.days[date] || { date, done: {} }; if (store.kind === "db" && kstore.days) return queued("kd/" + date, () => kstore.days.doc(date).set(cjson({ date, done: d.done }))); klsSave(); }
@@ -4556,7 +4633,7 @@ function tinitDb(db, id) {
   tstore.items = db.collection(`data/users/${id}/todo/items`);
   tstore.items.onSnapshot((snap) => { S.td.items = snap.docs.map((d) => ({ ...d.data(), id: d.id })); tsoft(); }, () => {});
 }
-function tsoft() { if (S.module !== "todo") return; if (S.ttab === "tvoice") { vsoft(); return; } const a = document.activeElement; if (S.tedit || (S.ttab === "timport" && S.timp?.result) || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
+function tsoft() { if (S.module === "day") { dsoft(); return; } if (S.module !== "todo") return; if (S.ttab === "tvoice") { vsoft(); return; } const a = document.activeElement; if (S.tedit || (S.ttab === "timport" && S.timp?.result) || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { renderChrome(); return; } render(); }
 async function tsave(x) { const i = S.td.items.findIndex((y) => y.id === x.id); if (i >= 0) S.td.items[i] = x; else S.td.items.push(x); if (store.kind === "db" && tstore.items) return queued("td/" + x.id, () => tstore.items.doc(x.id).set(cjson(x))); tlsSave(); }
 async function tdel(id) { S.td.items = S.td.items.filter((x) => x.id !== id); if (store.kind === "db" && tstore.items) return queued("td/" + id, () => tstore.items.doc(id).delete()); tlsSave(); }
 
@@ -5269,11 +5346,227 @@ function scrollToNow() {
 let toastT;
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2600); }
 
+/* ---------- Today: the whole day on one timeline, laid out by the Playbook ---------- */
+/* Pulls supplements, compounds, meals, training, skincare and to-dos into one list in time order.
+   Wake, training and bed times anchor the Playbook's habits (morning walk, kitchen closed, lights out)
+   and label each meal by where it sits around training. Doses and times always come from the person's own entries. */
+S.dtab = "dday"; S.dd = { days: {} };
+const DAY_DEF = { wake: "06:00", train: "17:00", bed: "22:00", habits: { walk: true, after: true, kitchen: true, lights: true } };
+const dstore = {};
+const DLS = "planner.today.v1";
+function dlsLoad() { try { const d = JSON.parse(localStorage.getItem(DLS) || "{}"); if (d.days) S.dd.days = d.days; } catch {} }
+function dlsSave() { try { localStorage.setItem(DLS, JSON.stringify(S.dd)); } catch {} }
+function dinitDb(db, id) {
+  dstore.days = db.collection(`data/users/${id}/today/days`);
+  dstore.days.orderBy("date", "desc").limit(60).onSnapshot((snap) => { const days = {}; snap.docs.forEach((d) => { const v = d.data(); days[d.id] = { date: d.id, done: v.done || {} }; }); S.dd.days = days; dsoft(); }, () => {});
+}
+function dsoft() { if (S.module !== "day") return; const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { renderChrome(); return; } render(); }
+async function dsaveDay(date) {
+  const d = S.dd.days[date] || { date, done: {} };
+  if (store.kind === "db" && dstore.days) return queued("dd/" + date, () => dstore.days.doc(date).set({ date, done: { ...d.done } }));
+  dlsSave();
+}
+const dcfg = () => { const c = S.settings?.day || {}; return { ...DAY_DEF, ...c, habits: { ...DAY_DEF.habits, ...(c.habits || {}) } }; };
+const dmin = (t) => { const [h, m] = String(t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+const dhm = (n) => { n = ((Math.round(n) % 1440) + 1440) % 1440; return `${pad(Math.floor(n / 60))}:${pad(n % 60)}`; };
+const dflag = (date, k) => S.dd.days[date]?.done?.[k];
+const nowHM = () => `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
+const DCOL = { meal: "var(--d-meal)", supp: "var(--d-supp)", comp: "var(--d-comp)", train: "var(--d-train)", sleep: "var(--d-sleep)", habit: "var(--d-habit)", skin: "var(--d-skin)" };
+const DLEG = [["meal", "Food"], ["supp", "Supps"], ["comp", "Compounds"], ["train", "Training"], ["skin", "Skin"], ["sleep", "Sleep"], ["habit", "Habits"]];
+const GHRX = /\b(gh|hgh|somatropin|growth hormone|tesamorelin|ipamorelin|cjc|mk-?677)\b/i;
+
+/* Everything on the day, in time order. Each item: key, time, kind, tag, title, sub, chips, done, tick (what Done does), go (where tapping goes). */
+function dItems(date) {
+  const C = dcfg(), H = C.habits, out = [], wake = dmin(C.wake), train = dmin(C.train), bed = dmin(C.bed) || 1440;
+  const plans = wplansFor(date), trainDay = plans.length > 0;
+  /* Supplements, grouped by their time */
+  const taken = S.days[date]?.taken || {}, byT = new Map();
+  for (const x of dosesFor(date)) { if (!byT.has(x.time)) byT.set(x.time, []); byT.get(x.time).push(x); }
+  /* Meals: Playbook labels from where each meal sits around training */
+  const slots = mslots(), plan = mplan(), logged = new Set(mentries(date).map((e) => e.meal));
+  const pre = trainDay ? slots.filter((s) => dmin(s.time) < train && dmin(s.time) >= train - 240).slice(-1)[0] : null;
+  const post = trainDay ? slots.find((s) => dmin(s.time) > train && dmin(s.time) <= train + 180) : null;
+  const last = slots[slots.length - 1];
+  slots.forEach((sl, i) => {
+    const items = plan[sl.id] || [], p = msum(items), k = "meal:" + sl.id;
+    let tag = sl.name, rule = "";
+    const named = /train|work ?out|gym/i.test(sl.name);
+    if (i === 0) rule = "Protein first, 40 to 50 g. Then veg, then carbs";
+    if (pre && sl.id === pre.id) { tag = named ? sl.name : `${sl.name} · pre-training`; rule = "Carbs here to fuel training"; }
+    else if (post && sl.id === post.id) { tag = named ? sl.name : `${sl.name} · post-training`; rule = "Biggest carb meal of the day"; }
+    else if (slots.length > 1 && sl.id === last.id) rule = "Low carb. Finish 2 to 3 hours before bed";
+    out.push({ key: k, time: sl.time, kind: "meal", tag, title: items.length ? items.map((e) => e.name).slice(0, 3).join(", ") + (items.length > 3 ? ` +${items.length - 3}` : "") : sl.name,
+      sub: items.length && p.protein ? `${Math.round(p.protein)} g protein` : "", rule,
+      done: !!dflag(date, k) || logged.has(sl.id), tick: { act: "dydone", key: k }, go: { mod: "meals" } });
+  });
+  const suppChips = (list) => list.map((x) => ({ label: x.s.name, sub: amountStr(x.servings * num(x.s.servingSize, 1), x.s.unit), done: taken[x.key] != null, attrs: `data-act="dose" data-key="${esc(x.key)}"` }));
+  for (const m of out.filter((x) => x.kind === "meal")) {
+    const list = byT.get(m.time); if (!list) continue; byT.delete(m.time);
+    m.tag += " + stack"; m.chips = suppChips(list); m.mealDone = m.done; m.done = m.done && list.every((x) => taken[x.key] != null); m.tick = { act: "dymeal", key: m.key, t: m.time };
+  }
+  for (const [t, list] of byT) {
+    const k = "supp:" + t, open = list.filter((x) => taken[x.key] == null).length;
+    out.push({ key: k, time: t, kind: "supp", tag: "Supplements", title: list.length === 1 ? list[0].s.name : `${list.length} supplements`,
+      sub: list.length === 1 ? amountStr(list[0].servings * num(list[0].s.servingSize, 1), list[0].s.unit) : "", chips: list.length > 1 ? suppChips(list) : null,
+      done: open === 0, tick: { act: "dysupp", key: t }, go: { mod: "supplements" } });
+  }
+  /* Compounds: each on its own line, at its own time (or the Playbook default: morning, GH just before bed) */
+  for (const c of S.cy.compounds.filter((c) => cDue(c, date) || cTaken(c.id, date))) {
+    const gh = GHRX.test(c.name), t = c.time || dhm(gh ? bed - 5 : wake + 60);
+    const amt = cAmt(c) > 0 ? ` · ${cAmtTxt(c)}` : "";
+    out.push({ key: "comp:" + c.id, time: t, kind: "comp", tag: gh ? "Compound · before bed, fasted" : "Compound", title: c.name, sub: `${fmtN(num(c.dose), 1)} ${cU(c)}${amt}${c.time ? "" : " · set a time in Cycle"}`,
+      rule: gh ? "2 hours after your last meal" : c.kind === "inj" ? "Same time every time" : "",
+      done: !!cTaken(c.id, date), tick: { act: "ctake", id: c.id }, go: { mod: "cycle" } });
+  }
+  /* Training at the training time */
+  const ws = S.wo.sessions[date];
+  for (const p of plans) {
+    const ex = p.exercises || [], sets = ex.reduce((a, e) => a + Math.max(1, Math.round(num(e.sets, 1))), 0), k = "train:" + p.id;
+    out.push({ key: k, time: C.train, kind: "train", tag: "Train", title: p.name, sub: `${plural(ex.length, "exercise")} · ${plural(sets, "set")}`, rule: "Up in weight only at 12 perfect reps",
+      done: !!dflag(date, k) || !!ws?.finished?.[p.id], tick: { act: "dydone", key: k }, go: { mod: "workouts" } });
+  }
+  /* Skincare: morning after waking, night before bed */
+  for (const [slot, t, nm] of [["am", wake + 10, "Morning skincare"], ["pm", bed - 45, "Night skincare"]]) {
+    const r = kRoutine(date, slot); if (!r.length) continue;
+    out.push({ key: "skin:" + slot, time: dhm(t), kind: "skin", tag: "Skincare", title: nm,
+      chips: r.map((x) => ({ label: x.name, done: !!kDone(date, x.id, slot), attrs: `data-act="ktick" data-id="${x.id}" data-slot="${slot}"` })),
+      done: r.every((x) => kDone(date, x.id, slot)), tick: { act: "dyskin", key: slot }, go: { mod: "skincare" } });
+  }
+  /* Playbook habits */
+  if (H.walk) out.push({ key: "h:walk", time: dhm(wake + 15), kind: "habit", tag: "Morning", title: "Brisk walk, 45 min", sub: "Steps before any scheduled cardio", done: !!dflag(date, "h:walk"), tick: { act: "dydone", key: "h:walk" } });
+  if (H.after && slots.length) { const big = slots.length > 1 ? last : slots[0]; out.push({ key: "h:after", time: dhm(dmin(big.time) + 30), kind: "habit", tag: "After " + big.name, title: "10 min walk", sub: "Cuts the blood sugar spike by about a third", done: !!dflag(date, "h:after"), tick: { act: "dydone", key: "h:after" } }); }
+  if (H.kitchen) out.push({ key: "h:kitchen", time: dhm(bed - 120), kind: "sleep", tag: "Kitchen closed", title: "No food from here", sub: "2 to 3 hours before bed keeps insulin down overnight", marker: true });
+  if (H.lights) out.push({ key: "h:lights", time: C.bed, kind: "sleep", tag: "Lights out", title: "Cold room, eye mask", sub: "16 to 18°C · 7 to 9 hours", done: !!dflag(date, "h:lights"), tick: { act: "dydone", key: "h:lights" } });
+  const ord = { habit: 0, skin: 1, comp: 2, meal: 3, supp: 4, train: 5, sleep: 6 };
+  return out.map((x) => ({ ...x, skipped: dflag(date, x.key) === "skip" })).sort((a, b) => a.time.localeCompare(b.time) || ord[a.kind] - ord[b.kind]);
+}
+/* The one thing to do now: the earliest thing still open that's due, otherwise the next one coming up */
+function dNow(items, date) {
+  const open = items.filter((x) => !x.marker && !x.done && !x.skipped);
+  if (date !== today()) return { cur: null, open };
+  const n = nowHM();
+  return { cur: open.find((x) => x.time <= n) || open[0] || null, open };
+}
+function dChips(x) {
+  return x.chips ? `<div class="dchips">${x.chips.map((c) => `<button class="dchip ${c.done ? "is-done" : ""}" ${c.attrs} aria-pressed="${c.done}">${I.check}<span>${esc(c.label)}${c.sub ? ` <i>${esc(c.sub)}</i>` : ""}</span></button>`).join("")}</div>` : "";
+}
+function dTickBtn(x, big) {
+  const t = x.tick; if (!t) return "";
+  const at = `data-act="${t.act}" ${t.key ? `data-key="${esc(t.key)}"` : ""} ${t.id ? `data-id="${esc(t.id)}"` : ""} ${t.t ? `data-t="${esc(t.t)}"` : ""}`;
+  return big ? `<button class="btn primary dnow-go" ${at}>${I.check}<span>Done${x.chips ? ", all of it" : ""}</span></button>`
+    : `<button class="dtick ${x.done ? "is-done" : ""}" ${at} aria-pressed="${x.done}" aria-label="${x.done ? "Done. Tap to undo" : "Mark done"}: ${esc(x.title)}">${I.check}</button>`;
+}
+function dayView() { return S.dtab === "dsetup" ? daySetup() : dayToday(); }
+function dayToday() {
+  const date = S.date, isToday = date === today(), d = parseD(date), C = dcfg();
+  const items = dItems(date), { cur, open } = dNow(items, date);
+  const tickable = items.filter((x) => !x.marker), doneN = tickable.filter((x) => x.done).length;
+  const plans = wplansFor(date), shot = S.cy.compounds.some((c) => cDue(c, date));
+  const title = isToday ? "Today" : date === addDays(today(), -1) ? "Yesterday" : date === addDays(today(), 1) ? "Tomorrow" : DOW[d.getDay()];
+  let html = `<div class="ov-head"><button class="iconbtn" data-act="day" data-n="-1" aria-label="Previous day">${I.left}</button>
+    <div class="grow"><div class="eyebrow">${esc(d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" }))}</div><h2 class="ov-title">${title}</h2></div>
+    ${isToday ? "" : `<button class="btn sm" data-act="day" data-n="0">Today</button>`}
+    <button class="iconbtn" data-act="day" data-n="1" aria-label="Next day">${I.right}</button></div>`;
+  /* The week at a glance: training day names and shot days */
+  const mon = addDays(date, -((d.getDay() + 6) % 7));
+  html += `<div class="dweek">${[0, 1, 2, 3, 4, 5, 6].map((i) => { const x = addDays(mon, i), ps = wplansFor(x), sh = S.cy.compounds.some((c) => cDue(c, x));
+    return `<button class="dwd ${x === date ? "is-on" : ""} ${x === today() ? "is-today" : ""}" data-act="dygo" data-date="${x}"><span>${DOW[parseD(x).getDay()].slice(0, 1)}</span><b>${esc(ps.length ? ps[0].name.split(/[\s·,(]/)[0].slice(0, 6) : "Rest")}</b><i class="${sh ? "" : "off"}"></i></button>`; }).join("")}</div>`;
+  const tags = [plans.length ? `<b>${esc(plans.map((p) => p.name).join(" + "))}</b>` : "Rest day", shot ? "Shot day" : ""].filter(Boolean).join(" · ");
+  if (!tickable.length) {
+    return html + `<div class="card empty"><h3>Your day lives here</h3><p>Everything you add in Supplements, Cycle, Meals, Workouts and Skincare shows up here in time order, with the Playbook's habits around it.</p>
+      <div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="dtab" data-tab="dsetup">Set my wake, training and bed times</button></div></div>`;
+  }
+  /* Now card */
+  if (cur) {
+    const late = isToday && cur.time < nowHM(), mins = dmin(cur.time) - dmin(nowHM());
+    const when = !isToday ? fmtTime(cur.time) : late ? `${fmtTime(cur.time)} · due` : `${fmtTime(cur.time)} · in ${mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60 ? (mins % 60) + " min" : ""}` : mins + " min"}`;
+    html += `<section class="dnow" style="--k:${DCOL[cur.kind]}"><div class="row between"><span class="eyebrow">${isToday ? (late ? "Now" : "Up next") : "First up"} · ${esc(when)}</span><span class="dnow-tag">${esc(cur.tag)}</span></div>
+      <h2>${esc(cur.title)}</h2>${cur.sub ? `<p>${esc(cur.sub)}</p>` : ""}${cur.rule ? `<span class="drule">${esc(cur.rule)}</span>` : ""}${dChips(cur)}
+      <div class="dnow-acts">${dTickBtn(cur, true)}${cur.go ? `<button class="btn" data-act="dyopen" data-mod="${cur.go.mod}">Open</button>` : ""}<button class="btn" data-act="dyskip" data-key="${esc(cur.key)}">Skip</button></div></section>`;
+  } else if (isToday || date < today()) {
+    html += `<section class="dnow is-clear"><span class="eyebrow">${isToday ? "That's everything" : "Day closed"}</span><h2>${doneN === tickable.length ? "All done. Nice work." : "Nothing left open."}</h2><p>${isToday ? `Lights out at ${esc(fmtTime(C.bed))}.` : ""}</p></section>`;
+  }
+  /* Quick stats */
+  const T = mtargets(), logd = new Set(mentries(date).map((e) => e.meal));
+  /* Meals ticked here without being logged count what was planned for them */
+  const prot = mPlanMode() ? msum(slots2all()).protein : msum(mentries(date)).protein + mslots().filter((sl) => !logd.has(sl.id) && dflag(date, "meal:" + sl.id) === true).reduce((a, sl) => a + msum(mplan()[sl.id] || []).protein, 0);
+  const shotsDue = S.cy.compounds.filter((c) => cDue(c, date) || cTaken(c.id, date)), shotsDone = shotsDue.filter((c) => cTaken(c.id, date)).length;
+  const bar = (v, t, col) => `<div class="dbar"><span style="width:${t ? Math.min(100, (v / t) * 100) : 0}%;background:${col}"></span></div>`;
+  html += `<div class="dstats"><div class="dstat"><span class="eyebrow">Day</span><b class="num">${doneN}/${tickable.length}</b>${bar(doneN, tickable.length, "var(--accent)")}</div>
+    <div class="dstat"><span class="eyebrow">Protein${mPlanMode() ? " planned" : ""}</span><b class="num">${Math.round(prot)}<span class="muted">/${Math.round(T.protein)} g</span></b>${bar(prot, T.protein, "var(--d-meal)")}</div>
+    <div class="dstat"><span class="eyebrow">${esc(tags.includes("Shot") || shotsDue.length ? "Doses" : "Training")}</span><b class="num">${shotsDue.length ? `${shotsDone}/${shotsDue.length}` : plans.length ? "Yes" : "Rest"}</b>${shotsDue.length ? bar(shotsDone, shotsDue.length, "var(--d-comp)") : bar(0, 1, "transparent")}</div></div>`;
+  /* To-dos due by this day */
+  const td = S.td.items.filter((x) => (!x.done || x.doneAt === date) && x.due && x.due <= date && (isToday || x.due === date)).sort((a, b) => (a.done - b.done) || TPRIS.indexOf(a.pri) - TPRIS.indexOf(b.pri));
+  if (td.length) html += `<section class="card dtodo"><div class="row between"><span class="eyebrow">To-do${isToday ? " today" : ""}</span><button class="linkbtn" data-act="dyopen" data-mod="todo">All</button></div>${td.slice(0, 5).map((x) => `<button class="dchip ${x.done ? "is-done" : ""}" data-act="ttoggle" data-id="${x.id}" aria-pressed="${!!x.done}">${I.check}<span>${esc(x.text)}${x.due < date ? ` <i class="warntxt">overdue</i>` : ""}</span></button>`).join("")}</section>`;
+  /* Timeline */
+  const n = nowHM();
+  let nowDrawn = !isToday;
+  html += `<div class="dtl">`;
+  for (const x of items) {
+    if (!nowDrawn && x.time > n) { html += `<div class="dnowline"><span class="num">${esc(fmtTime(n))}</span></div>`; nowDrawn = true; }
+    const isCur = cur && x.key === cur.key;
+    html += `<div class="dit ${x.done ? "is-done" : ""} ${x.skipped ? "is-skip" : ""} ${isCur ? "is-cur" : ""} ${x.marker ? "is-mark" : ""}" style="--k:${DCOL[x.kind]}"><span class="dt num">${esc(fmtTime(x.time).replace(" ", " "))}</span><i class="ddot"></i>
+      <div class="dcard"><div class="row between" style="gap:10px;align-items:flex-start"><button class="dbody" ${x.go ? `data-act="dyopen" data-mod="${x.go.mod}"` : "disabled"}><span class="dtag">${esc(x.tag)}${x.skipped ? " · skipped" : ""}</span><b>${esc(x.title)}</b>${x.sub ? `<span class="dsub">${esc(x.sub)}</span>` : ""}</button>${x.marker ? "" : dTickBtn(x)}</div>
+      ${x.rule && !x.done ? `<span class="drule">${esc(x.rule)}</span>` : ""}${x.chips && !x.done ? dChips(x) : ""}</div></div>`;
+  }
+  if (!nowDrawn) html += `<div class="dnowline"><span class="num">${esc(fmtTime(n))}</span></div>`;
+  html += `</div><div class="dleg">${DLEG.filter(([k]) => items.some((x) => x.kind === k)).map(([k, n]) => `<span style="--k:${DCOL[k]}"><i></i>${n}</span>`).join("")}</div>`;
+  html += `<p class="hint">Times come from each section. Wake ${esc(fmtTime(C.wake))}, train ${esc(fmtTime(C.train))}, bed ${esc(fmtTime(C.bed))}. <button class="linkbtn" data-act="dtab" data-tab="dsetup">Change</button></p>`;
+  return html;
+}
+const slots2all = () => { const p = mplan(); return mslots().flatMap((s) => p[s.id] || []); };
+function daySetup() {
+  const C = dcfg(), H = C.habits;
+  const tog = (k, name, desc) => `<label class="dtog"><input type="checkbox" data-dyhabit="${k}" ${H[k] ? "checked" : ""}><span class="grow"><b>${esc(name)}</b><span class="small muted">${esc(desc)}</span></span></label>`;
+  return `<div class="ov-head"><div class="grow"><div class="eyebrow">Set once</div><h2 class="ov-title">My day</h2></div></div>
+    <section class="card"><div class="eyebrow">Your anchors</div><p class="small muted" style="margin:4px 0 10px">The Playbook builds the day around three times. Move one and everything tied to it moves too.</p>
+      ${[["wake", "Wake up", "Morning walk and skincare follow it"], ["train", "Train", "Meals before and after are labelled for carbs"], ["bed", "Bed", "Kitchen closes 2 hours before. GH goes just before"]].map(([k, n, d]) => `<label class="danc"><span class="grow"><b>${n}</b><span class="small muted">${d}</span></span><input type="time" data-dyanchor="${k}" value="${esc(C[k])}"></label>`).join("")}</section>
+    <section class="card"><div class="eyebrow">Playbook habits on your timeline</div>
+      ${tog("walk", "Morning walk", "Brisk, 45 minutes, after you wake")}${tog("after", "Walk after your last meal", "10 minutes")}${tog("kitchen", "Kitchen closed", "A marker 2 hours before bed")}${tog("lights", "Lights out", "Cold room, eye mask, at bed time")}</section>
+    <p class="hint">Supplements, compounds, meals and skincare keep the times you set in their own sections. A compound without a time goes 1 hour after waking, or just before bed if it's GH.</p>`;
+}
+async function dSetFlag(date, key, val) {
+  const day = S.dd.days[date] || (S.dd.days[date] = { date, done: {} }); day.done ||= {};
+  if (val) day.done[key] = val; else delete day.done[key];
+  render(); await dsaveDay(date);
+}
+async function daySaveCfg(patch) { const c = dcfg(); S.settings = { ...S.settings, day: { ...c, ...patch, habits: { ...c.habits, ...(patch.habits || {}) } } }; render(); await saveSettings(); }
+async function dayClick(a, b) {
+  switch (a) {
+    case "dtab": S.module = "day"; S.dtab = b.dataset.tab; try { localStorage.setItem("planner.dtab", S.dtab); } catch {} render(); window.scrollTo(0, 0); return true;
+    case "dygo": S.date = b.dataset.date; render(); return true;
+    case "dyopen": { const m = b.dataset.mod; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
+    case "dydone": { const k = b.dataset.key; await dSetFlag(S.date, k, dflag(S.date, k) === true ? null : true); return true; }
+    case "dyskip": { const k = b.dataset.key; await dSetFlag(S.date, k, "skip"); toast("Skipped. It stays on the timeline."); return true; }
+    case "dymeal": {
+      const date = S.date, k = b.dataset.key, list = dosesFor(date).filter((x) => x.time === b.dataset.t), taken = S.days[date]?.taken || {};
+      const it = dItems(date).find((x) => x.key === k), allDone = it?.done;
+      for (const x of list) if ((taken[x.key] == null) !== !!allDone) await toggleDose(x.key, date);
+      if (!it?.mealDone || allDone) await dSetFlag(date, k, allDone ? null : true);
+      return true;
+    }
+    case "dysupp": { const date = S.date, list = dosesFor(date).filter((x) => x.time === b.dataset.key), taken = S.days[date]?.taken || {}; const open = list.filter((x) => taken[x.key] == null); for (const x of open.length ? open : list) await toggleDose(x.key, date); return true; }
+    case "dyskin": { const slot = b.dataset.key, r = kRoutine(S.date, slot), open = r.filter((x) => !kDone(S.date, x.id, slot)); for (const x of open.length ? open : r) await ktoggle(x.id, slot, S.date); return true; }
+  }
+  return false;
+}
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.dataset?.dyanchor && /^\d{2}:\d{2}$/.test(t.value)) daySaveCfg({ [t.dataset.dyanchor]: t.value });
+  if (t.dataset?.dyhabit) daySaveCfg({ habits: { [t.dataset.dyhabit]: t.checked } });
+});
+/* Keep the Now card current while the app is open */
+setInterval(() => { if (S.module === "day" && S.dtab === "dday" && !document.hidden) dsoft(); }, 60000);
+/* Coming back after midnight moves the view on to the new day */
+S.dlastToday = today();
+document.addEventListener("visibilitychange", () => { if (document.hidden) return; const t = today(); if (S.dlastToday !== t && S.date === S.dlastToday) S.date = t; S.dlastToday = t; if (S.module === "day") dsoft(); });
+
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-act]");
   if (!b) return;
   const a = b.dataset.act, id = b.dataset.id;
   if (b.classList.contains("sheet-bg") && e.target.closest("[data-stop]")) return;
+  if (await dayClick(a, b)) return;
   if (await mealClick(a, b)) return;
   if (await workoutClick(a, b)) return;
   if (await cycleClick(a, b)) return;
