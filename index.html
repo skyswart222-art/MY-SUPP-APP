@@ -977,6 +977,35 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 .bloodbar { display: flex; align-items: center; gap: 10px; text-align: left; width: 100%; font-size: 13.5px; padding: 11px 14px; color: var(--ink); }
 .bloodbar svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
 .bloodbar .ic { color: var(--d-comp); }
+/* Two-level header: five tiles, then the sections inside Plan and Life */
+.subnav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-top: 2px; }
+.subnav::-webkit-scrollbar { display: none; }
+.subnav[hidden] { display: none; }
+.sub { flex: 1 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; }
+.sub svg { width: 15px; height: 15px; flex: none; }
+.sub[aria-current="true"] { background: var(--sunk); color: var(--ink); border-color: var(--rim); font-weight: 600; }
+.sub[aria-current="true"] svg { color: var(--accent); }
+:root[data-grp="bloods"] nav.tabs { display: none; }
+/* Daily basics on Today */
+.dbasics { padding: 10px 14px 4px; }
+.dbrow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); min-width: 0; }
+.dbasics .dbrow:first-of-type { border-top: 0; }
+.dbrow .grow { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.dbrow .grow > b { font-size: 14px; }
+.dbrow .grow .num { font-size: 13px; }
+:root[data-grp] .mt { padding-inline: 0; letter-spacing: -0.01em; font-size: 11px; }
+.dbic { flex: none; width: 30px; height: 30px; border-radius: 10px; background: var(--sunk); display: grid; place-items: center; }
+.dbic svg { width: 16px; height: 16px; }
+.dbrow.is-wrap { flex-wrap: wrap; }
+.dbrow.is-wrap .grow { flex: 1 1 calc(100% - 40px); }
+.dbrow.is-wrap .dbp { margin-left: 40px; }
+.dbasics .dbin { width: 92px; flex: 0 0 92px; text-align: right; padding: 7px 10px; }
+.dbp { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.dbasics .dbp .in { width: 54px; flex: 0 0 54px; padding: 7px 6px; text-align: center; }
+.dwbar { position: relative; overflow: visible; }
+.dwbar span { display: block; height: 100%; border-radius: 4px; }
+.dwbar i { position: absolute; top: -3px; width: 2px; height: 10px; border-radius: 1px; background: var(--muted); opacity: .6; }
+.dbrow .iconbtn { font-size: 18px; line-height: 1; }
 </style>
 <link rel="stylesheet" href="auth.css">
 </head>
@@ -984,6 +1013,7 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 <header class="top">
   <div class="wrap">
     <div class="modules" id="modules" role="tablist" aria-label="Plans"></div>
+    <div class="subnav" id="subnav" role="tablist" aria-label="Sections in this group" hidden></div>
     <div class="syncnote" id="syncnote" role="status" hidden></div><span id="acct" hidden><button class="avatarbtn" id="avatarbtn" type="button" aria-label="Your profile" hidden></button></span>
   </div>
   <button class="hdrtog" id="hdrtog" type="button" data-act="hdrtog" aria-expanded="true" aria-controls="modules" aria-label="Hide sections"></button>

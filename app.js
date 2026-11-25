@@ -130,7 +130,6 @@ function renderSettings() {
       <div class="ntog">${modOrdered().filter((m) => NMODS.includes(m.id)).map((m) => { const on = nModOn(m.id); return `<button type="button" data-act="nmodtog" data-mod="${m.id}" aria-pressed="${on}"><span class="tk">${on ? I.check : ""}</span>${MODICON[m.id] || ""}<span class="grow">${esc(m.name)}</span></button>`; }).join("")}</div>
       <p class="small muted" style="margin:0">Pick which tabs can add notifications to the bell at the top.</p></div>
     <div class="col setbtns"><span class="eyebrow">Tabs and account</span>
-      <button type="button" class="btn" data-act="modorder"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg><span class="grow">Arrange tabs</span>${I.right}</button>
       ${acct ? `<button type="button" class="btn" data-act="set-profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span class="grow">Your profile and log out</span>${I.right}</button>` : ""}
       ${sync ? `<p class="small muted" style="margin:0">${esc(sync)}</p>` : ""}</div>
   </div></div>`;
@@ -668,23 +667,48 @@ S.hdrMin = false; try { S.hdrMin = localStorage.getItem("planner.hdrmin") === "1
 function paintHdrTog() {
   document.documentElement.classList.toggle("hdr-min", S.hdrMin);
   const t = $("#hdrtog"); if (!t) return;
-  const m = MODULES.find((x) => x.id === S.module);
+  const m0 = MODULES.find((x) => x.id === S.module), m = grpOf() === "bloods" ? { name: "Bloods" } : m0;
   t.setAttribute("aria-expanded", String(!S.hdrMin));
   t.setAttribute("aria-label", S.hdrMin ? `Show sections (now in ${m?.name || ""})` : "Hide sections");
   const nu = S.hdrMin && S.mode !== "loading" ? nUnread().length : 0;
-  t.innerHTML = S.hdrMin ? `<span class="ic">${MODICON[S.module] || ""}</span><span>${esc(m?.name || "")}</span>${nu ? `<i class="nbdot"></i>` : ""}${CHDN}` : CHUP;
+  t.innerHTML = S.hdrMin ? `<span class="ic">${grpOf() === "bloods" ? I.drop : MODICON[S.module] || ""}</span><span>${esc(m?.name || "")}</span>${nu ? `<i class="nbdot"></i>` : ""}${CHDN}` : CHUP;
   if (nu) t.setAttribute("aria-label", `Show sections (now in ${m?.name || ""}). ${plural(nu, "new notification")}`);
 }
 const MODICON = { day: DAYICON, supplements: I.stock, workouts: I.dumbbell, meals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.6-3.5 7v3H17"/></svg>', progress: I.scale, skincare: I.drop, cycle: I.vial, budget: I.wallet, todo: I.list };
+/* Five places at the top. Plan and Life hold several sections, picked from the row under the tiles. */
+const GROUPS = [
+  { id: "day", name: "Today", mods: ["day"] },
+  { id: "plan", name: "Plan", mods: ["supplements", "workouts", "meals", "cycle"] },
+  { id: "bloods", name: "Bloods", mods: ["cycle"] },
+  { id: "progress", name: "Progress", mods: ["progress"] },
+  { id: "life", name: "Life", mods: ["todo", "budget", "skincare"] },
+];
+const grpOf = () => S.module === "cycle" && S.ctab === "cbloods" ? "bloods" : (GROUPS.find((g) => g.id !== "bloods" && g.mods.includes(S.module)) || GROUPS[0]).id;
+const GRPICON = { day: DAYICON, plan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4.5" width="14" height="16.5" rx="2.5"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 15h4.5"/></svg>', bloods: I.drop, progress: I.scale, life: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-5v6h-4A1.5 1.5 0 0 1 4 19z"/></svg>' };
+S.grpLast = (() => { try { return JSON.parse(localStorage.getItem("planner.grplast") || "{}") || {}; } catch { return {}; } })();
+function grpGo(id) {
+  S.detail = null; S.mealAdd = null;
+  if (id === "bloods") { S.module = "cycle"; S.ctab = "cbloods"; S.bopen = null; }
+  else {
+    const G = GROUPS.find((x) => x.id === id); if (!G) return;
+    let m = S.grpLast[id]; if (!G.mods.includes(m)) m = G.mods[0];
+    S.module = m; if (m === "cycle" && S.ctab === "cbloods") S.ctab = "ctoday";
+  }
+  try { localStorage.setItem("planner.module", S.module); localStorage.setItem("planner.ctab", S.ctab); } catch {}
+}
 function renderChrome() {
   document.documentElement.setAttribute("data-mod", S.module);
   const tb = $("#themebtn");
   if (tb) { tb.innerHTML = S.theme === "dark" ? SUN : MOON; tb.setAttribute("aria-label", S.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"); }
-  /* Sections as an icon grid: two even rows of four, scrolling sideways if there are ever more than eight. */
-  const mods = modOrdered(), cols = Math.max(4, Math.ceil(mods.length / 2));
-  const tile = (m) => `<button class="mt" role="tab" ${m.ready ? `data-act="module" data-mod="${m.id}"` : "disabled"} aria-current="${m.id === S.module}" aria-label="${esc(m.name)}">${MODICON[m.id] || I.list}<span>${esc(MODSHORT[m.id] || m.name)}</span></button>`;
+  /* Five tiles, then the sections inside Plan or Life as a row of pills */
+  const g = grpOf(), G = GROUPS.find((x) => x.id === g);
+  document.documentElement.setAttribute("data-grp", g);
+  if (g !== "bloods" && S.grpLast[g] !== S.module) { S.grpLast[g] = S.module; try { localStorage.setItem("planner.grplast", JSON.stringify(S.grpLast)); } catch {} }
+  const tile = (x) => `<button class="mt" role="tab" data-act="grp" data-grp="${x.id}" aria-current="${x.id === g}" aria-label="${esc(x.name)}">${GRPICON[x.id]}<span>${esc(x.name)}</span></button>`;
   paintHdrTog();
-  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - ${(Math.min(cols, 5) - 1) * 6}px) / ${Math.min(cols, 5)}), 1fr))">${mods.map(tile).join("")}</div><div class="mside">${nBellBtn()}<button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button></div>`;
+  $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${GROUPS.length}, minmax(0, 1fr))">${GROUPS.map(tile).join("")}</div><div class="mside">${nBellBtn()}<button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button></div>`;
+  const subs = g === "bloods" ? [] : G.mods.map((id) => MODULES.find((m) => m.id === id)), sn = $("#subnav");
+  if (sn) { sn.hidden = subs.length < 2; sn.innerHTML = subs.length < 2 ? "" : subs.map((m) => `<button class="sub" role="tab" data-act="module" data-mod="${m.id}" aria-current="${m.id === S.module}">${MODICON[m.id] || I.list}<span>${esc(MODSHORT[m.id] || m.name)}</span></button>`).join(""); }
   if (S.module === "day") {
     const dt = [["dday", "Today", I.today], ["dsetup", "Protocol", I.target]];
     $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
@@ -704,9 +728,11 @@ function renderChrome() {
     return;
   }
   if (S.module === "cycle") {
-    const ct = [["ctoday", "Today", I.today], ["ccycle", "Cycle", I.vial], ["cstock", "Stock", I.stock], ["cbloods", "Bloods", I.drop]];
+    /* Bloods has its own tile at the top, so its page has no tab bar and the cycle's tabs leave it out */
+    if (g === "bloods") { $("#tabs").innerHTML = ""; return; }
+    const ct = [["ctoday", "Today", I.today], ["ccycle", "Cycle", I.vial], ["cstock", "Stock", I.stock]];
     const lowc = S.cy.compounds.filter(cLow).length;
-    $("#tabs").style.gridTemplateColumns = "repeat(4, 1fr)";
+    $("#tabs").style.gridTemplateColumns = "repeat(3, 1fr)";
     $("#tabs").innerHTML = ct.map(([id, label, ic]) => `<button class="tab" data-act="ctab" data-tab="${id}" ${S.ctab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span>${id === "cstock" && lowc ? `<span class="dot">${lowc}</span>` : ""}</button>`).join("");
     return;
   }
@@ -1766,7 +1792,8 @@ async function mealClick(a, b) {
     case "modmove": { const i = Number(b.dataset.i), j = i + Number(b.dataset.d), a = S.modEdit; if (j < 0 || j >= a.length) return true; [a[i], a[j]] = [a[j], a[i]]; renderOverlay(); return true; }
     case "modcancel": S.modEdit = null; renderOverlay(); return true;
     case "modsave": { const o = S.modEdit; S.modEdit = null; S.settings = { ...S.settings, modOrder: o }; try { localStorage.setItem("planner.modorder", JSON.stringify(o)); } catch {} renderOverlay(); renderChrome(); toast("Tab order saved"); await saveSettings(); return true; }
-    case "module": { const m = b.dataset.mod; if (m === S.module) return true; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
+    case "module": { const m = b.dataset.mod; if (m === S.module && !(m === "cycle" && S.ctab === "cbloods")) return true; S.module = m; S.detail = null; S.mealAdd = null; if (m === "cycle" && S.ctab === "cbloods") S.ctab = "ctoday"; try { localStorage.setItem("planner.module", m); localStorage.setItem("planner.ctab", S.ctab); } catch {} render(); window.scrollTo(0, 0); return true; }
+    case "grp": { const id = b.dataset.grp; if (id === grpOf()) return true; grpGo(id); render(); window.scrollTo(0, 0); return true; }
     case "mmode": { const v = b.dataset.v === "plan" ? "plan" : "log"; S.meals.settings = { ...S.meals.settings, mode: v, modeSeen: true }; if (S.mtab === "mweek" && v === "plan") S.mtab = "mtoday"; render(); toast(v === "plan" ? "Meals now shows your set plan" : "Back to logging each day"); await msaveSettings(); return true; }
     case "mmodehide": S.meals.settings = { ...S.meals.settings, modeSeen: true }; render(); await msaveSettings(); return true;
     case "mtab": S.mtab = b.dataset.tab; S.mtargetsForm = null; try { localStorage.setItem("planner.mtab", S.mtab); } catch {} render(); window.scrollTo(0, 0); return true;
@@ -2916,7 +2943,7 @@ function pLog() {
   const es = pentries().reverse();
   let html = `<div class="row between"><h2 style="font-size:22px">Log</h2><button class="btn sm" data-act="pedit" data-date="${today()}">Add entry</button></div>`;
   if (!es.length) return html + `<div class="card empty"><p>Every weigh-in and measurement shows up here.</p></div>`;
-  return html + `<div class="card plist" style="padding:2px 14px">${es.slice(0, 200).map((e) => { const bits = ["weight", "bodyFat", "steps", "restingHr"].filter((k) => has(e[k])).map((k) => `${PMETRICS[k].label.toLowerCase()} ${pfmt(k, num(e[k]))}`); const nm = MKEYS.filter(([k]) => has(e[k])).length; if (nm) bits.push(plural(nm, "measurement")); return `<button class="pi stackrow" data-act="pedit" data-date="${e.date}"><span class="grow"><b>${esc(shortD(e.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" }))}</b>${e.src === "health" ? ' <span class="chip">Health</span>' : ""}${e.example ? ' <span class="chip ex">Sample</span>' : ""}<br><span class="small muted">${esc(bits.join(" · ") || "No numbers")}${e.notes ? " · " + esc(e.notes) : ""}</span></span>${I.right}</button>`; }).join("")}</div>`;
+  return html + `<div class="card plist" style="padding:2px 14px">${es.slice(0, 200).map((e) => { const bits = ["weight", "bodyFat", "steps", "restingHr"].filter((k) => has(e[k])).map((k) => `${PMETRICS[k].label.toLowerCase()} ${pfmt(k, num(e[k]))}`); if (has(e.bpSys) && has(e.bpDia)) bits.push(`BP ${e.bpSys}/${e.bpDia}`); const nm = MKEYS.filter(([k]) => has(e[k])).length; if (nm) bits.push(plural(nm, "measurement")); return `<button class="pi stackrow" data-act="pedit" data-date="${e.date}"><span class="grow"><b>${esc(shortD(e.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" }))}</b>${e.src === "health" ? ' <span class="chip">Health</span>' : ""}${e.example ? ' <span class="chip ex">Sample</span>' : ""}<br><span class="small muted">${esc(bits.join(" · ") || "No numbers")}${e.notes ? " · " + esc(e.notes) : ""}</span></span>${I.right}</button>`; }).join("")}</div>`;
 }
 function pEntryForm() {
   const f = S.pform;
@@ -2924,7 +2951,7 @@ function pEntryForm() {
   return `<div class="row between"><h2 style="font-size:22px">${f.isNew ? "Add entry" : "Edit entry"}</h2><button class="btn sm ghost" data-act="pcancel">Cancel</button></div>
   <form class="f card" id="pfform" novalidate><fieldset>
     <label class="fl">Date<input class="in" type="date" data-pf="date" value="${esc(f.date)}" max="${today()}"></label>
-    <div class="fgrid">${fld("weight", "Weight (kg)", "0.1")}${fld("bodyFat", "Body fat %", "0.1", "optional")}${fld("waist", "Waist (cm)", "0.5", "optional")}${fld("restingHr", "Resting HR (bpm)", "1", "optional")}${fld("steps", "Steps", "1", "optional")}</div>
+    <div class="fgrid">${fld("weight", "Weight (kg)", "0.1")}${fld("bodyFat", "Body fat %", "0.1", "optional")}${fld("waist", "Waist (cm)", "0.5", "optional")}${fld("restingHr", "Resting HR (bpm)", "1", "optional")}${fld("steps", "Steps", "1", "optional")}${fld("bpSys", "BP systolic", "1", "optional")}${fld("bpDia", "BP diastolic", "1", "optional")}</div>
     <label class="fl">Notes<textarea class="in" data-pf="notes" placeholder="How you felt, sleep, anything different">${esc(f.notes || "")}</textarea></label></fieldset>
   <div class="sticky-save">${f.isNew ? "" : `<button type="button" class="btn danger" data-act="pdel">Delete</button>`}<button type="submit" class="btn primary">Save</button></div></form>`;
 }
@@ -3015,7 +3042,7 @@ async function progressClick(a, b) {
     case "ptab": S.ptab = b.dataset.tab; S.pform = null; S.pgoalForm = null; S.pmform = null; try { localStorage.setItem("planner.ptab", S.ptab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "pmetric": S.pmetric = b.dataset.k; render(); return true;
     case "prange": S.prange = b.dataset.r; render(); return true;
-    case "pedit": { const d = b.dataset.date, e = S.pg.entries[d]; S.pform = e ? { ...cjson(e), isNew: false, orig: d } : { isNew: true, date: d, weight: "", bodyFat: "", waist: "", steps: "", restingHr: "", notes: "" }; S.ptab = "plog"; render(); window.scrollTo(0, 0); return true; }
+    case "pedit": { const d = b.dataset.date, e = S.pg.entries[d]; S.pform = e ? { ...cjson(e), isNew: false, orig: d } : { isNew: true, date: d, weight: "", bodyFat: "", waist: "", steps: "", restingHr: "", bpSys: "", bpDia: "", notes: "" }; S.ptab = "plog"; render(); window.scrollTo(0, 0); return true; }
     case "pcancel": S.pform = null; render(); return true;
     case "pdel": { const d = S.pform.orig; S.pform = null; await pdelEntry(d); render(); toast("Entry deleted"); return true; }
     case "pcad": S.pgoalForm.cadence = b.dataset.v; render(); return true;
@@ -3048,8 +3075,8 @@ document.addEventListener("submit", async (e) => {
   } else if (id === "pfform") {
     e.preventDefault(); e.stopImmediatePropagation();
     const f = S.pform; if (!f.date) { toast("Pick a date."); return; }
-    const ent = { ...(S.pg.entries[f.orig || f.date] || {}), date: f.date, src: f.src || "manual", notes: (f.notes || "").trim() }; delete ent.isNew; delete ent.orig; for (const k of ["weight", "bodyFat", "waist", "steps", "restingHr"]) { if (has(f[k])) ent[k] = num(f[k]); else delete ent[k]; }
-    if (!Object.keys(PMETRICS).some((k) => has(ent[k])) && !ent.notes) { toast("Add at least one number."); return; }
+    const ent = { ...(S.pg.entries[f.orig || f.date] || {}), date: f.date, src: f.src || "manual", notes: (f.notes || "").trim() }; delete ent.isNew; delete ent.orig; for (const k of ["weight", "bodyFat", "waist", "steps", "restingHr", "bpSys", "bpDia"]) { if (has(f[k])) ent[k] = num(f[k]); else delete ent[k]; }
+    if (![...Object.keys(PMETRICS), "bpSys"].some((k) => has(ent[k])) && !ent.notes) { toast("Add at least one number."); return; }
     const orig = f.orig; S.pform = null; render(); if (orig && orig !== ent.date) await pdelEntry(orig); await psaveEntry(ent); render(); toast("Saved");
   } else if (id === "pmform") {
     e.preventDefault(); e.stopImmediatePropagation();
@@ -4423,12 +4450,12 @@ function dlsLoad() { try { const d = JSON.parse(localStorage.getItem(DLS) || "{}
 function dlsSave() { try { localStorage.setItem(DLS, JSON.stringify(S.dd)); } catch {} }
 function dinitDb(db, id) {
   dstore.days = db.collection(`data/users/${id}/today/days`);
-  dstore.days.orderBy("date", "desc").limit(60).onSnapshot((snap) => { const days = {}; snap.docs.forEach((d) => { const v = d.data(); days[d.id] = { date: d.id, done: v.done || {}, ...(v.site ? { site: v.site } : {}) }; }); S.dd.days = days; dsoft(); }, () => {});
+  dstore.days.orderBy("date", "desc").limit(60).onSnapshot((snap) => { const days = {}; snap.docs.forEach((d) => { const v = d.data(); days[d.id] = { date: d.id, done: v.done || {}, ...(v.site ? { site: v.site } : {}), ...(v.water ? { water: v.water } : {}) }; }); S.dd.days = days; dsoft(); }, () => {});
 }
 function dsoft() { if (S.module !== "day") return; const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { renderChrome(); return; } render(); }
 async function dsaveDay(date) {
   const d = S.dd.days[date] || { date, done: {} };
-  if (store.kind === "db" && dstore.days) return queued("dd/" + date, () => dstore.days.doc(date).set({ date, done: { ...d.done }, ...(d.site ? { site: d.site } : {}) }));
+  if (store.kind === "db" && dstore.days) return queued("dd/" + date, () => dstore.days.doc(date).set({ date, done: { ...d.done }, ...(d.site ? { site: d.site } : {}), ...(d.water ? { water: d.water } : {}) }));
   dlsSave();
 }
 const dcfg = () => { const c = S.settings?.day || {}; return { ...DAY_DEF, ...c, habits: { ...DAY_DEF.habits, ...(c.habits || {}) } }; };
@@ -4571,6 +4598,7 @@ function dayToday() {
   html += `<div class="dstats"><div class="dstat"><span class="eyebrow">Day</span><b class="num">${doneN}/${tickable.length}</b>${bar(doneN, tickable.length, "var(--accent)")}</div>
     <div class="dstat"><span class="eyebrow">Protein${mPlanMode() ? " planned" : ""}</span><b class="num">${Math.round(prot)}<span class="muted">/${Math.round(T.protein)} g</span></b>${bar(prot, T.protein, "var(--d-meal)")}</div>
     <div class="dstat"><span class="eyebrow">${esc(tags.includes("Shot") || shotsDue.length ? "Doses" : "Training")}</span><b class="num">${shotsDue.length ? `${shotsDone}/${shotsDue.length}` : plans.length ? "Yes" : "Rest"}</b>${shotsDue.length ? bar(shotsDone, shotsDue.length, "var(--d-comp)") : bar(0, 1, "transparent")}</div></div>`;
+  html += dBasics(date);
   /* To-dos due by this day */
   const td = S.td.items.filter((x) => (!x.done || x.doneAt === date) && x.due && x.due <= date && (isToday || x.due === date)).sort((a, b) => (a.done - b.done) || TPRIS.indexOf(a.pri) - TPRIS.indexOf(b.pri));
   if (td.length) html += `<section class="card dtodo"><div class="row between"><span class="eyebrow">To-do${isToday ? " today" : ""}</span><button class="linkbtn" data-act="dyopen" data-mod="todo">All</button></div>${td.slice(0, 5).map((x) => `<button class="dchip ${x.done ? "is-done" : ""}" data-act="ttoggle" data-id="${x.id}" aria-pressed="${!!x.done}">${I.check}<span>${esc(x.text)}${x.due < date ? ` <i class="warntxt">overdue</i>` : ""}</span></button>`).join("")}</section>`;
@@ -4590,6 +4618,59 @@ function dayToday() {
   html += `<p class="hint">Times come from each section. Wake ${esc(fmtTime(C.wake))}, train ${esc(fmtTime(C.train))}, bed ${esc(fmtTime(C.bed))}. <button class="linkbtn" data-act="dtab" data-tab="dsetup">Change</button></p>`;
   return html;
 }
+/* ---------- Daily basics, from the Playbook: water, steps, the weight average, weekly blood pressure ---------- */
+const PB_WATER = [3, 4]; /* litres a day */
+const LB = 2.20462;
+const pbProtein = () => { const G = S.pg.settings.goals || {}; return has(G.weight) ? Math.round(num(G.weight) * LB) : null; };
+const pAvgOf = (k, from, to) => { const v = pentries().filter((e) => has(e[k]) && e.date >= from && e.date <= to).map((e) => num(e[k])); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+const lastBP = (upto) => pentries().filter((e) => has(e.bpSys) && has(e.bpDia) && e.date <= upto).pop() || null;
+/* Due when there's no reading since the most recent check day */
+function bpDue(date) { const bd = Number(dcfg().bpDay ?? 0), last = addDays(date, -((parseD(date).getDay() - bd + 7) % 7)), bp = lastBP(date); return { bp, due: !bp || bp.date < last, today: parseD(date).getDay() === bd, day: bd }; }
+function dBasics(date) {
+  if (date > today()) return "";
+  const w = num(S.dd.days[date]?.water), e = S.pg.entries[date] || {}, isToday = date === today();
+  const wa = pAvgOf("weight", addDays(date, -6), date), wp = pAvgOf("weight", addDays(date, -13), addDays(date, -7)), ch = wa != null && wp != null ? wa - wp : null;
+  const sa = pAvgOf("steps", addDays(date, -7), addDays(date, -1));
+  const B = bpDue(date), pct = Math.min(100, (w / PB_WATER[1]) * 100);
+  const row = (ic, col, body, ctl, cls = "") => `<div class="dbrow ${cls}"><span class="dbic" style="color:${col}">${ic}</span><div class="grow">${body}</div>${ctl}</div>`;
+  let h = `<section class="card dbasics"><div class="row between"><span class="eyebrow">Basics</span><button class="linkbtn" data-act="dyopen" data-mod="progress">Progress</button></div>`;
+  h += row(I.drop, "var(--d-supp)", `<span><b>Water</b> <span class="num" style="white-space:nowrap">${fmtN(w, 2)}<span class="muted"> / ${PB_WATER[0]}–${PB_WATER[1]} L</span></span>${w >= PB_WATER[0] ? ` <span class="chip ok">done</span>` : ""}</span>
+      <div class="dbar dwbar"><span style="width:${pct}%;background:var(--d-supp)"></span><i style="left:${(PB_WATER[0] / PB_WATER[1]) * 100}%"></i></div>`,
+    `<button class="iconbtn" data-act="dywater" data-d="-0.5" aria-label="Take off half a litre" ${w > 0 ? "" : "disabled"}>−</button><button class="btn sm" data-act="dywater" data-d="0.5">+ 0.5 L</button>`);
+  h += row(I.trend, "var(--d-habit)", `<b>Steps</b><span class="small muted">${sa != null ? `Last 7 days: ${fmtN(Math.round(sa), 0)} a day. Push it up bit by bit` : "Push the number up bit by bit"}</span>`,
+    `<input class="in num dbin" type="number" inputmode="numeric" min="0" step="1" data-dyb="steps" value="${has(e.steps) ? esc(e.steps) : ""}" placeholder="0" aria-label="Steps">`);
+  h += row(I.scale, "var(--accent)", `<b>Weight</b><span class="small muted">${wa != null ? `7-day average <b class="num" style="color:var(--ink)">${fmtN(wa, 1)} kg</b>${ch != null ? `, ${Math.abs(ch) < 0.05 ? "same as" : `${ch < 0 ? "down" : "up"} ${fmtN(Math.abs(ch), 1)}`} on the week before` : ""}` : "Weigh daily, but only look at the 7-day average"}</span>`,
+    `<input class="in num dbin" type="number" inputmode="decimal" min="0" step="0.1" data-dyb="weight" value="${has(e.weight) ? esc(e.weight) : ""}" placeholder="kg" aria-label="Weight in kg">`);
+  const bpTxt = B.bp ? `${B.bp.date === date ? "Logged" : "Last"} ${esc(B.bp.bpSys)}/${esc(B.bp.bpDia)}${B.bp.date === date ? "" : ` on ${esc(shortD(B.bp.date, { weekday: "short", day: "numeric", month: "short" }))}`}` : "No reading yet";
+  if (B.due || S.dbpEdit === date) h += row(I.heart, "var(--d-comp)", `<span><b>Blood pressure</b>${B.due ? ` <span class="chip warn">${B.today && isToday ? "due today" : "this week"}</span>` : ""}</span><span class="small muted">Weekly check at home. ${bpTxt}</span>`,
+    `<span class="dbp"><input class="in num" id="dbp-s" type="number" inputmode="numeric" min="60" max="260" placeholder="120" aria-label="Systolic" value="${has(e.bpSys) ? esc(e.bpSys) : ""}"><span class="muted">/</span><input class="in num" id="dbp-d" type="number" inputmode="numeric" min="30" max="160" placeholder="80" aria-label="Diastolic" value="${has(e.bpDia) ? esc(e.bpDia) : ""}"><button class="btn sm" data-act="dybp">Save</button></span>`, "is-wrap");
+  else h += row(I.heart, "var(--d-comp)", `<b>Blood pressure</b><span class="small muted">${bpTxt}. Next check ${esc(DOW[B.day])}</span>`, `<button class="btn sm" data-act="dybpedit">Log</button>`);
+  return h + `</section>`;
+}
+async function dSaveMetric(date, patch) {
+  const cur = S.pg.entries[date] || { date, src: "manual" }, ent = { ...cur }; delete ent.example;
+  for (const [k, v] of Object.entries(patch)) { if (has(v)) ent[k] = num(v); else delete ent[k]; }
+  await psaveEntry(ent); render();
+}
+async function basicsClick(a, b) {
+  switch (a) {
+    case "dywater": { const date = S.date, day = S.dd.days[date] || (S.dd.days[date] = { date, done: {} }); day.done ||= {}; const v = Math.max(0, Math.round((num(day.water) + num(b.dataset.d)) * 4) / 4); if (v) day.water = v; else delete day.water; render(); await dsaveDay(date); return true; }
+    case "dybpedit": S.dbpEdit = S.date; render(); return true;
+    case "dybp": {
+      const sv = $("#dbp-s")?.value, dv = $("#dbp-d")?.value;
+      if (!has(sv) || !has(dv) || num(sv) < 60 || num(sv) > 260 || num(dv) < 30 || num(dv) > 160 || num(dv) >= num(sv)) { toast("Enter both numbers, like 120 / 80."); return true; }
+      S.dbpEdit = null; await dSaveMetric(S.date, { bpSys: Math.round(num(sv)), bpDia: Math.round(num(dv)) }); toast(`Blood pressure ${Math.round(num(sv))}/${Math.round(num(dv))} saved`); return true;
+    }
+    case "pbprot": { const v = pbProtein(); if (!v) return true; S.meals.settings = { ...S.meals.settings, targets: { ...mtargets(), protein: v } }; render(); await msaveSettings(); toast(`Protein target set to ${v} g`); return true; }
+  }
+  return false;
+}
+document.addEventListener("change", (e) => {
+  const t = e.target, k = t.dataset?.dyb; if (!k || S.module !== "day") return;
+  if (t.value !== "" && (!has(t.value) || num(t.value) < 0)) return;
+  dSaveMetric(S.date, { [k]: t.value === "" ? "" : k === "steps" ? Math.round(num(t.value)) : Math.round(num(t.value) * 10) / 10 });
+  if (k === "weight" && t.value !== "") toast(`Logged ${fmtN(num(t.value), 1)} kg`);
+});
 const slots2all = () => { const p = mplan(); return mslots().flatMap((s) => p[s.id] || []); };
 /* ---------- My protocol: weekly rhythm, injection sites, Playbook timing checks ---------- */
 /* Injection sites. The Playbook rotates four: left delt, right delt, left ventroglute, right ventroglute. Quads and pecs can be switched on. */
@@ -4710,6 +4791,13 @@ function daySetup() {
     <div class="psites">${PSITES.map(([k, n]) => `<button class="psite ${rot.includes(k) ? "is-on" : ""} ${oil.length && k === next ? "is-next" : ""}" data-act="psitetog" data-k="${k}" aria-pressed="${rot.includes(k)}">${esc(n)}</button>`).join("")}</div>
     ${log.length ? `<div class="small muted" style="margin-top:10px">Last: ${log.map((d) => `${DOW[parseD(d.date).getDay()]} ${parseD(d.date).getDate()} ${esc(siteName(d.site))}`).join(" · ")}</div>` : ""}
     <p class="small muted" style="margin:8px 0 0">GH and GLP go SubQ into belly fat, so they stay out of the rotation.</p></section>`;
+  /* Daily basics */
+  { const pv = pbProtein(), cur = Math.round(mtargets().protein), G = S.pg.settings.goals || {}, bd = Number(C.bpDay ?? 0);
+    html += `<section class="card"><div class="eyebrow">Daily basics</div>
+      <div class="dbrow"><div class="grow"><b>Protein</b><span class="small muted">${pv ? `1 g per lb of goal weight: ${fmtN(num(G.weight), 1)} kg goal is <b style="color:var(--ink)">${pv} g a day</b>, about ${Math.round(pv / 4)} g over 4 meals. Your meals target is ${cur} g.` : "1 g per lb of your goal weight. Set a goal weight in Progress to work it out."}</span></div>
+        ${pv ? (Math.abs(pv - cur) >= 5 ? `<button class="btn sm primary" data-act="pbprot">Use ${pv} g</button>` : `<span class="chip ok">set</span>`) : `<button class="btn sm" data-act="dyopen" data-mod="progress">Goal</button>`}</div>
+      <div class="dbrow"><div class="grow"><b>Water</b><span class="small muted">${PB_WATER[0]} to ${PB_WATER[1]} litres a day, tracked on Today.</span></div></div>
+      <label class="dbrow"><span class="grow"><b>Blood pressure</b><span class="small muted">Check at home every week. It's due on this day until you log it.</span></span><select class="in" data-dybpday style="width:auto">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<option value="${d}" ${d === bd ? "selected" : ""}>${DOW[d]}</option>`).join("")}</select></label></section>`; }
   /* Habits */
   html += `<section class="card"><div class="eyebrow">Playbook habits on your timeline</div>
       ${tog("walk", "Morning walk", "Brisk, 45 minutes, after you wake")}${tog("after", "Walk after your last meal", "10 minutes")}${tog("kitchen", "Kitchen closed", "A marker 2 hours before bed")}${tog("lights", "Lights out", "Cold room, eye mask, at bed time")}</section>
@@ -4762,6 +4850,7 @@ document.addEventListener("change", (e) => {
   const t = e.target;
   if (t.dataset?.dyanchor && /^\d{2}:\d{2}$/.test(t.value)) daySaveCfg({ [t.dataset.dyanchor]: t.value });
   if (t.dataset?.dyhabit) daySaveCfg({ habits: { [t.dataset.dyhabit]: t.checked } });
+  if (t.dataset?.dybpday != null) daySaveCfg({ bpDay: Number(t.value) });
 });
 /* Keep the Now card current while the app is open */
 setInterval(() => { if (S.module === "day" && S.dtab === "dday" && !document.hidden) dsoft(); }, 60000);
@@ -4918,6 +5007,7 @@ document.addEventListener("click", async (e) => {
   const a = b.dataset.act, id = b.dataset.id;
   if (b.classList.contains("sheet-bg") && e.target.closest("[data-stop]")) return;
   if (await dayClick(a, b)) return;
+  if (await basicsClick(a, b)) return;
   if (await protoClick(a, b)) return;
   if (await bloodsClick(a, b)) return;
   if (await mealClick(a, b)) return;
