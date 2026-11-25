@@ -686,7 +686,7 @@ function renderChrome() {
   paintHdrTog();
   $("#modules").innerHTML = `<div class="mgrid" style="grid-template-columns:repeat(${cols}, minmax(calc((100% - ${(Math.min(cols, 5) - 1) * 6}px) / ${Math.min(cols, 5)}), 1fr))">${mods.map(tile).join("")}</div><div class="mside">${nBellBtn()}<button class="mgear" data-act="settings" aria-label="Settings" title="Settings">${GEAR}</button></div>`;
   if (S.module === "day") {
-    const dt = [["dday", "Today", I.today], ["dsetup", "My day", I.target]];
+    const dt = [["dday", "Today", I.today], ["dsetup", "Protocol", I.target]];
     $("#tabs").style.gridTemplateColumns = "repeat(2, 1fr)";
     $("#tabs").innerHTML = dt.map(([id, label, ic]) => `<button class="tab" data-act="dtab" data-tab="${id}" ${S.dtab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
     return;
@@ -4421,12 +4421,12 @@ function dlsLoad() { try { const d = JSON.parse(localStorage.getItem(DLS) || "{}
 function dlsSave() { try { localStorage.setItem(DLS, JSON.stringify(S.dd)); } catch {} }
 function dinitDb(db, id) {
   dstore.days = db.collection(`data/users/${id}/today/days`);
-  dstore.days.orderBy("date", "desc").limit(60).onSnapshot((snap) => { const days = {}; snap.docs.forEach((d) => { const v = d.data(); days[d.id] = { date: d.id, done: v.done || {} }; }); S.dd.days = days; dsoft(); }, () => {});
+  dstore.days.orderBy("date", "desc").limit(60).onSnapshot((snap) => { const days = {}; snap.docs.forEach((d) => { const v = d.data(); days[d.id] = { date: d.id, done: v.done || {}, ...(v.site ? { site: v.site } : {}) }; }); S.dd.days = days; dsoft(); }, () => {});
 }
 function dsoft() { if (S.module !== "day") return; const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { renderChrome(); return; } render(); }
 async function dsaveDay(date) {
   const d = S.dd.days[date] || { date, done: {} };
-  if (store.kind === "db" && dstore.days) return queued("dd/" + date, () => dstore.days.doc(date).set({ date, done: { ...d.done } }));
+  if (store.kind === "db" && dstore.days) return queued("dd/" + date, () => dstore.days.doc(date).set({ date, done: { ...d.done }, ...(d.site ? { site: d.site } : {}) }));
   dlsSave();
 }
 const dcfg = () => { const c = S.settings?.day || {}; return { ...DAY_DEF, ...c, habits: { ...DAY_DEF.habits, ...(c.habits || {}) } }; };
@@ -4478,7 +4478,8 @@ function dItems(date) {
     const gh = GHRX.test(c.name), t = c.time || dhm(gh ? bed - 5 : wake + 60);
     const amt = cAmt(c) > 0 ? ` · ${cAmtTxt(c)}` : "";
     out.push({ key: "comp:" + c.id, time: t, kind: "comp", tag: gh ? "Compound · before bed, fasted" : "Compound", title: c.name, sub: `${fmtN(num(c.dose), 1)} ${cU(c)}${amt}${c.time ? "" : " · set a time in Cycle"}`,
-      rule: gh ? "2 hours after your last meal" : c.kind === "inj" ? "Same time every time" : "",
+      rule: gh ? "2 hours after your last meal · SubQ, belly fat" : SUBQRX.test(c.name) ? "SubQ into belly fat, never IM" : c.kind === "inj" ? "Same time every time" : "",
+      site: isOilShot(c) ? siteFor(date) : null,
       done: !!cTaken(c.id, date), tick: { act: "ctake", id: c.id }, go: { mod: "cycle" } });
   }
   /* Training at the training time */
@@ -4519,6 +4520,7 @@ function dTickBtn(x, big) {
   return big ? `<button class="btn primary dnow-go" ${at}>${I.check}<span>Done${x.chips ? ", all of it" : ""}</span></button>`
     : `<button class="dtick ${x.done ? "is-done" : ""}" ${at} aria-pressed="${x.done}" aria-label="${x.done ? "Done. Tap to undo" : "Mark done"}: ${esc(x.title)}">${I.check}</button>`;
 }
+const dSiteBtn = (x) => x.done ? `<span class="dsite is-done">${esc(siteName(x.site))}</span>` : `<button class="dsite" data-act="dysite" aria-label="Injection site ${esc(siteName(x.site))}. Tap to change">${esc(siteName(x.site))}<span>change</span></button>`;
 function dayView() { return S.dtab === "dsetup" ? daySetup() : dayToday(); }
 function dayToday() {
   const date = S.date, isToday = date === today(), d = parseD(date), C = dcfg();
@@ -4537,18 +4539,20 @@ function dayToday() {
   const tags = [plans.length ? `<b>${esc(plans.map((p) => p.name).join(" + "))}</b>` : "Rest day", shot ? "Shot day" : ""].filter(Boolean).join(" · ");
   if (!tickable.length) {
     return html + `<div class="card empty"><h3>Your day lives here</h3><p>Everything you add in Supplements, Cycle, Meals, Workouts and Skincare shows up here in time order, with the Playbook's habits around it.</p>
-      <div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="dtab" data-tab="dsetup">Set my wake, training and bed times</button></div></div>`;
+      <div class="row wrapflex" style="justify-content:center"><button class="btn primary" data-act="dtab" data-tab="dsetup">Set up my protocol</button></div></div>`;
   }
   /* Now card */
   if (cur) {
     const late = isToday && cur.time < nowHM(), mins = dmin(cur.time) - dmin(nowHM());
     const when = !isToday ? fmtTime(cur.time) : late ? `${fmtTime(cur.time)} · due` : `${fmtTime(cur.time)} · in ${mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60 ? (mins % 60) + " min" : ""}` : mins + " min"}`;
     html += `<section class="dnow" style="--k:${DCOL[cur.kind]}"><div class="row between"><span class="eyebrow">${isToday ? (late ? "Now" : "Up next") : "First up"} · ${esc(when)}</span><span class="dnow-tag">${esc(cur.tag)}</span></div>
-      <h2>${esc(cur.title)}</h2>${cur.sub ? `<p>${esc(cur.sub)}</p>` : ""}${cur.rule ? `<span class="drule">${esc(cur.rule)}</span>` : ""}${dChips(cur)}
+      <h2>${esc(cur.title)}</h2>${cur.sub ? `<p>${esc(cur.sub)}</p>` : ""}${cur.site ? dSiteBtn(cur) : ""}${cur.rule ? `<span class="drule">${esc(cur.rule)}</span>` : ""}${dChips(cur)}
       <div class="dnow-acts">${dTickBtn(cur, true)}${cur.go ? `<button class="btn" data-act="dyopen" data-mod="${cur.go.mod}">Open</button>` : ""}<button class="btn" data-act="dyskip" data-key="${esc(cur.key)}">Skip</button></div></section>`;
   } else if (isToday || date < today()) {
     html += `<section class="dnow is-clear"><span class="eyebrow">${isToday ? "That's everything" : "Day closed"}</span><h2>${doneN === tickable.length ? "All done. Nice work." : "Nothing left open."}</h2><p>${isToday ? `Lights out at ${esc(fmtTime(C.bed))}.` : ""}</p></section>`;
   }
+  const tips = isToday ? pbChecks().length : 0;
+  if (tips) html += `<button class="card ptipbar" data-act="dtab" data-tab="dsetup"><span class="chip warn">${tips}</span><span class="grow">${tips === 1 ? "1 thing is" : tips + " things are"} timed differently from the Playbook</span>${I.right}</button>`;
   /* Quick stats */
   const T = mtargets(), logd = new Set(mentries(date).map((e) => e.meal));
   /* Meals ticked here without being logged count what was planned for them */
@@ -4570,7 +4574,7 @@ function dayToday() {
     const isCur = cur && x.key === cur.key;
     html += `<div class="dit ${x.done ? "is-done" : ""} ${x.skipped ? "is-skip" : ""} ${isCur ? "is-cur" : ""} ${x.marker ? "is-mark" : ""}" style="--k:${DCOL[x.kind]}"><span class="dt num">${esc(fmtTime(x.time).replace(" ", " "))}</span><i class="ddot"></i>
       <div class="dcard"><div class="row between" style="gap:10px;align-items:flex-start"><button class="dbody" ${x.go ? `data-act="dyopen" data-mod="${x.go.mod}"` : "disabled"}><span class="dtag">${esc(x.tag)}${x.skipped ? " · skipped" : ""}</span><b>${esc(x.title)}</b>${x.sub ? `<span class="dsub">${esc(x.sub)}</span>` : ""}</button>${x.marker ? "" : dTickBtn(x)}</div>
-      ${x.rule && !x.done ? `<span class="drule">${esc(x.rule)}</span>` : ""}${x.chips && !x.done ? dChips(x) : ""}</div></div>`;
+      ${x.site ? dSiteBtn(x) : ""}${x.rule && !x.done ? `<span class="drule">${esc(x.rule)}</span>` : ""}${x.chips && !x.done ? dChips(x) : ""}</div></div>`;
   }
   if (!nowDrawn) html += `<div class="dnowline"><span class="num">${esc(fmtTime(n))}</span></div>`;
   html += `</div><div class="dleg">${DLEG.filter(([k]) => items.some((x) => x.kind === k)).map(([k, n]) => `<span style="--k:${DCOL[k]}"><i></i>${n}</span>`).join("")}</div>`;
@@ -4578,15 +4582,138 @@ function dayToday() {
   return html;
 }
 const slots2all = () => { const p = mplan(); return mslots().flatMap((s) => p[s.id] || []); };
+/* ---------- My protocol: weekly rhythm, injection sites, Playbook timing checks ---------- */
+/* Injection sites. The Playbook rotates four: left delt, right delt, left ventroglute, right ventroglute. Quads and pecs can be switched on. */
+const PSITES = [["ld", "Left delt"], ["rd", "Right delt"], ["lv", "Left VG"], ["rv", "Right VG"], ["lq", "Left quad"], ["rq", "Right quad"], ["lp", "Left pec"], ["rp", "Right pec"]];
+const PSITE_DEF = ["ld", "rd", "lv", "rv"];
+const siteName = (k) => (PSITES.find((x) => x[0] === k) || [k, k])[1];
+/* GH and GLP drugs go SubQ into belly fat (the Playbook says never IM), so they're outside the rotation */
+const SUBQRX = /\b(gh|hgh|somatropin|growth hormone|glp|retatrutide|tirzepatide|semaglutide|ozempic|mounjaro|wegovy)\b/i;
+const isOilShot = (c) => c.kind === "inj" && !SUBQRX.test(c.name) && !GHRX.test(c.name);
+const pSites = () => { const s = dcfg().sites; return Array.isArray(s) && s.length ? PSITES.map((x) => x[0]).filter((k) => s.includes(k)) : PSITE_DEF; };
+const shotDay = (date) => S.cy.compounds.some((c) => isOilShot(c) && (cDue(c, date) || cTaken(c.id, date)));
+/* The site for a day: the one logged, otherwise the next in the rotation after the last one logged before it */
+function siteFor(date) {
+  const own = S.dd.days[date]?.site; if (own) return own;
+  const rot = pSites(), past = Object.values(S.dd.days).filter((d) => d.site && d.date < date).sort((a, b) => b.date.localeCompare(a.date))[0];
+  if (!past) return rot[0];
+  const i = rot.indexOf(past.site); return rot[(i + 1) % rot.length];
+}
+const siteLog = () => Object.values(S.dd.days).filter((d) => d.site).sort((a, b) => b.date.localeCompare(a.date));
+async function dSetSite(date, site) { const day = S.dd.days[date] || (S.dd.days[date] = { date, done: {} }); if (site) day.site = site; else delete day.site; render(); await dsaveDay(date); }
+
+/* The Playbook split, added to Gym as five plans */
+const PB_SPLIT = [
+  ["Push", [1], [["Bench press", 3, "8-12", "", "2 min"], ["Overhead press", 3, "8-12", "", "2 min"], ["Incline dumbbell press", 3, "8-12", "", "90s"], ["Lateral raise", 3, "8-12", "", "60s"], ["Triceps pushdown", 3, "8-12", "", "60s"]]],
+  ["Pull", [2], [["Lat pulldown", 3, "8-12", "", "2 min"], ["Barbell row", 3, "8-12", "", "2 min"], ["Seated cable row", 3, "8-12", "", "90s"], ["Rear delt fly", 3, "8-12", "", "60s"], ["Biceps curl", 3, "8-12", "", "60s"]]],
+  ["Legs", [3], [["Back squat", 3, "8-12", "", "2-3 min"], ["Romanian deadlift", 3, "8-12", "", "2 min"], ["Leg press", 3, "8-12", "", "90s"], ["Leg curl", 3, "8-12", "", "60s"], ["Calf raise", 3, "8-12", "", "60s"]]],
+  ["Upper", [5], [["Incline bench press", 3, "8-12", "", "2 min"], ["Chest-supported row", 3, "8-12", "", "2 min"], ["Seated dumbbell press", 3, "8-12", "", "90s"], ["Pull-ups", 3, "8-12", "", "90s"], ["Biceps curl", 3, "8-12", "", "60s"]]],
+  ["Lower", [6], [["Hack squat", 3, "8-12", "", "2-3 min"], ["Hip thrust", 3, "8-12", "", "2 min"], ["Leg extension", 3, "8-12", "", "90s"], ["Leg curl", 3, "8-12", "", "60s"], ["Calf raise", 3, "8-12", "", "60s"]]],
+];
+async function pAddSplit() {
+  for (const [name, days, ex] of PB_SPLIT) await wsavePlan({ id: "pb_" + uid(), name, days, example: true, program: "Playbook split", exercises: ex.map(([n, st, r, k, rest]) => ({ name: n, sets: st, reps: r, kg: k, rest, notes: "" })) });
+  render(); toast("Playbook split added to Gym. Swap exercises any time.");
+}
+
+/* Playbook timing. Each rule matches a supplement by name and says where it belongs in the day. */
+const PB_RULES = [
+  { rx: /magnesium/i, say: "30 to 60 minutes before bed", want: (A) => [A.bed - 60, A.bed - 30], to: (A) => A.bed - 60 },
+  { rx: /melatonin/i, say: "30 to 60 minutes before bed", want: (A) => [A.bed - 60, A.bed - 30], to: (A) => A.bed - 30 },
+  { rx: /\bzinc\b/i, say: "with dinner, away from breakfast", meal: "last" },
+  { rx: /ashwagandha|ksm/i, say: "with dinner", meal: "last" },
+  { rx: /glycine|glutathione/i, say: "with dinner or just after", meal: "last" },
+  { rx: /\bd3\b|vitamin d|\bk2\b|coq10|ubiquinol/i, say: "in the morning with your highest-fat meal", meal: "first" },
+  { rx: /berberine|omega|fish oil|curcumin|turmeric|bergamot|garlic|kyolic|astragalus|metformin|\bdim\b|glucarate|maca|multivit/i, say: "with a meal", meal: "any" },
+  { rx: /tudca|nattokinase/i, say: "away from food", away: true },
+];
+function pbChecks() {
+  const C = dcfg(), A = { wake: dmin(C.wake), train: dmin(C.train), bed: dmin(C.bed) || 1440 }, dis = C.dismiss || {};
+  const slots = mslots(), mt = slots.map((s) => dmin(s.time)), out = [];
+  const near = (t, w = 45) => mt.filter((m) => Math.abs(m - t) <= w);
+  const nearest = (t) => mt.reduce((b, m) => (b == null || Math.abs(m - t) < Math.abs(b - t) ? m : b), null);
+  const awaySpot = (t) => { let best = null; for (let x = A.wake + 30; x <= A.bed - 30; x += 15) if (mt.every((m) => Math.abs(m - x) >= 90) && (best == null || Math.abs(x - t) < Math.abs(best - t))) best = x; return best; };
+  const mealName = (m) => slots.find((s) => dmin(s.time) === m)?.name || "your meal";
+  for (const s of active()) (s.schedule || []).forEach((r, i) => {
+    if (!r.time) return; const rule = PB_RULES.find((x) => x.rx.test(s.name)); if (!rule) return;
+    const t = dmin(r.time), id = `s:${s.id}:${i}`; if (dis[id]) return;
+    let ok = true, to = null, why = "";
+    if (rule.want) { const [a, b] = rule.want(A); ok = t >= a && t <= b; to = rule.to(A); why = `That's ${fmtTime(dhm(a))} to ${fmtTime(dhm(b))} with bed at ${fmtTime(C.bed)}.`; }
+    else if (rule.away) { if (!mt.length) return; ok = near(t, 60).length === 0; to = awaySpot(t); why = "It works best at least an hour from a meal."; }
+    else if (rule.meal) {
+      if (!mt.length) return;
+      const target = rule.meal === "first" ? mt[0] : rule.meal === "last" ? mt[mt.length - 1] : nearest(t);
+      ok = rule.meal === "any" ? near(t).length > 0 : Math.abs(t - target) <= 45; to = target; why = `Your ${mealName(target).toLowerCase()} is at ${fmtTime(dhm(target))}.`;
+    }
+    if (!ok && to != null && dhm(to) !== r.time) out.push({ id, name: s.name, at: r.time, say: rule.say, why, to: dhm(to), fix: { kind: "s", sid: s.id, i } });
+  });
+  /* GH and GH peptides: just before bed, fasted, 2 hours after the last meal */
+  for (const c of S.cy.compounds.filter((c) => !cEnded(c) && GHRX.test(c.name) && c.time)) {
+    const t = dmin(c.time), id = `c:${c.id}`; if (dis[id]) continue;
+    if (t < A.bed - 30 || t > A.bed) out.push({ id, name: c.name, at: c.time, say: "just before bed, fasted", why: `Bed is at ${fmtTime(C.bed)}. It lines up with your own night-time GH pulse.`, to: dhm(A.bed - 5), fix: { kind: "c", cid: c.id } });
+    else if (mt.length && mt[mt.length - 1] > t - 120) out.push({ id: id + ":meal", name: c.name, at: c.time, say: "2 hours after your last meal", why: `Your ${mealName(mt[mt.length - 1]).toLowerCase()} at ${fmtTime(dhm(mt[mt.length - 1]))} is less than 2 hours before it. Food blunts the GH response.`, to: null });
+  }
+  /* NAC and glutathione share a pathway: don't take big doses together */
+  const at = (rx) => active().flatMap((s) => (rx.test(s.name) ? (s.schedule || []).map((r) => r.time) : []));
+  const both = at(/\bnac\b|acetyl.?cysteine/i).filter((t) => at(/glutathione/i).includes(t));
+  if (both.length && !dis["nacglut"]) out.push({ id: "nacglut", name: "NAC and glutathione", at: both[0], say: "at different times", why: "They share the same pathway, so large doses together waste both.", to: null });
+  return out;
+}
+async function pFix(id) {
+  const x = pbChecks().find((y) => y.id === id); if (!x || !x.to) return;
+  if (x.fix.kind === "s") {
+    const s = S.supps.find((y) => y.id === x.fix.sid); if (!s) return;
+    const n = JSON.parse(JSON.stringify(s)); n.schedule[x.fix.i].time = x.to; n.schedule.sort((a, b) => a.time.localeCompare(b.time));
+    render(); await saveSupp(n);
+  } else {
+    const c = S.cy.compounds.find((y) => y.id === x.fix.cid); if (!c) return;
+    const n = { ...c, time: x.to }; render(); await csaveComp(n);
+  }
+  render(); toast(`${x.name} moved to ${fmtTime(x.to)}.`);
+}
+function pChecksCard(list) {
+  if (!list.length) return `<section class="card pchk is-ok"><div class="eyebrow">Playbook timing check</div><p class="small" style="margin:6px 0 0">${I.check} Everything with a Playbook timing rule is in the right spot.</p></section>`;
+  return `<section class="card pchk"><div class="row between"><span class="eyebrow">Playbook timing check</span><span class="chip warn">${plural(list.length, "tip")}</span></div>
+    ${list.map((x) => `<div class="pchk-it"><b>${esc(x.name)} <span class="muted num">· ${esc(fmtTime(x.at))}</span></b><span class="small">Playbook: ${esc(x.say)}. ${esc(x.why)}</span>
+      <div class="row" style="gap:6px;margin-top:6px">${x.to ? `<button class="btn sm primary" data-act="pfix" data-id="${esc(x.id)}">Move to ${esc(fmtTime(x.to))}</button>` : ""}<button class="btn sm" data-act="pkeep" data-id="${esc(x.id)}">Keep mine</button></div></div>`).join("")}</section>`;
+}
 function daySetup() {
-  const C = dcfg(), H = C.habits;
+  const C = dcfg(), H = C.habits, mon = addDays(today(), -((parseD(today()).getDay() + 6) % 7));
   const tog = (k, name, desc) => `<label class="dtog"><input type="checkbox" data-dyhabit="${k}" ${H[k] ? "checked" : ""}><span class="grow"><b>${esc(name)}</b><span class="small muted">${esc(desc)}</span></span></label>`;
-  return `<div class="ov-head"><div class="grow"><div class="eyebrow">Set once</div><h2 class="ov-title">My day</h2></div></div>
-    <section class="card"><div class="eyebrow">Your anchors</div><p class="small muted" style="margin:4px 0 10px">The Playbook builds the day around three times. Move one and everything tied to it moves too.</p>
-      ${[["wake", "Wake up", "Morning walk and skincare follow it"], ["train", "Train", "Meals before and after are labelled for carbs"], ["bed", "Bed", "Kitchen closes 2 hours before. GH goes just before"]].map(([k, n, d]) => `<label class="danc"><span class="grow"><b>${n}</b><span class="small muted">${d}</span></span><input type="time" data-dyanchor="${k}" value="${esc(C[k])}"></label>`).join("")}</section>
-    <section class="card"><div class="eyebrow">Playbook habits on your timeline</div>
+  let html = `<div class="ov-head"><div class="grow"><div class="eyebrow">Set once</div><h2 class="ov-title">My protocol</h2></div></div>`;
+  /* Anchors */
+  html += `<section class="card"><div class="eyebrow">Your anchors</div><p class="small muted" style="margin:4px 0 10px">The Playbook builds the day around three times. Move one and everything tied to it moves too.</p>
+      ${[["wake", "Wake up", "Morning walk and skincare follow it"], ["train", "Train", "Meals before and after are labelled for carbs"], ["bed", "Bed", "Kitchen closes 2 hours before. GH goes just before"]].map(([k, n, d]) => `<label class="danc"><span class="grow"><b>${n}</b><span class="small muted">${d}</span></span><input type="time" data-dyanchor="${k}" value="${esc(C[k])}"></label>`).join("")}</section>`;
+  /* Playbook timing check */
+  html += pChecksCard(pbChecks());
+  /* Weekly rhythm */
+  const days = [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(mon, i));
+  html += `<section class="card"><div class="row between"><span class="eyebrow">Weekly rhythm</span><button class="linkbtn" data-act="dyopen" data-mod="workouts">Edit in Gym</button></div>
+    <div class="pweek">${days.map((x) => { const ps = wplansFor(x).filter((p) => !(S.wo.sessions[x]?.added || []).includes(p.id)), cs = S.cy.compounds.filter((c) => !cEnded(c) && cDue(c, x));
+      return `<div class="${ps.length ? "" : "is-rest"}"><span>${DOW[parseD(x).getDay()]}</span><b>${esc(ps.length ? ps.map((p) => p.name).join(" + ") : "Rest")}</b>${cs.length ? `<i title="${esc(cs.map((c) => c.name).join(", "))}">${shotDay(x) ? "Shot" : plural(cs.length, "dose")}</i>` : ""}</div>`; }).join("")}</div>
+    ${S.wo.plans.length ? `<p class="small muted" style="margin:10px 0 0">Playbook: 3 sets of 8 to 12 per exercise, 5 exercises max, about 15 hard sets a session. Add weight only at 12 perfect reps.</p>`
+      : `<p class="small muted" style="margin:10px 0 8px">No training plan yet. The Playbook runs Push, Pull, Legs, rest, Upper, Lower, rest, with 5 exercises of 3 sets each.</p><button class="btn sm primary" data-act="paddsplit">Use the Playbook split</button>`}</section>`;
+  /* Injection sites */
+  const rot = pSites(), next = siteFor(today()), log = siteLog().slice(0, 6), oil = S.cy.compounds.filter((c) => !cEnded(c) && isOilShot(c));
+  html += `<section class="card"><div class="row between"><span class="eyebrow">Injection sites</span>${oil.length ? `<span class="small">Next: <b style="color:var(--d-comp)">${esc(siteName(next))}</b></span>` : ""}</div>
+    <p class="small muted" style="margin:4px 0 10px">${oil.length ? `For ${esc(oil.map((c) => c.name).join(", "))}. Each shot day moves to the next site, so every site rests between shots. Tap to choose which sites you rotate.` : "Add an injectable compound in Cycle and its shot days will rotate through these sites."}</p>
+    <div class="psites">${PSITES.map(([k, n]) => `<button class="psite ${rot.includes(k) ? "is-on" : ""} ${oil.length && k === next ? "is-next" : ""}" data-act="psitetog" data-k="${k}" aria-pressed="${rot.includes(k)}">${esc(n)}</button>`).join("")}</div>
+    ${log.length ? `<div class="small muted" style="margin-top:10px">Last: ${log.map((d) => `${DOW[parseD(d.date).getDay()]} ${parseD(d.date).getDate()} ${esc(siteName(d.site))}`).join(" · ")}</div>` : ""}
+    <p class="small muted" style="margin:8px 0 0">GH and GLP go SubQ into belly fat, so they stay out of the rotation.</p></section>`;
+  /* Habits */
+  html += `<section class="card"><div class="eyebrow">Playbook habits on your timeline</div>
       ${tog("walk", "Morning walk", "Brisk, 45 minutes, after you wake")}${tog("after", "Walk after your last meal", "10 minutes")}${tog("kitchen", "Kitchen closed", "A marker 2 hours before bed")}${tog("lights", "Lights out", "Cold room, eye mask, at bed time")}</section>
     <p class="hint">Supplements, compounds, meals and skincare keep the times you set in their own sections. A compound without a time goes 1 hour after waking, or just before bed if it's GH.</p>`;
+  return html;
+}
+async function protoClick(a, b) {
+  switch (a) {
+    case "pfix": await pFix(b.dataset.id); return true;
+    case "pkeep": { const c = dcfg(); await daySaveCfg({ dismiss: { ...(c.dismiss || {}), [b.dataset.id]: true } }); toast("Kept. It won't be flagged again."); return true; }
+    case "paddsplit": await pAddSplit(); return true;
+    case "psitetog": { const k = b.dataset.k, cur = pSites(), n = cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]; if (!n.length) { toast("Keep at least one site."); return true; } await daySaveCfg({ sites: PSITES.map((x) => x[0]).filter((x) => n.includes(x)) }); return true; }
+    case "dysite": { const rot = pSites(), cur = siteFor(S.date), nx = rot[(rot.indexOf(cur) + 1) % rot.length]; await dSetSite(S.date, nx); toast(`Today's site: ${siteName(nx)}`); return true; }
+  }
+  return false;
 }
 async function dSetFlag(date, key, val) {
   const day = S.dd.days[date] || (S.dd.days[date] = { date, done: {} }); day.done ||= {};
@@ -4598,6 +4725,13 @@ async function dayClick(a, b) {
   switch (a) {
     case "dtab": S.module = "day"; S.dtab = b.dataset.tab; try { localStorage.setItem("planner.dtab", S.dtab); } catch {} render(); window.scrollTo(0, 0); return true;
     case "dygo": S.date = b.dataset.date; render(); return true;
+    case "ctake": {
+      if (S.module !== "day") return false;
+      const date = S.date, c = S.cy.compounds.find((x) => x.id === b.dataset.id), site = siteFor(date);
+      await ctoggle(b.dataset.id, date);
+      if (c && isOilShot(c)) { const any = S.cy.compounds.some((x) => isOilShot(x) && cTaken(x.id, date)); if (any && !S.dd.days[date]?.site) await dSetSite(date, site); else if (!any && S.dd.days[date]?.site) await dSetSite(date, null); }
+      return true;
+    }
     case "dyopen": { const m = b.dataset.mod; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
     case "dydone": { const k = b.dataset.key; await dSetFlag(S.date, k, dflag(S.date, k) === true ? null : true); return true; }
     case "dyskip": { const k = b.dataset.key; await dSetFlag(S.date, k, "skip"); toast("Skipped. It stays on the timeline."); return true; }
@@ -4630,6 +4764,7 @@ document.addEventListener("click", async (e) => {
   const a = b.dataset.act, id = b.dataset.id;
   if (b.classList.contains("sheet-bg") && e.target.closest("[data-stop]")) return;
   if (await dayClick(a, b)) return;
+  if (await protoClick(a, b)) return;
   if (await mealClick(a, b)) return;
   if (await workoutClick(a, b)) return;
   if (await cycleClick(a, b)) return;
