@@ -2575,7 +2575,9 @@ function cBloods() {
     <div class="row wrapflex"><label class="btn primary bupload">${I.upload}<span>${B.fileName ? "Upload another" : "Upload results"}</span><input type="file" accept="application/pdf,image/*" multiple data-bimport="1" aria-label="Upload blood test results"></label><button class="btn" data-act="bmanual">Enter by hand</button></div>
     ${S.canPhoto === false || !S.sample ? `<div class="status">Reading results needs the Claude app or claude.ai, signed in. You can still enter them by hand.</div>` : ""}
     ${B.busy ? `<div class="status"><span class="spin"></span> ${esc(B.msg || "Reading your results…")}</div>` : B.msg ? `<div class="status ${B.kind}">${esc(B.msg)}</div>` : ""}</div>`;
+  html += bNextCard();
   if (!S.cy.panels.length) return html + `<div class="card empty"><h3>No results yet</h3><p>Each upload is saved to a log, and you get charts of every marker over time with your cycles shaded in.</p><button class="btn" data-act="bsample">Try sample results</button></div>`;
+  html += bTargetsCard();
   const ms = bMarkers(); if (!S.bmarker || !ms.some((m) => m.key === S.bmarker)) S.bmarker = (ms.find((m) => m.n > 1 && bflag(m.last)) || ms.find((m) => m.n > 1) || ms[0])?.key;
   html += `<section class="card"><div class="eyebrow">Trends</div><div class="bchips" role="tablist">${ms.map((m) => `<button class="bchip ${bflag(m.last) ? "out" : ""}" data-act="bpick" data-k="${esc(m.key)}" aria-pressed="${m.key === S.bmarker}">${esc(m.name)}${bflag(m.last) ? " ·" + bflag(m.last) : ""}</button>`).join("")}</div>${bChart(S.bmarker)}${(() => { const mm = ms.find((x) => x.key === S.bmarker); return mm ? `<details class="bmore"><summary>What is ${esc(mm.name)}?</summary>${binfoCard(mm.name, mm.last)}</details>` : ""; })()}</section>`;
   const R = S.cy.settings.review, RB = S.breview;
@@ -4501,6 +4503,10 @@ function dItems(date) {
   if (H.after && slots.length) { const big = slots.length > 1 ? last : slots[0]; out.push({ key: "h:after", time: dhm(dmin(big.time) + 30), kind: "habit", tag: "After " + big.name, title: "10 min walk", sub: "Cuts the blood sugar spike by about a third", done: !!dflag(date, "h:after"), tick: { act: "dydone", key: "h:after" } }); }
   if (H.kitchen) out.push({ key: "h:kitchen", time: dhm(bed - 120), kind: "sleep", tag: "Kitchen closed", title: "No food from here", sub: "2 to 3 hours before bed keeps insulin down overnight", marker: true });
   if (H.lights) out.push({ key: "h:lights", time: C.bed, kind: "sleep", tag: "Lights out", title: "Cold room, eye mask", sub: "16 to 18°C · 7 to 9 hours", done: !!dflag(date, "h:lights"), tick: { act: "dydone", key: "h:lights" } });
+  const BD = bDayItems(date, C); out.push(...BD.items);
+  if (BD.n === 1 || BD.n === 2) for (const x of out) if (x.kind === "train") x.rule = `Bloods in ${BD.n === 1 ? "1 day" : "2 days"}: keep it light, no hard sets`;
+  if (BD.n === 1) for (const x of out) if (x.key === "h:kitchen") { x.tag = "Fast from here"; x.title = "Water only until your blood test"; x.sub = "Fasted 8 to 12 hours gives a true insulin, glucose and triglyceride result"; }
+  if (BD.n === 0) { const draw = out.find((x) => x.key === "b:draw").time; for (const x of out) if (x.time <= draw && x.key !== "b:draw" && (x.kind === "meal" || (x.kind === "comp" && isOilShot(S.cy.compounds.find((c) => "comp:" + c.id === x.key) || {})))) { x.time = dhm(dmin(draw) + 15); x.rule = x.kind === "meal" ? "After your blood test" : "After your blood draw: that was your trough"; } }
   const ord = { habit: 0, skin: 1, comp: 2, meal: 3, supp: 4, train: 5, sleep: 6 };
   return out.map((x) => ({ ...x, skipped: dflag(date, x.key) === "skip" })).sort((a, b) => a.time.localeCompare(b.time) || ord[a.kind] - ord[b.kind]);
 }
@@ -4547,10 +4553,13 @@ function dayToday() {
     const when = !isToday ? fmtTime(cur.time) : late ? `${fmtTime(cur.time)} · due` : `${fmtTime(cur.time)} · in ${mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60 ? (mins % 60) + " min" : ""}` : mins + " min"}`;
     html += `<section class="dnow" style="--k:${DCOL[cur.kind]}"><div class="row between"><span class="eyebrow">${isToday ? (late ? "Now" : "Up next") : "First up"} · ${esc(when)}</span><span class="dnow-tag">${esc(cur.tag)}</span></div>
       <h2>${esc(cur.title)}</h2>${cur.sub ? `<p>${esc(cur.sub)}</p>` : ""}${cur.site ? dSiteBtn(cur) : ""}${cur.rule ? `<span class="drule">${esc(cur.rule)}</span>` : ""}${dChips(cur)}
-      <div class="dnow-acts">${dTickBtn(cur, true)}${cur.go ? `<button class="btn" data-act="dyopen" data-mod="${cur.go.mod}">Open</button>` : ""}<button class="btn" data-act="dyskip" data-key="${esc(cur.key)}">Skip</button></div></section>`;
+      <div class="dnow-acts">${dTickBtn(cur, true)}${cur.go ? `<button class="btn" data-act="dyopen" data-mod="${cur.go.mod}" ${cur.go.tab ? `data-tab="${cur.go.tab}"` : ""}>Open</button>` : ""}<button class="btn" data-act="dyskip" data-key="${esc(cur.key)}">Skip</button></div></section>`;
   } else if (isToday || date < today()) {
     html += `<section class="dnow is-clear"><span class="eyebrow">${isToday ? "That's everything" : "Day closed"}</span><h2>${doneN === tickable.length ? "All done. Nice work." : "Nothing left open."}</h2><p>${isToday ? `Lights out at ${esc(fmtTime(C.bed))}.` : ""}</p></section>`;
   }
+  const BN = isToday ? bNext() : null, bn = BN?.date ? dDiff(today(), BN.date) : null;
+  if (bn != null && bn >= 0 && bn <= 7) html += `<button class="card bloodbar" data-act="dybloods"><span class="ic">${I.drop}</span><span class="grow">${bn === 0 ? "<b>Blood test today.</b> Fasted, before 10 AM, before your shot." : `<b>Bloods ${bn === 1 ? "tomorrow" : "in " + bn + " days"}.</b> ${bn > 3 ? `Stop biotin from ${DOW[parseD(addDays(BN.date, -3)).getDay()]}.` : bn === 3 ? "Stop biotin today." : "No hard training, plenty of water."}`}</span>${I.right}</button>`;
+  else if (bn != null && bn < 0 && isToday) html += `<button class="card bloodbar" data-act="dybloods"><span class="ic">${I.drop}</span><span class="grow"><b>Bloods are ${-bn} day${bn === -1 ? "" : "s"} overdue.</b> Book your retest.</span>${I.right}</button>`;
   const tips = isToday ? pbChecks().length : 0;
   if (tips) html += `<button class="card ptipbar" data-act="dtab" data-tab="dsetup"><span class="chip warn">${tips}</span><span class="grow">${tips === 1 ? "1 thing is" : tips + " things are"} timed differently from the Playbook</span>${I.right}</button>`;
   /* Quick stats */
@@ -4573,7 +4582,7 @@ function dayToday() {
     if (!nowDrawn && x.time > n) { html += `<div class="dnowline"><span class="num">${esc(fmtTime(n))}</span></div>`; nowDrawn = true; }
     const isCur = cur && x.key === cur.key;
     html += `<div class="dit ${x.done ? "is-done" : ""} ${x.skipped ? "is-skip" : ""} ${isCur ? "is-cur" : ""} ${x.marker ? "is-mark" : ""}" style="--k:${DCOL[x.kind]}"><span class="dt num">${esc(fmtTime(x.time).replace(" ", " "))}</span><i class="ddot"></i>
-      <div class="dcard"><div class="row between" style="gap:10px;align-items:flex-start"><button class="dbody" ${x.go ? `data-act="dyopen" data-mod="${x.go.mod}"` : "disabled"}><span class="dtag">${esc(x.tag)}${x.skipped ? " · skipped" : ""}</span><b>${esc(x.title)}</b>${x.sub ? `<span class="dsub">${esc(x.sub)}</span>` : ""}</button>${x.marker ? "" : dTickBtn(x)}</div>
+      <div class="dcard"><div class="row between" style="gap:10px;align-items:flex-start"><button class="dbody" ${x.go ? `data-act="dyopen" data-mod="${x.go.mod}" ${x.go.tab ? `data-tab="${x.go.tab}"` : ""}` : "disabled"}><span class="dtag">${esc(x.tag)}${x.skipped ? " · skipped" : ""}</span><b>${esc(x.title)}</b>${x.sub ? `<span class="dsub">${esc(x.sub)}</span>` : ""}</button>${x.marker ? "" : dTickBtn(x)}</div>
       ${x.site ? dSiteBtn(x) : ""}${x.rule && !x.done ? `<span class="drule">${esc(x.rule)}</span>` : ""}${x.chips && !x.done ? dChips(x) : ""}</div></div>`;
   }
   if (!nowDrawn) html += `<div class="dnowline"><span class="num">${esc(fmtTime(n))}</span></div>`;
@@ -4685,6 +4694,8 @@ function daySetup() {
       ${[["wake", "Wake up", "Morning walk and skincare follow it"], ["train", "Train", "Meals before and after are labelled for carbs"], ["bed", "Bed", "Kitchen closes 2 hours before. GH goes just before"]].map(([k, n, d]) => `<label class="danc"><span class="grow"><b>${n}</b><span class="small muted">${d}</span></span><input type="time" data-dyanchor="${k}" value="${esc(C[k])}"></label>`).join("")}</section>`;
   /* Playbook timing check */
   html += pChecksCard(pbChecks());
+  { const N = bNext(), n = N.date ? dDiff(today(), N.date) : null, L = pbLatest(), off = L.filter((x) => x.st !== "ok").length;
+    html += `<button class="card bloodbar" data-act="dybloods"><span class="ic">${I.drop}</span><span class="grow"><b>Bloods</b><br><span class="small muted">${N.date ? `Next test ${esc(shortD(N.date, { weekday: "short", day: "numeric", month: "short" }))} · ${n < 0 ? `${-n} days overdue` : n === 0 ? "today" : `in ${n} days`}` : "Set your next test date"}${L.length ? ` · ${off ? `${off} off the Playbook target` : "all on target"}` : ""}</span></span>${I.right}</button>`; }
   /* Weekly rhythm */
   const days = [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(mon, i));
   html += `<section class="card"><div class="row between"><span class="eyebrow">Weekly rhythm</span><button class="linkbtn" data-act="dyopen" data-mod="workouts">Edit in Gym</button></div>
@@ -4732,7 +4743,7 @@ async function dayClick(a, b) {
       if (c && isOilShot(c)) { const any = S.cy.compounds.some((x) => isOilShot(x) && cTaken(x.id, date)); if (any && !S.dd.days[date]?.site) await dSetSite(date, site); else if (!any && S.dd.days[date]?.site) await dSetSite(date, null); }
       return true;
     }
-    case "dyopen": { const m = b.dataset.mod; S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
+    case "dyopen": { const m = b.dataset.mod; if (m === "cycle" && b.dataset.tab) { S.ctab = b.dataset.tab; S.bopen = null; } S.module = m; S.detail = null; S.mealAdd = null; try { localStorage.setItem("planner.module", m); } catch {} render(); window.scrollTo(0, 0); return true; }
     case "dydone": { const k = b.dataset.key; await dSetFlag(S.date, k, dflag(S.date, k) === true ? null : true); return true; }
     case "dyskip": { const k = b.dataset.key; await dSetFlag(S.date, k, "skip"); toast("Skipped. It stays on the timeline."); return true; }
     case "dymeal": {
@@ -4758,6 +4769,149 @@ setInterval(() => { if (S.module === "day" && S.dtab === "dday" && !document.hid
 S.dlastToday = today();
 document.addEventListener("visibilitychange", () => { if (document.hidden) return; const t = today(); if (S.dlastToday !== t && S.date === S.dlastToday) S.date = t; S.dlastToday = t; if (S.module === "day") dsoft(); });
 
+/* ---------- Bloods, the Playbook way: target ranges, ratios, next test and its prep ---------- */
+/* Targets are the Playbook's green ranges, held in its US units. Each marker converts from the units labs use
+   (Australian labs mostly report nmol/L, pmol/L, mmol/L), so a result is read in whatever unit it came in. */
+const lin = (f) => [(v) => v * f, (v) => v / f];
+const PBT = [
+  { id: "tt", name: "Total testosterone", al: ["total testosterone", "testosterone", "testosterone total"], lo: 700, hi: 1100, u: "ng/dL", units: { "ng/dl": lin(1), "nmol/l": lin(28.84) }, note: "Test it at trough. On its own it tells you very little." },
+  { id: "ft", name: "Free testosterone", al: ["free testosterone", "free t", "testosterone free"], lo: 20, hi: 30, u: "pg/mL", units: { "pg/ml": lin(1) }, exact: true, note: "The one you actually feel. The Playbook's 20 to 30 is the pg/mL (direct) test. Calculated free T in pmol/L uses a different scale, so it isn't scored against this.", low: "Check SHBG first. High SHBG keeps free T flat, and more dose won't help." },
+  { id: "e2", name: "Estradiol (sensitive)", al: ["estradiol", "oestradiol", "e2", "estradiol sensitive"], lo: 20, hi: 30, u: "pg/mL", units: { "pg/ml": lin(1), "pmol/l": lin(0.2724) }, note: "Judge it by the ratio to testosterone and how you feel, not the number alone.",
+    high: "Check the ratio and your symptoms first. Then inject more often, add DIM and calcium D-glucarate, and lose body fat. An AI only for real symptoms.", low: "Crashed estrogen: joint pain, low mood, low libido. If you're on an AI, the Playbook says stop it and retest in 2 weeks." },
+  { id: "prl", name: "Prolactin", al: ["prolactin"], lo: 2, hi: 15, u: "ng/mL", units: { "ng/ml": lin(1), "µg/l": lin(1), "miu/l": lin(0.0472), "mu/l": lin(0.0472) }, note: "Kills libido and is almost never tested.", high: "Check which compounds you're running (nandrolone and trenbolone raise it). Talk to your doctor before treating it." },
+  { id: "ins", name: "Fasting insulin", al: ["insulin", "fasting insulin", "insulin fasting"], lo: 2, hi: 8, u: "mU/L", units: { "mu/l": lin(1), "miu/l": lin(1), "µiu/ml": lin(1), "µu/ml": lin(1), "pmol/l": lin(1 / 6) }, note: "The most important one. Above 8 means your body is stuck storing fat.", high: "Tier 2 is mandatory above 10: berberine with meals, taurine, magnesium glycinate, omega-3 and citrus bergamot. Metformin only with your doctor if above 15." },
+  { id: "a1c", name: "HbA1c", al: ["hba1c", "a1c", "haemoglobin a1c", "hemoglobin a1c", "glycated haemoglobin"], lo: 4, hi: 5.4, u: "%", units: { "%": lin(1), "mmol/mol": [(v) => v / 10.929 + 2.15, (v) => (v - 2.15) * 10.929] }, note: "Can read a little low on TRT, so read it with insulin.", high: "Same as high insulin: the Tier 2 stack and food first." },
+  { id: "glu", name: "Fasting glucose", al: ["glucose", "fasting glucose", "glucose fasting"], lo: 70, hi: 90, u: "mg/dL", units: { "mg/dl": lin(1), "mmol/l": lin(18.016) }, note: "The last marker to go up. Normal glucose doesn't mean normal insulin." },
+  { id: "tg", name: "Triglycerides", al: ["triglycerides", "triglyceride", "trigs"], lo: 0, hi: 100, u: "mg/dL", units: { "mg/dl": lin(1), "mmol/l": lin(88.57) }, note: "The fastest one to fix with food.", high: "Lipids: omega-3, citrus bergamot, aged garlic and CoQ10. Retest every 8 weeks on cycle." },
+  { id: "hdl", name: "HDL cholesterol", al: ["hdl cholesterol", "hdl", "hdl-c"], lo: 50, hi: 90, u: "mg/dL", units: { "mg/dl": lin(1), "mmol/l": lin(38.67) }, note: "TRT and orals push it down. Track it every test.", low: "Lipids: omega-3, citrus bergamot, aged garlic and CoQ10. Review your compounds. Retest every 8 weeks on cycle." },
+  { id: "apob", name: "ApoB", al: ["apob", "apolipoprotein b", "apo b"], lo: 0, hi: 80, u: "mg/dL", units: { "mg/dl": lin(1), "g/l": lin(100) }, note: "Counts the particles that clog arteries. Often climbs on a protocol.", high: "Lipids: omega-3, citrus bergamot, aged garlic and CoQ10." },
+  { id: "lpa", name: "Lp(a)", al: ["lp(a)", "lpa", "lipoprotein(a)", "lipoprotein a"], lo: 0, hi: 75, u: "nmol/L", units: { "nmol/l": lin(1) }, note: "Genetic. Test it once. If it's high, everything else must be tighter." },
+  { id: "crp", name: "hsCRP", al: ["crp", "hscrp", "hs-crp", "c-reactive protein", "hs crp", "high sensitivity crp"], lo: 0, hi: 1, u: "mg/L", units: { "mg/l": lin(1), "mg/dl": lin(10) }, note: "Hidden inflammation. Blocks fat loss and recovery.", high: "Curcumin with piperine, omega-3, vitamin C and aged garlic. Fix sleep, training volume and food before adding compounds." },
+  { id: "tsh", name: "TSH", al: ["tsh", "thyroid stimulating hormone"], lo: 0.5, hi: 2, u: "mIU/L", units: { "miu/l": lin(1), "mu/l": lin(1), "µiu/ml": lin(1) }, note: "Above 2 means your brain is pushing hard. Hard dieting pushes it up." },
+  { id: "ft3", name: "Free T3", al: ["free t3", "ft3"], lo: 3.5, hi: 4.2, u: "pg/mL", units: { "pg/ml": lin(1), "pmol/l": lin(0.651) }, note: "Drops fast when you diet hard. It's why fat loss stalls in month three." },
+  { id: "ft4", name: "Free T4", al: ["free t4", "ft4"], lo: 1, hi: 1.6, u: "ng/dL", units: { "ng/dl": lin(1), "pmol/l": lin(0.0777) }, note: "T4 fine but T3 low: stress, under-eating or bad sleep is blocking the conversion." },
+  { id: "hct", name: "Haematocrit", al: ["haematocrit", "hematocrit", "hct"], lo: 40, hi: 52, u: "%", units: { "%": lin(1), "l/l": lin(100) }, note: "How thick your blood is. The Playbook keeps it under 52.", high: "Water first, 3 to 4 litres a day and 1 litre the morning of your test. Then nattokinase (check with your doctor if you're on blood thinners). Inject more often. Get a sleep study if you snore." },
+  { id: "ggt", name: "GGT", al: ["ggt", "gamma gt", "gamma-gt", "gamma glutamyl transferase"], lo: 0, hi: 30, u: "U/L", units: { "u/l": lin(1), "iu/l": lin(1) }, note: "The best liver marker. Training doesn't raise it.", high: "Liver: TUDCA, NAC, glutathione, vitamin C and curcumin. Cut back orals. Retest in 6 weeks." },
+  { id: "alt", name: "ALT", al: ["alt", "alanine aminotransferase", "alanine transaminase"], lo: 0, hi: 30, u: "U/L", units: { "u/l": lin(1), "iu/l": lin(1) }, note: "The liver-specific one. High ALT and GGT together means the liver, not training.", high: "Liver: TUDCA, NAC, glutathione, vitamin C and curcumin. Cut back orals. Retest in 6 weeks." },
+  { id: "ast", name: "AST", al: ["ast", "aspartate aminotransferase", "aspartate transaminase"], lo: 0, hi: 26, u: "U/L", units: { "u/l": lin(1), "iu/l": lin(1) }, note: "Comes from muscle too. High after leg day is normal. Read it with ALT and GGT." },
+  { id: "cys", name: "Cystatin C", al: ["cystatin c", "cystatin"], lo: 0.5, hi: 0.9, u: "mg/L", units: { "mg/l": lin(1) }, note: "Kidney test that ignores muscle. Creatinine flags big guys and creatine users wrongly.", high: "Kidneys: astragalus, NAC and taurine, 4+ litres of water a day. Retest in 6 weeks." },
+  { id: "hcy", name: "Homocysteine", al: ["homocysteine"], lo: 0, hi: 8, u: "µmol/L", units: { "µmol/l": lin(1) }, note: "Damages blood vessels. Often high when B12 is low. Cheap to fix." },
+  { id: "vd", name: "Vitamin D", al: ["vitamin d", "25-oh vitamin d", "25 oh vitamin d", "vitamin d3", "25-hydroxy vitamin d", "vit d"], lo: 60, hi: 80, u: "ng/mL", units: { "ng/ml": lin(1), "nmol/l": lin(0.4006) }, note: "Low vitamin D feels like a protocol that isn't working.", low: "D3 always with K2. Retest at 8 weeks. This one fix often improves your TRT response a lot." },
+  { id: "fer", name: "Ferritin", al: ["ferritin"], lo: 50, hi: 150, u: "ng/mL", units: { "ng/ml": lin(1), "µg/l": lin(1) }, note: "Iron stores. Under 50 means flat energy." },
+  { id: "cor", name: "Cortisol (AM)", al: ["cortisol", "cortisol am", "morning cortisol"], lo: 10, hi: 18, u: "µg/dL", units: { "µg/dl": lin(1), "nmol/l": lin(0.03625) }, note: "Too high stores belly fat and eats muscle. Sleep and stress first." },
+  { id: "b12", name: "Vitamin B12", al: ["vitamin b12", "b12", "cobalamin"], lo: 500, hi: 1200, u: "pg/mL", units: { "pg/ml": lin(1), "pmol/l": lin(1.355) }, note: "Under 500 feels like brain fog and slow recovery." },
+  { id: "igf", name: "IGF-1", al: ["igf-1", "igf1", "igf 1", "insulin-like growth factor 1"], lo: 250, hi: 350, u: "ng/mL", units: { "ng/ml": lin(1), "µg/l": lin(1), "nmol/l": lin(7.649) }, note: "Shows what GH is doing in your body. Check it every 8 to 12 weeks on GH." },
+];
+const pbNameKey = (n) => String(n || "").toLowerCase().replace(/\(([^)]*)\)/g, (m, x) => (/^a$/.test(x.trim()) ? "(a)" : " ")).replace(/\b(fasting|serum|plasma|sensitive|calculated|calc|am|level|lc-?ms\/?ms)\b/g, " ").replace(/\s+/g, " ").trim();
+const PBT_BY = new Map(); for (const t of PBT) for (const a of t.al) PBT_BY.set(a, t);
+function pbTarget(name) { const raw = String(name || "").toLowerCase().trim(), k = pbNameKey(name); return PBT_BY.get(raw) || PBT_BY.get(k) || PBT_BY.get(k.replace(/^total /, "")) || null; }
+const pbUnitKey = (u) => String(u || "").toLowerCase().replace(/\s+/g, "").replace(/μ/g, "µ").replace(/mcg|ug/g, "µg").replace(/umol/g, "µmol").replace(/uiu|µiu/g, "µiu").replace(/^iu\/l$/, "iu/l");
+/* The unit a result is in: by its label, or, with no label we know, by which unit puts the value in a believable range */
+function pbConv(t, m) {
+  const v = num(m.value); if (m.value === "" || m.value == null || !isFinite(v)) return null;
+  const k = pbUnitKey(m.unit); if (t.units[k]) return { k, c: t.units[k] };
+  if (t.exact) return null;
+  if (t.id === "hct") return { k: v < 1.5 ? "l/l" : "%", c: t.units[v < 1.5 ? "l/l" : "%"] };
+  const mid = (t.lo + t.hi) / 2 || t.hi, fits = Object.entries(t.units).map(([kk, c]) => ({ k: kk, c, d: Math.abs(Math.log(Math.max(1e-9, c[0](v)) / mid)) })).filter((x) => x.d < Math.log(6)).sort((a, b) => a.d - b.d);
+  return fits[0] || null;
+}
+function pbRead(m) {
+  const t = pbTarget(m.name); if (!t) return null;
+  const cv = pbConv(t, m); if (!cv) return null;
+  const base = cv.c[0](num(m.value)), st = base < t.lo ? "low" : base > t.hi ? "high" : "ok";
+  const own = (x) => cv.c[1](x), ul = m.unit || (cv.k === pbUnitKey(t.u) ? t.u : cv.k);
+  const rng = t.lo > 0 ? `${bfmt(own(t.lo))} to ${bfmt(own(t.hi))}` : `under ${bfmt(own(t.hi))}`;
+  return { t, m, base, st, rng: `${rng} ${ul}`.trim(), tip: st === "high" ? t.high : st === "low" ? t.low : "", own };
+}
+/* Latest value of each Playbook marker, across all panels */
+function pbLatest() {
+  const out = new Map();
+  for (const p of panelsAsc()) for (const m of p.markers || []) { const r = pbRead(m); if (r) out.set(r.t.id, { ...r, date: p.date }); }
+  return PBT.map((t) => out.get(t.id)).filter(Boolean);
+}
+function pbRatios(L) {
+  const g = (id) => L.find((x) => x.t.id === id), out = [];
+  const tt = g("tt"), e2 = g("e2"), tg = g("tg"), hdl = g("hdl");
+  if (tt && e2 && e2.base > 0) { const r = tt.base / e2.base; out.push({ name: "Testosterone : estradiol", val: `${fmtN(r, r < 10 ? 1 : 0)} : 1`, note: "Around 15 : 1 is typical, but it's different for everyone. The ratio matters more than the number.", st: r < 8 || r > 40 ? "warn" : "ok" }); }
+  if (tg && hdl && hdl.base > 0) { const r = tg.base / hdl.base; out.push({ name: "Triglycerides ÷ HDL", val: fmtN(r, 1), note: "Over 3 means insulin resistance.", st: r > 3 ? "high" : r > 2 ? "warn" : "ok" }); }
+  return out;
+}
+/* Next blood test: the date booked, or 12 weeks after the last one */
+const bWeeks = () => num(S.cy.settings.retestWeeks, 12) || 12;
+function bNext() {
+  const booked = S.cy.settings.nextBloods, last = panelsAsc().filter((p) => !p.example).slice(-1)[0];
+  if (booked && booked >= addDays(today(), -1)) return { date: booked, booked: true, last };
+  return { date: last ? addDays(last.date, bWeeks() * 7) : null, booked: false, last };
+}
+const bBiotin = () => active().filter((s) => /biotin|hair|skin|nail|multi/i.test(s.name) || (s.ingredients || []).some((i) => /biotin/i.test(i.name || "")));
+function bPrep(d) {
+  const wk = (x) => `${DOW[parseD(x).getDay()]} ${parseD(x).getDate()} ${parseD(x).toLocaleDateString(undefined, { month: "short" })}`;
+  const hard = [-2, -1].map((n) => addDays(d, n)).flatMap((x) => wplansFor(x).map((p) => `${p.name} on ${DOW[parseD(x).getDay()]}`));
+  const bio = bBiotin(), last = panelsAsc().filter((p) => !p.example).slice(-1)[0];
+  return [
+    { k: "fast", t: "Fasted 8 to 12 hours", s: "Water only. Food ruins insulin, glucose and triglycerides." },
+    { k: "am", t: "Before 10 AM", s: "Testosterone, cortisol and the hormone panel need a morning draw." },
+    { k: "trough", t: "Before your next shot", s: shotDay(d) ? "It's a shot day: get drawn first, then take your shot. That's your trough." : "Test the morning your next shot is due, before you take it." },
+    { k: "biotin", t: `Stop biotin from ${wk(addDays(d, -3))}`, s: bio.length ? `72 hours before. Check ${bio.map((s) => s.name).join(", ")} for biotin.` : "72 hours before. It skews hormone and thyroid results." },
+    { k: "water", t: "Drink plenty of water", s: "The day before, and 1 litre that morning. Dehydration makes haematocrit look higher." },
+    { k: "train", t: `No hard training from ${wk(addDays(d, -2))}`, s: hard.length ? `48 hours before. You have ${hard.join(" and ")}: keep it light or move it.` : "48 hours before. A hard session raises AST, ALT and hsCRP for days." },
+    { k: "lab", t: "Same lab every time", s: last?.lab ? `Last time: ${last.lab}.` : "Labs use different tests and ranges. Stick to one to see your trend." },
+    { k: "e2", t: "Ask for sensitive estradiol", s: "The normal estradiol test is made for women and isn't accurate for men." },
+  ];
+}
+function bOrder() {
+  const gh = S.cy.compounds.some((c) => !cEnded(c) && GHRX.test(c.name)), prl = S.cy.compounds.some((c) => !cEnded(c) && /nandrolone|deca|npp|tren/i.test(c.name));
+  return ["Total and free testosterone", "Sensitive estradiol", "SHBG", "Haematocrit and full blood count", "Cholesterol with ApoB", "Liver: GGT, AST, ALT", "Fasting insulin and glucose", ...(prl ? ["Prolactin"] : []), ...(gh ? ["IGF-1"] : [])];
+}
+function bNextCard() {
+  const N = bNext(), done = S.cy.settings.prep?.[N.date] || {};
+  if (!N.date) return `<section class="card bnext"><div class="eyebrow">Next blood test</div><p class="small muted" style="margin:6px 0 10px">The Playbook retests every 3 months, the same way each time. Pick the day you're booked in and the prep lands on your Today screen.</p><label class="danc"><span class="grow"><b>Booked for</b></span><input type="date" data-bnext value=""></label></section>`;
+  const n = dDiff(today(), N.date), when = n === 0 ? "Today" : n === 1 ? "Tomorrow" : n > 0 ? `In ${n} days` : `${-n} days overdue`;
+  return `<section class="card bnext"><div class="row between"><span class="eyebrow">Next blood test</span><span class="chip ${n < 0 ? "crit" : n <= 7 ? "warn" : ""}">${esc(when)}</span></div>
+    <h3 class="bnext-d">${esc(parseD(N.date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }))}</h3>
+    <p class="small muted" style="margin:0">${N.booked ? "Booked." : `${bWeeks()} weeks after your last test${N.last ? ` on ${shortD(N.last.date, { day: "numeric", month: "short" })}` : ""}. Set the real date when you book.`}</p>
+    <div class="row wrapflex" style="gap:8px;margin-top:8px"><label class="bdate"><span class="small muted">Booked for</span><input type="date" data-bnext value="${esc(N.booked ? N.date : "")}"></label>
+      <label class="bdate"><span class="small muted">Retest every</span><select data-bweeks>${[8, 10, 12].map((w) => `<option value="${w}" ${bWeeks() === w ? "selected" : ""}>${w} weeks</option>`).join("")}</select></label></div>
+    <div class="eyebrow" style="margin-top:12px">Get tested properly</div>
+    <div class="bprep">${bPrep(N.date).map((x) => `<button class="bprep-it ${done[x.k] ? "is-done" : ""}" data-act="bprep" data-k="${x.k}" aria-pressed="${!!done[x.k]}"><i>${I.check}</i><span><b>${esc(x.t)}</b><span class="small muted">${esc(x.s)}</span></span></button>`).join("")}</div>
+    <details class="bmore"><summary>What to ask for</summary><p class="small" style="margin:6px 0 0">${esc(bOrder().join(" · "))}.</p><p class="small muted" style="margin:6px 0 0">The full baseline panel once, then the markers you're working on. Biotin, hard training and food all skew results, so the prep matters.</p></details></section>`;
+}
+function bTargetsCard() {
+  const L = pbLatest(); if (!L.length) return "";
+  const ord = { high: 0, low: 0, ok: 1 }, list = L.slice().sort((a, b) => ord[a.st] - ord[b.st]), off = L.filter((x) => x.st !== "ok").length, R = pbRatios(L);
+  const bar = (x) => { const span = (x.t.hi - x.t.lo) || x.t.hi, a = x.t.lo - span * 0.6, b = x.t.hi + span * 0.6, pos = Math.max(2, Math.min(98, ((x.base - a) / (b - a)) * 100)), gl = ((x.t.lo - a) / (b - a)) * 100, gw = ((x.t.hi - x.t.lo) / (b - a)) * 100;
+    return `<div class="btrack"><span class="g" style="left:${gl.toFixed(1)}%;width:${gw.toFixed(1)}%"></span><span class="m ${x.st}" style="left:${pos.toFixed(1)}%"></span></div>`; };
+  const missing = PBT.filter((t) => ["tt", "ft", "e2", "ins", "a1c", "hdl", "tg", "apob", "crp", "hct", "ggt", "alt", "vd", "prl"].includes(t.id) && !S.cy.panels.some((p) => (p.markers || []).some((m) => pbTarget(m.name) === t))).map((t) => t.name);
+  return `<section class="card btgt"><div class="row between"><span class="eyebrow">Playbook targets</span>${off ? `<span class="chip warn">${off} off target</span>` : `<span class="chip">${I.check} All on target</span>`}</div>
+    <p class="small muted" style="margin:4px 0 6px">Green is where the Playbook wants you, which is often tighter than the lab's normal. Latest result for each marker.</p>
+    ${list.map((x) => `<details class="brt ${x.st}"><summary><span class="brt-n">${esc(x.t.name)}</span>${bar(x)}<span class="brt-v num ${x.st === "ok" ? "" : "warntxt"}">${esc(bfmt(x.m.value))}</span></summary>
+      <div class="brt-more small"><div class="muted">Target ${esc(x.rng)} · ${esc(shortD(x.date, { day: "numeric", month: "short", year: "2-digit" }))}</div><div>${esc(x.t.note)}</div>${x.tip ? `<div class="brt-tip"><b>Playbook:</b> ${esc(x.tip)}</div>` : ""}</div></details>`).join("")}
+    ${R.length ? `<div class="eyebrow" style="margin-top:10px">Ratios</div>${R.map((r) => `<div class="bratio"><span class="grow"><b>${esc(r.name)}</b><span class="small muted">${esc(r.note)}</span></span><b class="num ${r.st === "ok" ? "" : "warntxt"}">${esc(r.val)}</b></div>`).join("")}` : ""}
+    ${missing.length ? `<p class="small muted" style="margin:10px 0 0"><b style="color:var(--ink)">Not tested yet:</b> ${esc(missing.join(", "))}.</p>` : ""}
+    <p class="hint" style="margin:8px 0 0">The Playbook's coaching targets, not clinical thresholds. Go through changes with your doctor.</p></section>`;
+}
+async function bloodsClick(a, b) {
+  switch (a) {
+    case "bprep": { const N = bNext(); if (!N.date) return true; const P = { ...(S.cy.settings.prep || {}) }; for (const k of Object.keys(P)) if (k < addDays(today(), -30)) delete P[k]; const d = { ...(P[N.date] || {}) }; d[b.dataset.k] = !d[b.dataset.k]; P[N.date] = d; S.cy.settings = { ...S.cy.settings, prep: P }; render(); await csaveSettings(); return true; }
+    case "dybloods": S.module = "cycle"; S.ctab = "cbloods"; S.bopen = null; try { localStorage.setItem("planner.ctab", "cbloods"); } catch {} render(); window.scrollTo(0, 0); return true;
+  }
+  return false;
+}
+document.addEventListener("change", async (e) => {
+  const t = e.target;
+  if (t.matches?.("[data-bnext]")) { S.cy.settings = { ...S.cy.settings, nextBloods: t.value || "" }; render(); await csaveSettings(); if (t.value) toast(`Blood test set for ${shortD(t.value, { weekday: "short", day: "numeric", month: "short" })}. Prep will show on Today.`); }
+  if (t.matches?.("[data-bweeks]")) { S.cy.settings = { ...S.cy.settings, retestWeeks: num(t.value, 12) }; render(); await csaveSettings(); }
+});
+/* Bloods prep on the Today timeline */
+function bDayItems(date, C) {
+  const N = bNext(); if (!N.date || N.date < date) return { items: [], n: null };
+  const n = dDiff(date, N.date), out = [], wake = dmin(C.wake);
+  if (n === 3) out.push({ key: "b:biotin", time: dhm(wake + 5), kind: "habit", tag: "Bloods in 3 days", title: "Stop biotin today", sub: bBiotin().length ? `Check ${bBiotin().map((s) => s.name).join(", ")}` : "72 hours before your test", done: !!dflag(date, "b:biotin"), tick: { act: "dydone", key: "b:biotin" }, go: { mod: "cycle", tab: "cbloods" } });
+  if (n === 1) out.push({ key: "b:water", time: dhm(wake + 5), kind: "habit", tag: "Bloods tomorrow", title: "Drink plenty of water today", sub: "No hard training. Fast from dinner, water only", done: !!dflag(date, "b:water"), tick: { act: "dydone", key: "b:water" }, go: { mod: "cycle", tab: "cbloods" } });
+  if (n === 0) out.push({ key: "b:draw", time: dhm(Math.min(wake + 60, 9 * 60 + 30)), kind: "comp", tag: "Blood test · before 10 AM", title: "Get your bloods drawn", sub: "Fasted, water only, 1 litre this morning. Ask for sensitive estradiol", rule: shotDay(date) ? "Before your shot: that's your trough" : "Same lab as last time", done: !!dflag(date, "b:draw"), tick: { act: "dydone", key: "b:draw" }, go: { mod: "cycle", tab: "cbloods" } });
+  return { items: out, n };
+}
+
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-act]");
   if (!b) return;
@@ -4765,6 +4919,7 @@ document.addEventListener("click", async (e) => {
   if (b.classList.contains("sheet-bg") && e.target.closest("[data-stop]")) return;
   if (await dayClick(a, b)) return;
   if (await protoClick(a, b)) return;
+  if (await bloodsClick(a, b)) return;
   if (await mealClick(a, b)) return;
   if (await workoutClick(a, b)) return;
   if (await cycleClick(a, b)) return;

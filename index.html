@@ -948,6 +948,35 @@ label.kimpbtn { position: relative; overflow: hidden; cursor: pointer; }
 .psite { border: 1px solid var(--line); background: var(--sunk); color: var(--muted); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
 .psite.is-on { color: var(--ink); border-color: color-mix(in srgb, var(--d-comp) 40%, var(--line)); }
 .psite.is-next { background: color-mix(in srgb, var(--d-comp) 18%, transparent); border-color: var(--d-comp); color: var(--ink); font-weight: 600; }
+/* Bloods: next test, prep, Playbook targets */
+.bnext { display: flex; flex-direction: column; gap: 4px; }
+.bnext-d { font-size: 26px; margin-top: 4px; }
+.bdate { display: flex; flex-direction: column; gap: 3px; }
+.bdate input, .bdate select { font: inherit; font-size: 14px; background: var(--sunk); border: 1px solid var(--line); border-radius: 10px; padding: 7px 9px; color: var(--ink); }
+.bprep { display: flex; flex-direction: column; }
+.bprep-it { all: unset; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); }
+.bprep-it:first-child { border-top: 0; }
+.bprep-it > i { flex: none; width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--muted); display: grid; place-items: center; color: transparent; margin-top: 1px; }
+.bprep-it > i svg { width: 13px; height: 13px; }
+.bprep-it.is-done > i { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+.bprep-it.is-done b { text-decoration: line-through; opacity: .6; }
+.bprep-it > span { display: flex; flex-direction: column; gap: 1px; }
+.btgt { display: flex; flex-direction: column; gap: 2px; }
+.brt summary { list-style: none; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; cursor: pointer; border-top: 1px solid var(--line); }
+.brt summary::-webkit-details-marker { display: none; }
+.brt-n { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brt-v { font-size: 14px; font-weight: 600; min-width: 44px; text-align: right; }
+.btrack { position: relative; height: 8px; border-radius: 6px; background: var(--track); }
+.btrack .g { position: absolute; top: 0; bottom: 0; border-radius: 6px; background: color-mix(in srgb, var(--ok) 45%, transparent); }
+.btrack .m { position: absolute; top: -4px; width: 4px; height: 16px; margin-left: -2px; border-radius: 2px; background: var(--ink); }
+.btrack .m.high, .btrack .m.low { background: var(--warn); }
+.brt-more { display: flex; flex-direction: column; gap: 4px; padding: 0 0 10px; }
+.brt-tip { background: var(--warn-soft); border-radius: 10px; padding: 7px 9px; }
+.bratio { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.bratio .grow { display: flex; flex-direction: column; }
+.bloodbar { display: flex; align-items: center; gap: 10px; text-align: left; width: 100%; font-size: 13.5px; padding: 11px 14px; color: var(--ink); }
+.bloodbar svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.bloodbar .ic { color: var(--d-comp); }
 </style>
 <link rel="stylesheet" href="auth.css">
 </head>
